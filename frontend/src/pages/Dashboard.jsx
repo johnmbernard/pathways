@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useOrgStore } from "../store/orgStore";
+import Nav from "../components/Nav";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -14,7 +15,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 flex">
+      {/* Navigation Sidebar */}
+      <Nav />
+
+      {/* Main Content */}
+      <div className="flex-1 ml-64">
       {/* Header */}
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -186,6 +192,7 @@ export default function Dashboard() {
           </div>
         </section>
       </main>
+      </div>
     </div>
   );
 }

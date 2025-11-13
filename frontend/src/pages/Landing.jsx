@@ -4,7 +4,10 @@ export default function Landing() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50 flex">
+
+      {/* Main Content */}
+      <div className="flex-1">
       {/* Header */}
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -77,6 +80,7 @@ export default function Landing() {
           </p>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
