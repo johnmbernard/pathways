@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* ----- Custom CSS Variables ----- */
+:root {
+  --bg-main: #f8fafc;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --card-bg: #ffffff;
+  --border: #e2e8f0;
+}
