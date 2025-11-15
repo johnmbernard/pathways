@@ -9,7 +9,8 @@ import InitiationStep2 from "./pages/InitiationWizard/Step2";
 import InitiationStep3 from "./pages/InitiationWizard/Step3";
 import InitiationStep4 from "./pages/InitiationWizard/Step4";
 import InitiationStep5 from "./pages/InitiationWizard/Step5";
-import ScopeWizard from "./pages/Foundation/Scope";
+import ScopeWhiteboard from "./pages/Foundation/ScopeWhiteboard";
+import MVPSelection from "./pages/Foundation/MVPSelection";
 import ScheduleWizard from "./pages/Foundation/Schedule";
 
 import "./styles/globals.css";
@@ -28,7 +29,8 @@ export default function App() {
         <Route path="/projects/create/step3" element={<InitiationStep3 />} />
         <Route path="/projects/create/step4" element={<InitiationStep4 />} />
         <Route path="/projects/create/step5" element={<InitiationStep5 />} />
-        <Route path="/projects/foundation/scope" element={<ScopeWizard />} />
+        <Route path="/projects/foundation/scope" element={<ScopeWhiteboard />} />
+        <Route path="/projects/foundation/mvp" element={<MVPSelection />} />
         <Route path="/projects/foundation/schedule" element={<ScheduleWizard />} />
         <Route path="/projects/hub" element={<Projects />} />
       </Routes>

@@ -29,6 +29,8 @@ export const useProjectStore = create((set) => ({
         acceptanceCriteria: feature.acceptanceCriteria || "",
         isMVP: !!feature.isMVP,
         priority: state.scopeFeatures.length, // append to end
+        estimateDays: typeof feature.estimateDays === 'number' ? feature.estimateDays : 1,
+        dependencies: feature.dependencies || [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -73,6 +75,34 @@ export const useProjectStore = create((set) => ({
       scopeFeatures: state.scopeFeatures.map((f) =>
         f.id === id ? { ...f, acceptanceCriteria: criteria, updatedAt: new Date().toISOString() } : f
       ),
+    })),
+
+  // Feature dependency methods for critical path
+  addFeatureDependency: (featureId, targetId, type = "FS") =>
+    set((state) => ({
+      scopeFeatures: state.scopeFeatures.map((f) =>
+        f.id === featureId
+          ? {
+              ...f,
+              dependencies: [...(f.dependencies || []), { targetId, type }],
+              updatedAt: new Date().toISOString(),
+            }
+          : f
+      ),
+    })),
+
+  removeFeatureDependency: (featureId, targetId) =>
+    set((state) => ({
+      scopeFeatures: state.scopeFeatures.map((f) =>
+        f.id === featureId
+          ? { ...f, dependencies: (f.dependencies || []).filter((d) => d.targetId !== targetId), updatedAt: new Date().toISOString() }
+          : f
+      ),
+    })),
+
+  setFeatureDependencies: (featureId, deps) =>
+    set((state) => ({
+      scopeFeatures: state.scopeFeatures.map((f) => (f.id === featureId ? { ...f, dependencies: deps, updatedAt: new Date().toISOString() } : f)),
     })),
 
   setScopeFeatures: (features) => set({ scopeFeatures: features }),
