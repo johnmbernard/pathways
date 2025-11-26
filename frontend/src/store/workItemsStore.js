@@ -1,33 +1,22 @@
 import { create } from 'zustand';
 
+const STORAGE_KEY = 'pathways_work_items_v1';
+
+function loadItems() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [
+    { id: '1', title: 'Example Epic', state: 'New', type: 'Epic', parentId: null, order: 0 },
+    { id: '2', title: 'Feature 1', state: 'New', type: 'Feature', parentId: '1', order: 0 },
+    { id: '3', title: 'User Story A', state: 'Committed', type: 'User Story', parentId: '2', order: 0 },
+  ];
+}
+
 // Work item store with hierarchical structure
 export const useWorkItemsStore = create((set, get) => ({
-  items: [
-    {
-      id: '1',
-      title: 'Example Epic',
-      state: 'New',
-      type: 'Epic',
-      parentId: null,
-      order: 0,
-    },
-    {
-      id: '2',
-      title: 'Feature 1',
-      state: 'New',
-      type: 'Feature',
-      parentId: '1',
-      order: 0,
-    },
-    {
-      id: '3',
-      title: 'User Story A',
-      state: 'Committed',
-      type: 'User Story',
-      parentId: '2',
-      order: 0,
-    },
-  ],
+  items: loadItems(),
   expandedItems: new Set(['1', '2']), // Track expanded state
 
   // Add new work item
@@ -44,6 +33,20 @@ export const useWorkItemsStore = create((set, get) => ({
     items: state.items.map(item => 
       item.id === id ? { ...item, ...updates } : item
     ),
+  })),
+
+  // Bulk rename types and normalize to valid types list
+  bulkRenameTypes: (mapping, validTypes) => set((state) => ({
+    items: state.items.map(item => {
+      let type = item.type;
+      if (mapping && mapping[type]) {
+        type = mapping[type];
+      }
+      if (Array.isArray(validTypes) && validTypes.length > 0 && !validTypes.includes(type)) {
+        type = validTypes[0];
+      }
+      return { ...item, type };
+    })
   })),
 
   // Delete work item
@@ -76,3 +79,10 @@ export const useWorkItemsStore = create((set, get) => ({
       .sort((a, b) => a.order - b.order);
   },
 }));
+
+// Persist items on any change
+useWorkItemsStore.subscribe((state) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
+  } catch {}
+});

@@ -1,17 +1,10 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useWorkItemsStore } from '../store/workItemsStore';
 import { ChevronRight, ChevronDown, Plus, MoreHorizontal } from 'lucide-react';
+import HierarchyBuilder from '../components/HierarchyBuilder';
+import { useHierarchyStore } from '../store/hierarchyStore';
 
-const WORK_ITEM_TYPES = ['Epic', 'Feature', 'User Story', 'Task', 'Bug'];
-const STATES = ['New', 'Committed', 'In Progress', 'Done', 'Removed'];
-
-const STATE_COLORS = {
-  'New': 'bg-gray-100 text-gray-700',
-  'Committed': 'bg-blue-100 text-blue-700',
-  'In Progress': 'bg-yellow-100 text-yellow-700',
-  'Done': 'bg-green-100 text-green-700',
-  'Removed': 'bg-red-100 text-red-700',
-};
+// Types will be derived from hierarchy tiers + flat types
 
 const TYPE_ICONS = {
   'Epic': '📦',
@@ -23,6 +16,7 @@ const TYPE_ICONS = {
 
 function WorkItemRow({ item, depth = 0 }) {
   const { updateItem, deleteItem, toggleExpanded, getChildren, expandedItems, addItem } = useWorkItemsStore();
+  const { tiers, flatTypes } = useHierarchyStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   const [showActions, setShowActions] = useState(false);
@@ -101,25 +95,17 @@ function WorkItemRow({ item, depth = 0 }) {
           )}
         </div>
 
-        {/* State Dropdown */}
-        <select
-          value={item.state}
-          onChange={(e) => updateItem(item.id, { state: e.target.value })}
-          className={`px-3 py-1 rounded text-xs font-medium mr-2 ${STATE_COLORS[item.state]}`}
-        >
-          {STATES.map(state => (
-            <option key={state} value={state}>{state}</option>
-          ))}
-        </select>
-
-        {/* Type Dropdown */}
+        {/* Type Dropdown (derived from hierarchy + flat types) */}
         <select
           value={item.type}
           onChange={(e) => updateItem(item.id, { type: e.target.value })}
           className="px-3 py-1 rounded text-xs bg-white border border-gray-300 mr-2"
         >
-          {WORK_ITEM_TYPES.map(type => (
-            <option key={type} value={type}>{type}</option>
+          {tiers.map(t => (
+            <option key={t.id} value={t.name}>{t.name}</option>
+          ))}
+          {flatTypes.map(t => (
+            <option key={t.id} value={t.name}>{t.name}</option>
           ))}
         </select>
 
@@ -154,15 +140,14 @@ function WorkItemRow({ item, depth = 0 }) {
 
 export default function WorkItemsPage() {
   const { getRootItems, addItem } = useWorkItemsStore();
+  const { tiers, flatTypes } = useHierarchyStore();
+  const [isHierarchyOpen, setIsHierarchyOpen] = useState(false);
   const rootItems = getRootItems();
 
+  const allTypes = useMemo(() => [...tiers.map(t => t.name), ...flatTypes.map(t => t.name)], [tiers, flatTypes]);
   const handleNewWorkItem = () => {
-    addItem({
-      title: 'New Work Item',
-      state: 'New',
-      type: 'Feature',
-      parentId: null,
-    });
+    const defaultType = tiers[1]?.name || tiers[0]?.name || allTypes[0] || 'Feature';
+    addItem({ title: 'New Work Item', state: 'New', type: defaultType, parentId: null });
   };
 
   return (
@@ -182,11 +167,11 @@ export default function WorkItemsPage() {
               <Plus size={18} />
               New Work Item
             </button>
-            <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
-              View as Board
-            </button>
-            <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
-              Column Options
+            <button
+              onClick={() => setIsHierarchyOpen(true)}
+              className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+            >
+              Hierarchy Builder
             </button>
           </div>
         </div>
@@ -198,7 +183,6 @@ export default function WorkItemsPage() {
         <div className="w-8"></div>
         <div className="w-12 px-2">ID</div>
         <div className="flex-1 px-2">Title</div>
-        <div className="w-32 px-2">State</div>
         <div className="w-32 px-2">Type</div>
         <div className="w-20"></div>
       </div>
@@ -223,6 +207,9 @@ export default function WorkItemsPage() {
       <div className="border-t border-gray-200 bg-gray-50 px-6 py-2 text-xs text-gray-600">
         {rootItems.length} items
       </div>
+
+      {/* Hierarchy Builder Modal */}
+      <HierarchyBuilder open={isHierarchyOpen} onClose={() => setIsHierarchyOpen(false)} />
     </div>
   );
 }
