@@ -3,7 +3,7 @@
 // Mount with: app.use('/api/example', exampleRoutes);
 
 import express from 'express';
-import { exampleLogic, validateInput } from '../logic/example.js';
+import { exampleLogic, validateInput } from '../logic/capacityEngine.js';
 
 const router = express.Router();
 
