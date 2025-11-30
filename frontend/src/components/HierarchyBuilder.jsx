@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useHierarchyStore } from '../store/hierarchyStore';
 import { useWorkItemsStore } from '../store/workItemsStore';
 import { X, Plus, GripVertical, Trash2 } from 'lucide-react';
+import { Button } from './ui';
+import styles from './HierarchyBuilder.module.css';
 
 export default function HierarchyBuilder({ open, onClose }) {
   const {
@@ -18,75 +20,91 @@ export default function HierarchyBuilder({ open, onClose }) {
 
   React.useEffect(() => {
     if (open) {
-      setBaselineTiers(tiers.map(t => ({ ...t }))); 
+      setBaselineTiers(tiers.map(t => ({ ...t })));
       setBaselineFlatTypes(flatTypes.map(t => ({ ...t })));
     }
-  }, [open]);
+  }, [open, tiers, flatTypes]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-gray-900" style={{ opacity: 0.4 }} onClick={onClose} />
+    <div className={styles.overlay} onClick={onClose}>
       {/* Modal container */}
-      <div className="absolute inset-0 flex items-start justify-center mt-16" onClick={onClose}>
-        <div
-          className="bg-white rounded shadow-lg border border-gray-300 w-[720px] p-4"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-3">
-            <h2 className="text-lg font-semibold">Hierarchy Builder</h2>
-            <button className="p-1 hover:bg-gray-100 rounded" onClick={onClose}><X size={18} /></button>
-          </div>
+      <div
+        className={styles.modal}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.header}>
+          <h2 className={styles.title}>Hierarchy Builder</h2>
+          <button 
+            className={styles.closeButton}
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </div>
 
+        <div className={styles.body}>
           {/* Tiers */}
-          <section className="mb-4">
-            <h3 className="text-sm font-semibold mb-2">Nested hierarchy tiers</h3>
-            <div className="border border-gray-200 rounded">
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Nested hierarchy tiers</h3>
+            <div className={styles.list}>
               {tiers.map((t, idx) => (
-                <div key={t.id} className="flex items-center border-b border-gray-200 last:border-b-0 p-2">
-                  <span className="text-gray-500 w-6 text-center" title="Drag handle"><GripVertical size={16} /></span>
-                  <span className="text-xs text-gray-500 w-10">{idx + 1}</span>
+                <div key={t.id} className={styles.listItem}>
+                  <span className={styles.dragHandle} title="Drag handle">
+                    <GripVertical size={16} />
+                  </span>
+                  <span className={styles.index}>{idx + 1}</span>
                   <input
                     value={t.name}
                     onChange={(e) => updateTier(t.id, e.target.value)}
-                    className="flex-1 px-2 py-1 border border-gray-300 rounded"
+                    className={styles.input}
                   />
-                  <div className="ml-2 flex items-center gap-1">
+                  <div className={styles.actions}>
                     <button
                       disabled={idx === 0}
                       onClick={() => moveTier(idx, Math.max(0, idx - 1))}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs hover:bg-gray-50"
+                      className={styles.moveButton}
                     >Up</button>
                     <button
                       disabled={idx === tiers.length - 1}
                       onClick={() => moveTier(idx, Math.min(tiers.length - 1, idx + 1))}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs hover:bg-gray-50"
+                      className={styles.moveButton}
                     >Down</button>
                     <button
                       onClick={() => removeTier(t.id)}
-                      className="p-1 hover:bg-red-50 rounded text-red-600"
+                      className={styles.deleteButton}
                       title="Remove tier"
-                    ><Trash2 size={16} /></button>
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-2 flex items-center gap-2">
+            <div className={styles.addForm}>
               <input
                 placeholder="New tier name"
                 value={newTierName}
                 onChange={(e) => setNewTierName(e.target.value)}
-                className="flex-1 px-2 py-1 border border-gray-300 rounded"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newTierName.trim()) {
+                    addTier(newTierName.trim());
+                    setNewTierName('');
+                  }
+                }}
+                className={styles.input}
               />
-              <button
+              <Button
                 onClick={() => { if (newTierName.trim()) { addTier(newTierName.trim()); setNewTierName(''); } }}
-                className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-              ><Plus size={16} /> Add Tier</button>
+                variant="primary"
+                size="sm"
+              >
+                <Plus size={16} /> Add Tier
+              </Button>
             </div>
-            <div className="mt-3">
-              <button
+            <div className={styles.applySection}>
+              <Button
                 onClick={() => {
                   // Build mapping from baseline names to current names by index
                   const mapping = {};
@@ -106,43 +124,56 @@ export default function HierarchyBuilder({ open, onClose }) {
                   // Invoke bulk rename in work items store
                   workItemsStore.getState().bulkRenameTypes(mapping, validTypes);
                 }}
-                className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50"
+                variant="secondary"
+                size="sm"
+                className={styles.applyButton}
               >
                 Apply changes to existing items
-              </button>
+              </Button>
             </div>
           </section>
 
           {/* Flat types */}
-          <section>
-            <h3 className="text-sm font-semibold mb-2">Flat (non-nested) work item types</h3>
-            <div className="border border-gray-200 rounded">
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Flat (non-nested) work item types</h3>
+            <div className={styles.list}>
               {flatTypes.map((t) => (
-                <div key={t.id} className="flex items-center border-b border-gray-200 last:border-b-0 p-2">
+                <div key={t.id} className={styles.listItem}>
                   <input
                     value={t.name}
                     onChange={(e) => updateFlatType(t.id, e.target.value)}
-                    className="flex-1 px-2 py-1 border border-gray-300 rounded"
+                    className={styles.input}
                   />
                   <button
                     onClick={() => removeFlatType(t.id)}
-                    className="p-1 hover:bg-red-50 rounded text-red-600 ml-2"
+                    className={styles.deleteButton}
                     title="Remove type"
-                  ><Trash2 size={16} /></button>
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               ))}
             </div>
-            <div className="mt-2 flex items-center gap-2">
+            <div className={styles.addForm}>
               <input
                 placeholder="New flat type"
                 value={newFlatTypeName}
                 onChange={(e) => setNewFlatTypeName(e.target.value)}
-                className="flex-1 px-2 py-1 border border-gray-300 rounded"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newFlatTypeName.trim()) {
+                    addFlatType(newFlatTypeName.trim());
+                    setNewFlatTypeName('');
+                  }
+                }}
+                className={styles.input}
               />
-              <button
+              <Button
                 onClick={() => { if (newFlatTypeName.trim()) { addFlatType(newFlatTypeName.trim()); setNewFlatTypeName(''); } }}
-                className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-              ><Plus size={16} /> Add Type</button>
+                variant="primary"
+                size="sm"
+              >
+                <Plus size={16} /> Add Type
+              </Button>
             </div>
           </section>
         </div>

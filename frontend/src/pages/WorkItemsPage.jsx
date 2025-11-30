@@ -1,29 +1,59 @@
 import React, { useMemo, useState } from 'react';
 import { useWorkItemsStore } from '../store/workItemsStore';
-import { ChevronRight, ChevronDown, Plus, MoreHorizontal } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2, Pencil, Building, X, Check } from 'lucide-react';
+import DateInputs from '../components/DateInputs';
 import HierarchyBuilder from '../components/HierarchyBuilder';
 import { useHierarchyStore } from '../store/hierarchyStore';
+import { useOrganizationStore } from '../store/organizationStore';
+import { useNavigate } from 'react-router-dom';
+import { Button, Badge } from '../components/ui';
+import { PageHeader } from '../components/layout/Layout';
+import styles from './WorkItemsPage.module.css';
+import layoutStyles from '../components/layout/Layout.module.css';
+import modalStyles from './EditWorkItemModal.module.css';
 
-// Types will be derived from hierarchy tiers + flat types
+// Types derived from hierarchy tiers + flat types
 
-const TYPE_ICONS = {
-  'Epic': '📦',
-  'Feature': '🔥',
-  'User Story': '📋',
-  'Task': '✓',
-  'Bug': '🐛',
-};
-
-function WorkItemRow({ item, depth = 0 }) {
+function WorkItemRow({ item, depth = 0, onEdit }) {
   const { updateItem, deleteItem, toggleExpanded, getChildren, expandedItems, addItem } = useWorkItemsStore();
   const { tiers, flatTypes } = useHierarchyStore();
+  const { units, flatUnits, getTierLevel } = useOrganizationStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
-  const [showActions, setShowActions] = useState(false);
+  // Actions are now always visible; remove hover state
+
+  // Combine tree units and flat units for dropdown with tier info
+  const allOrgUnits = useMemo(() => [
+    ...units.map(u => ({ id: u.id, name: u.name, isFlat: false, tierLevel: getTierLevel(u.id) })),
+    ...flatUnits.map(u => ({ id: u.id, name: u.name, isFlat: true, tierLevel: null }))
+  ], [units, flatUnits, getTierLevel]);
+
+  // Color palette for org tiers
+  const getTierColor = (tierLevel) => {
+    const colors = [
+      '#3b82f6', // blue-500 (Tier 1)
+      '#8b5cf6', // violet-500 (Tier 2)
+      '#ec4899', // pink-500 (Tier 3)
+      '#f59e0b', // amber-500 (Tier 4)
+      '#10b981', // emerald-500 (Tier 5+)
+    ];
+    if (tierLevel === null) return '#6b7280'; // gray-500 for flat units
+    return colors[Math.min(tierLevel - 1, colors.length - 1)];
+  };
 
   const children = getChildren(item.id);
   const hasChildren = children.length > 0;
   const isExpanded = expandedItems.has(item.id);
+
+  // Determine icon based on hierarchy tier or flat type name
+  const tierIndex = tiers.findIndex(t => t.name === item.type);
+  let icon = '🏷️';
+  if (tierIndex === 0) icon = '📦';
+  else if (tierIndex === 1) icon = '🔥';
+  else if (tierIndex >= 2) icon = '📋';
+  else if (flatTypes.some(t => t.name.toLowerCase() === String(item.type).toLowerCase())) {
+    icon = /bug/i.test(item.type) ? '🐛' : '🏷️';
+  }
 
   const handleSave = () => {
     if (editTitle.trim()) {
@@ -33,11 +63,18 @@ function WorkItemRow({ item, depth = 0 }) {
   };
 
   const handleAddChild = () => {
+    // Default child type to next tier after parent's type
+    const parentTierIndex = tiers.findIndex(t => t.name === item.type);
+    const nextTierType = parentTierIndex >= 0 && tiers[parentTierIndex + 1]
+      ? tiers[parentTierIndex + 1].name
+      : (tiers[parentTierIndex] ? tiers[parentTierIndex].name : (tiers[0]?.name || 'Feature'));
+
     addItem({
       title: 'New Work Item',
       state: 'New',
-      type: 'Task',
+      type: nextTierType,
       parentId: item.id,
+      assignedOrgUnit: item.assignedOrgUnit ?? null,
     });
     if (!isExpanded) {
       toggleExpanded(item.id);
@@ -46,29 +83,28 @@ function WorkItemRow({ item, depth = 0 }) {
 
   return (
     <>
-      <div 
-        className="group flex items-center hover:bg-gray-50 border-b border-gray-200"
-        style={{ paddingLeft: `${depth * 24 + 8}px` }}
-        onMouseEnter={() => setShowActions(true)}
-        onMouseLeave={() => setShowActions(false)}
+      <div
+        className={`${styles.row} ${isEditing ? styles.editing : ''}`}
+        style={{ paddingLeft: `${depth * 20 + 24}px` }}
       >
         {/* Expand/Collapse Button */}
         <button
           onClick={() => hasChildren && toggleExpanded(item.id)}
-          className="p-1 hover:bg-gray-200 rounded"
-          style={{ visibility: hasChildren ? 'visible' : 'hidden' }}
+          className={`${styles.expandButton} ${!hasChildren ? styles.invisible : ''}`}
         >
-          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          {isExpanded ? <ChevronDown size={14} className="text-gray-500" /> : <ChevronRight size={14} className="text-gray-500" />}
         </button>
 
         {/* Work Item Type Icon */}
-        <span className="mx-2 text-lg">{TYPE_ICONS[item.type]}</span>
+        <span className={styles.icon}>{icon}</span>
 
         {/* ID */}
-        <span className="text-xs text-gray-500 w-12">{item.id}</span>
+        <div className={styles.idBadge}>
+          <span className={styles.idBadgeInner}>#{item.id}</span>
+        </div>
 
         {/* Title */}
-        <div className="flex-1 py-2 px-2">
+        <div className={styles.titleCell}>
           {isEditing ? (
             <input
               type="text"
@@ -82,13 +118,14 @@ function WorkItemRow({ item, depth = 0 }) {
                   setIsEditing(false);
                 }
               }}
-              className="w-full px-2 py-1 border border-blue-500 rounded focus:outline-none"
+              className={styles.titleInput}
               autoFocus
             />
           ) : (
             <span 
               onDoubleClick={() => setIsEditing(true)}
-              className="cursor-text"
+              className={styles.titleText}
+              title={item.title}
             >
               {item.title}
             </span>
@@ -96,120 +133,347 @@ function WorkItemRow({ item, depth = 0 }) {
         </div>
 
         {/* Type Dropdown (derived from hierarchy + flat types) */}
-        <select
-          value={item.type}
-          onChange={(e) => updateItem(item.id, { type: e.target.value })}
-          className="px-3 py-1 rounded text-xs bg-white border border-gray-300 mr-2"
-        >
-          {tiers.map(t => (
-            <option key={t.id} value={t.name}>{t.name}</option>
-          ))}
-          {flatTypes.map(t => (
-            <option key={t.id} value={t.name}>{t.name}</option>
-          ))}
-        </select>
+        <div className={styles.typeCell}>
+          <select
+            value={item.type}
+            onChange={(e) => {
+              const newType = e.target.value;
+              // If promoted to top tier, remove indentation by clearing parentId
+              const topTier = tiers[0]?.name;
+              if (topTier && newType === topTier) {
+                updateItem(item.id, { type: newType, parentId: null });
+              } else {
+                updateItem(item.id, { type: newType });
+              }
+            }}
+            className={styles.typeSelect}
+          >
+            {tiers.map(t => (
+              <option key={t.id} value={t.name}>{t.name}</option>
+            ))}
+            {flatTypes.map(t => (
+              <option key={t.id} value={t.name}>{t.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Start/Target Dates */}
+        <div className={styles.scheduleCell}>
+          <DateInputs
+            startDate={item.startDate}
+            targetDate={item.targetDate}
+            onChange={(updates) => {
+              // updates contains either startDate or targetDate
+              const payload = {};
+              if (updates.startDate !== undefined) payload.startDate = updates.startDate;
+              if (updates.targetDate !== undefined) payload.targetDate = updates.targetDate;
+              // Normalize: empty string represents no date
+              const normalized = Object.fromEntries(Object.entries(payload).map(([k, v]) => [k, v || '']));
+              updateItem(item.id, normalized);
+            }}
+          />
+        </div>
+
+        {/* Assigned Organization Unit Dropdown */}
+        <div className={styles.teamCell}>
+          <Building size={14} className={styles.teamIcon} />
+          <select
+            value={item.assignedOrgUnit || ''}
+            onChange={(e) => updateItem(item.id, { assignedOrgUnit: e.target.value || null })}
+            className={styles.teamSelect}
+          >
+            <option value="">No Team</option>
+            {allOrgUnits.map(org => (
+              <option 
+                key={org.id} 
+                value={org.id}
+                style={{ 
+                  color: getTierColor(org.tierLevel),
+                  fontWeight: org.isFlat ? 'normal' : '500'
+                }}
+              >
+                {org.isFlat ? '🏷️ ' : `Tier ${org.tierLevel} • `}{org.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Actions */}
-        {showActions && (
-          <div className="flex items-center gap-1 mr-2">
-            <button
-              onClick={handleAddChild}
-              className="p-1 hover:bg-gray-200 rounded text-blue-600"
-              title="Add child item"
-            >
-              <Plus size={16} />
-            </button>
-            <button
-              onClick={() => deleteItem(item.id)}
-              className="p-1 hover:bg-gray-200 rounded text-red-600"
-              title="Delete"
-            >
-              <MoreHorizontal size={16} />
-            </button>
-          </div>
-        )}
+        <div className={styles.actionsCell}>
+          <button
+            onClick={handleAddChild}
+            className={`${styles.actionButton} ${styles.add}`}
+            title="Add child work item"
+          >
+            <Plus size={16} strokeWidth={2.5} />
+          </button>
+          <button
+            onClick={() => onEdit(item)}
+            className={`${styles.actionButton} ${styles.edit}`}
+            title="Edit work item details"
+          >
+            <Pencil size={16} strokeWidth={2.5} />
+          </button>
+          <button
+            onClick={() => deleteItem(item.id)}
+            className={`${styles.actionButton} ${styles.delete}`}
+            title="Delete work item"
+          >
+            <Trash2 size={16} strokeWidth={2.5} />
+          </button>
+        </div>
       </div>
 
       {/* Render Children */}
       {isExpanded && children.map(child => (
-        <WorkItemRow key={child.id} item={child} depth={depth + 1} />
+        <WorkItemRow key={child.id} item={child} depth={depth + 1} onEdit={onEdit} />
       ))}
     </>
   );
 }
 
 export default function WorkItemsPage() {
-  const { getRootItems, addItem } = useWorkItemsStore();
+  const { getRootItems, addItem, updateItem } = useWorkItemsStore();
   const { tiers, flatTypes } = useHierarchyStore();
+  const { units } = useOrganizationStore();
+  const navigate = useNavigate();
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const rootItems = getRootItems();
 
   const allTypes = useMemo(() => [...tiers.map(t => t.name), ...flatTypes.map(t => t.name)], [tiers, flatTypes]);
+  
+  // Get root organization name (first unit with no parent)
+  const rootOrg = units.find(u => u.parentId === null);
+  const orgName = rootOrg?.name || 'your organization';
+  
   const handleNewWorkItem = () => {
     const defaultType = tiers[1]?.name || tiers[0]?.name || allTypes[0] || 'Feature';
+    // Always create as top-level (root) item
     addItem({ title: 'New Work Item', state: 'New', type: defaultType, parentId: null });
   };
 
   return (
-    <div className="h-screen flex flex-col bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Work Items</h1>
-            <p className="text-sm text-gray-500 mt-1">Backlog</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleNewWorkItem}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
+    <div className={styles.page}>
+      <PageHeader
+        title="Backlog"
+        subtitle={`Manage ${orgName}'s backlog`}
+        actions={
+          <>
+            <Button onClick={handleNewWorkItem} variant="primary">
               <Plus size={18} />
               New Work Item
-            </button>
-            <button
-              onClick={() => setIsHierarchyOpen(true)}
-              className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-            >
+            </Button>
+            <Button onClick={() => setIsHierarchyOpen(true)} variant="secondary">
               Hierarchy Builder
-            </button>
+            </Button>
+          </>
+        }
+      />
+
+      <div className={styles.container}>
+        <div className={styles.tableWrapper}>
+          {/* Work Items Table Header */}
+          <div className={styles.tableHeader}>
+            <div className={styles.headerExpand}></div>
+            <div className={styles.headerIcon}></div>
+            <div className={styles.headerId}>ID</div>
+            <div className={styles.headerTitle}>Title</div>
+            <div className={styles.headerType}>Type</div>
+            <div className={styles.headerSchedule}>Schedule</div>
+            <div className={styles.headerTeam}>Assigned Team</div>
+            <div className={styles.headerActions}>Actions</div>
           </div>
-        </div>
-      </header>
 
-      {/* Work Items Table Header */}
-      <div className="border-b border-gray-300 bg-gray-50 px-2 py-2 flex items-center text-sm font-medium text-gray-700">
-        <div className="w-8"></div>
-        <div className="w-8"></div>
-        <div className="w-12 px-2">ID</div>
-        <div className="flex-1 px-2">Title</div>
-        <div className="w-32 px-2">Type</div>
-        <div className="w-20"></div>
-      </div>
+          {/* Work Items List */}
+          <div className={styles.tableBody}>
+            {rootItems.length === 0 ? (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyStateContent}>
+                  <div>
+                    <svg className={styles.emptyStateIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <p className={styles.emptyStateTitle}>No work items yet</p>
+                  <p className={styles.emptyStateText}>Click "New Work Item" to get started</p>
+                </div>
+              </div>
+            ) : (
+              rootItems.map(item => (
+                <WorkItemRow key={item.id} item={item} depth={0} onEdit={setEditingItem} />
+              ))
+            )}
+          </div>
 
-      {/* Work Items List */}
-      <div className="flex-1 overflow-auto">
-        {rootItems.length === 0 ? (
-          <div className="flex items-center justify-center h-64 text-gray-500">
-            <div className="text-center">
-              <p className="text-lg mb-2">No work items yet</p>
-              <p className="text-sm">Click "New Work Item" to get started</p>
+          {/* Footer Stats */}
+          <div className={styles.tableFooter}>
+            <div className={styles.footerStats}>
+              <Badge variant="primary">{rootItems.length} total</Badge>
+              <span className={styles.footerDivider}>•</span>
+              <span className={styles.footerText}>Last updated just now</span>
             </div>
           </div>
-        ) : (
-          rootItems.map(item => (
-            <WorkItemRow key={item.id} item={item} depth={0} />
-          ))
-        )}
-      </div>
-
-      {/* Footer Stats */}
-      <div className="border-t border-gray-200 bg-gray-50 px-6 py-2 text-xs text-gray-600">
-        {rootItems.length} items
+        </div>
       </div>
 
       {/* Hierarchy Builder Modal */}
       <HierarchyBuilder open={isHierarchyOpen} onClose={() => setIsHierarchyOpen(false)} />
+
+      {/* Edit Work Item Modal */}
+      {editingItem && (
+        <EditWorkItemModal
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+          onSave={(updates) => {
+            updateItem(editingItem.id, updates);
+            setEditingItem(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Edit Work Item Modal Component
+function EditWorkItemModal({ item, onClose, onSave }) {
+  const [description, setDescription] = useState(item.description || '');
+  const [acceptanceCriteria, setAcceptanceCriteria] = useState(
+    item.acceptanceCriteria || []
+  );
+  const [newCriterion, setNewCriterion] = useState('');
+
+  const handleAddCriterion = () => {
+    if (newCriterion.trim()) {
+      setAcceptanceCriteria([...acceptanceCriteria, { text: newCriterion.trim(), completed: false }]);
+      setNewCriterion('');
+    }
+  };
+
+  const handleToggleCriterion = (index) => {
+    setAcceptanceCriteria(
+      acceptanceCriteria.map((criterion, i) =>
+        i === index ? { ...criterion, completed: !criterion.completed } : criterion
+      )
+    );
+  };
+
+  const handleRemoveCriterion = (index) => {
+    setAcceptanceCriteria(acceptanceCriteria.filter((_, i) => i !== index));
+  };
+
+  const handleSave = () => {
+    onSave({ description, acceptanceCriteria });
+  };
+
+  return (
+    <div className={layoutStyles.modalOverlay}>
+      <div className={layoutStyles.modal}>
+        {/* Header */}
+        <div className={layoutStyles.modalHeader}>
+          <div>
+            <h2 className={layoutStyles.modalTitle}>Edit Work Item</h2>
+            <p className={layoutStyles.modalSubtitle}>{item.title}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className={layoutStyles.modalClose}
+            title="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className={layoutStyles.modalBody}>
+          {/* Description */}
+          <div className={modalStyles.formGroup}>
+            <label className={modalStyles.label}>
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add a detailed description of this work item..."
+              className={modalStyles.textarea}
+            />
+          </div>
+
+          {/* Acceptance Criteria */}
+          <div className={modalStyles.formGroup}>
+            <label className={modalStyles.label}>
+              Acceptance Criteria
+            </label>
+
+            {/* Criteria List */}
+            <div className={modalStyles.criteriaList}>
+              {acceptanceCriteria.map((criterion, index) => (
+                <div
+                  key={index}
+                  className={`${modalStyles.criterionItem} ${criterion.completed ? modalStyles.completed : modalStyles.incomplete}`}
+                >
+                  <button
+                    onClick={() => handleToggleCriterion(index)}
+                    className={`${modalStyles.checkbox} ${criterion.completed ? modalStyles.checked : modalStyles.unchecked}`}
+                  >
+                    {criterion.completed && (
+                      <Check size={14} className="text-white" strokeWidth={3} />
+                    )}
+                  </button>
+                  <span
+                    className={`${modalStyles.criterionText} ${criterion.completed ? modalStyles.completed : modalStyles.incomplete}`}
+                  >
+                    {criterion.text}
+                  </span>
+                  <button
+                    onClick={() => handleRemoveCriterion(index)}
+                    className={modalStyles.removeButton}
+                    title="Remove"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add New Criterion */}
+            <div className={modalStyles.addCriterionRow}>
+              <input
+                type="text"
+                value={newCriterion}
+                onChange={(e) => setNewCriterion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCriterion();
+                  }
+                }}
+                placeholder="Add acceptance criterion..."
+                className={modalStyles.criterionInput}
+              />
+              <Button
+                onClick={handleAddCriterion}
+                variant="secondary"
+                disabled={!newCriterion.trim()}
+              >
+                <Plus size={16} />
+                Add
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className={layoutStyles.modalFooter}>
+          <Button onClick={onClose} variant="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleSave} variant="primary">
+            <Check size={16} />
+            Save Changes
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

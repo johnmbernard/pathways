@@ -1,0 +1,360 @@
+/* Work Items Page Styles */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(to bottom right, #f9fafb, #ffffff);
+}
+
+.container {
+  flex: 1;
+  overflow: hidden;
+  padding: 1.5rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 1.5rem;
+  }
+}
+
+.tableWrapper {
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 96rem;
+  margin: 0 auto;
+}
+
+.tableHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  padding: 0.75rem 0;
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (min-width: 640px) {
+  .tableHeader {
+    font-size: 0.75rem;
+    padding: 0.75rem 0;
+  }
+}
+
+.headerColumn {
+  display: flex;
+  align-items: center;
+}
+
+.headerExpand { width: 2rem; flex-shrink: 0; margin-left: 24px; }
+.headerIcon { width: 2.5rem; flex-shrink: 0; }
+.headerId { width: 5rem; flex-shrink: 0; }
+.headerTitle { flex: 1; min-width: 0; padding-right: 1rem; }
+.headerType { width: 10rem; flex-shrink: 0; }
+.headerSchedule { width: 18rem; flex-shrink: 0; }
+.headerTeam { width: 14rem; flex-shrink: 0; }
+.headerActions { width: 8rem; flex-shrink: 0; text-align: center; }
+
+.tableBody {
+  flex: 1;
+  overflow: auto;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9ca3af;
+}
+
+.emptyStateContent {
+  text-align: center;
+}
+
+.emptyStateIcon {
+  margin: 0 auto 1rem;
+  height: 4rem;
+  width: 4rem;
+  color: #d1d5db;
+}
+
+.emptyStateTitle {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.emptyStateText {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+.tableFooter {
+  border-top: 1px solid #e5e7eb;
+  background: linear-gradient(to right, #f9fafb, #ffffff);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footerStats {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.footerDivider {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.footerText {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Work Item Row Styles */
+
+.row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #f3f4f6;
+  transition: all 150ms;
+  font-size: 0.875rem;
+  padding: 0.5rem 0;
+}
+
+.row:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.row:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.row:hover {
+  background-color: rgba(14, 190, 254, 0.1);
+}
+
+.row.editing {
+  background-color: #ecfeff;
+  box-shadow: inset 0 0 0 1px #06b6d4;
+}
+
+.expandButton {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  transition: all 150ms;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+}
+
+.expandButton:hover {
+  background-color: #e5e7eb;
+}
+
+.expandButton.invisible {
+  visibility: hidden;
+}
+
+.icon {
+  width: 2.5rem;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 1.125rem;
+}
+
+.idBadge {
+  width: 5rem;
+  flex-shrink: 0;
+}
+
+.idBadgeInner {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  background-color: #f3f4f6;
+  font-size: 0.75rem;
+  font-family: 'Courier New', monospace;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.titleCell {
+  flex: 1;
+  min-width: 0;
+  padding-right: 1rem;
+}
+
+.titleInput {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #06b6d4;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  background-color: #ffffff;
+}
+
+.titleInput:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.5);
+  border-color: transparent;
+}
+
+.titleText {
+  cursor: text;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  transition: color 150ms;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.titleText:hover {
+  color: #0891c2;
+}
+
+.typeCell {
+  width: 10rem;
+  flex-shrink: 0;
+  padding-right: 1rem;
+}
+
+.typeSelect,
+.teamSelect {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  transition: all 150ms;
+  cursor: pointer;
+}
+
+.typeSelect:hover,
+.teamSelect:hover {
+  border-color: #06b6d4;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.typeSelect:focus,
+.teamSelect:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.5);
+  border-color: transparent;
+}
+
+.scheduleCell {
+  width: 18rem;
+  flex-shrink: 0;
+  padding-right: 1rem;
+}
+
+.teamCell {
+  width: 14rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding-right: 1rem;
+}
+
+.teamIcon {
+  color: #9ca3af;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+.teamSelect {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actionsCell {
+  width: 8rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.actionButton {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 150ms;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.actionButton:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.actionButton:active {
+  transform: scale(0.95);
+}
+
+.actionButton.add {
+  color: #0891c2;
+}
+
+.actionButton.add:hover {
+  background-color: #cffafe;
+}
+
+.actionButton.edit {
+  color: #2563eb;
+}
+
+.actionButton.edit:hover {
+  background-color: #dbeafe;
+}
+
+.actionButton.delete {
+  color: #dc2626;
+}
+
+.actionButton.delete:hover {
+  background-color: #fee2e2;
+}
