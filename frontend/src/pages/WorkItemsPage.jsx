@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useWorkItemsStore } from '../store/workItemsStore';
-import { ChevronRight, ChevronDown, Plus, Trash2, Pencil, Building, X, Check } from 'lucide-react';
+import { useProjectsStore } from '../store/projectsStore';
+import { ChevronRight, ChevronDown, Plus, Trash2, Pencil, Building, X, Check, FolderKanban } from 'lucide-react';
 import DateInputs from '../components/DateInputs';
 import HierarchyBuilder from '../components/HierarchyBuilder';
 import { useHierarchyStore } from '../store/hierarchyStore';
@@ -16,8 +17,10 @@ import modalStyles from './EditWorkItemModal.module.css';
 
 function WorkItemRow({ item, depth = 0, onEdit }) {
   const { updateItem, deleteItem, toggleExpanded, getChildren, expandedItems, addItem } = useWorkItemsStore();
+  const { getProject } = useProjectsStore();
   const { tiers, flatTypes } = useHierarchyStore();
   const { units, flatUnits, getTierLevel } = useOrganizationStore();
+  const project = item.projectId ? getProject(item.projectId) : null;
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   // Actions are now always visible; remove hover state
@@ -122,13 +125,21 @@ function WorkItemRow({ item, depth = 0, onEdit }) {
               autoFocus
             />
           ) : (
-            <span 
-              onDoubleClick={() => setIsEditing(true)}
-              className={styles.titleText}
-              title={item.title}
-            >
-              {item.title}
-            </span>
+            <div className={styles.titleContent}>
+              <span 
+                onDoubleClick={() => setIsEditing(true)}
+                className={styles.titleText}
+                title={item.title}
+              >
+                {item.title}
+              </span>
+              {project && (
+                <span className={styles.projectBadge} title={`Project: ${project.title}`}>
+                  <FolderKanban size={12} />
+                  {project.title}
+                </span>
+              )}
+            </div>
           )}
         </div>
 

@@ -2,6 +2,8 @@ import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import WorkItemsPage from './pages/WorkItemsPage'
 import OrganizationBuilder from './pages/OrganizationBuilder'
+import ProjectsPage from './pages/ProjectsPage'
+import RefinementPage from './pages/RefinementPage'
 import RoadmapPage from './pages/RoadmapPage'
 import TeamPriorities from './pages/TeamPriorities'
 import NavBar from './components/NavBar'
@@ -18,6 +20,8 @@ function App() {
             <Routes>
               <Route path="/" element={<WorkItemsPage hierarchyOpen={hierarchyOpen} setHierarchyOpen={setHierarchyOpen} />} />
               <Route path="/organization" element={<OrganizationBuilder />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/refinement/:sessionId" element={<RefinementPage />} />
               <Route path="/roadmap" element={<RoadmapPage />} />
               <Route path="/team/priorities" element={<TeamPriorities />} />
               <Route path="/team/boards" element={<div className="p-6">Boards view coming soon...</div>} />

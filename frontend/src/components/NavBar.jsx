@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronRight, ChevronDown, List, Building2, Map, ListChecks, Kanban, BarChart3 } from 'lucide-react';
+import { ChevronRight, ChevronDown, List, Building2, Map, ListChecks, Kanban, BarChart3, FolderKanban } from 'lucide-react';
 import styles from './NavBar.module.css';
 
 export default function NavBar({ onOpenHierarchy }) {
@@ -45,6 +45,13 @@ export default function NavBar({ onOpenHierarchy }) {
               >
                 <List className={styles.navItemIcon} size={18} />
                 Backlog
+              </Link>
+              <Link
+                to="/projects"
+                className={`${styles.navItem} ${isActive('/projects') ? styles.active : ''}`}
+              >
+                <FolderKanban className={styles.navItemIcon} size={18} />
+                Projects
               </Link>
               <Link
                 to="/roadmap"

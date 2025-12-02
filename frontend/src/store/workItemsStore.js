@@ -9,9 +9,9 @@ function loadItems() {
     if (raw) return JSON.parse(raw);
   } catch {}
   return [
-    { id: '1', title: 'Example Epic', state: 'New', type: 'Epic', parentId: null, order: 0, assignedOrgUnit: null, startDate: '', targetDate: '', description: '', acceptanceCriteria: [], priority: 'P2' },
-    { id: '2', title: 'Feature 1', state: 'New', type: 'Feature', parentId: '1', order: 0, assignedOrgUnit: null, startDate: '', targetDate: '', description: '', acceptanceCriteria: [], priority: 'P1' },
-    { id: '3', title: 'User Story A', state: 'Committed', type: 'User Story', parentId: '2', order: 0, assignedOrgUnit: null, startDate: '', targetDate: '', description: '', acceptanceCriteria: [], priority: 'P3' },
+    { id: '1', title: 'Example Epic', state: 'New', type: 'Epic', parentId: null, order: 0, assignedOrgUnit: null, startDate: '', targetDate: '', description: '', acceptanceCriteria: [], priority: 'P2', projectId: 'proj-1' },
+    { id: '2', title: 'Feature 1', state: 'New', type: 'Feature', parentId: '1', order: 0, assignedOrgUnit: null, startDate: '', targetDate: '', description: '', acceptanceCriteria: [], priority: 'P1', projectId: 'proj-1' },
+    { id: '3', title: 'User Story A', state: 'Committed', type: 'User Story', parentId: '2', order: 0, assignedOrgUnit: null, startDate: '', targetDate: '', description: '', acceptanceCriteria: [], priority: 'P3', projectId: 'proj-1' },
   ];
 }
 
@@ -76,6 +76,7 @@ export const useWorkItemsStore = create((set, get) => ({
         description: item.description || '', 
         acceptanceCriteria: item.acceptanceCriteria || [],
         priority: item.priority || 'P3', // default to P3 if not specified
+        projectId: item.projectId || null, // link to project if specified
       }],
       nextId: state.nextId + 1,
     };
