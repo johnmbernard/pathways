@@ -7,7 +7,7 @@ const useRefinementStore = create(
       sessions: [],
       
       // Create a new refinement session
-      createSession: (projectId, tier, organizationalUnit, assignedObjective) => {
+      createSession: (projectId, tier, organizationalUnit, assignedObjective, currentUser) => {
         const newSession = {
           id: `refinement_${projectId}_tier${tier}_${organizationalUnit}_${Date.now()}`,
           projectId,
@@ -20,6 +20,7 @@ const useRefinementStore = create(
           workItems: [], // Only for team tier
           status: 'in_progress', // not_started | in_progress | completed | escalated
           createdAt: new Date().toISOString(),
+          createdBy: currentUser?.id || 'unknown',
           completedAt: null,
           leadTimeAnalysis: {}
         };
@@ -52,10 +53,11 @@ const useRefinementStore = create(
       },
       
       // Add discussion message
-      addDiscussion: (sessionId, message) => {
+      addDiscussion: (sessionId, message, currentUser) => {
         const newMessage = {
           id: `disc_${Date.now()}`,
-          author: message.author || 'Current User', // TODO: Get from auth
+          authorId: currentUser?.id || 'unknown',
+          authorName: currentUser?.name || 'Current User',
           timestamp: new Date().toISOString(),
           message: message.text,
           type: message.type || 'comment' // comment | question | answer
@@ -71,13 +73,15 @@ const useRefinementStore = create(
       },
       
       // Add refined objective (for non-team tiers)
-      addObjective: (sessionId, objective) => {
+      addObjective: (sessionId, objective, currentUser) => {
         const newObjective = {
           id: `obj_${sessionId}_${Date.now()}`,
           title: objective.title,
           description: objective.description || '',
           targetDate: objective.targetDate,
           assignedUnits: objective.assignedUnits || [],
+          createdBy: currentUser?.id || 'unknown',
+          createdByName: currentUser?.name || 'Current User',
           dependencies: objective.dependencies || [],
           risks: objective.risks || [],
           createdAt: new Date().toISOString()
@@ -125,7 +129,7 @@ const useRefinementStore = create(
       },
       
       // Add work item (for team tier only)
-      addWorkItem: (sessionId, workItem) => {
+      addWorkItem: (sessionId, workItem, currentUser) => {
         const newWorkItem = {
           tempId: `wi_temp_${Date.now()}`,
           title: workItem.title,
@@ -133,6 +137,8 @@ const useRefinementStore = create(
           type: workItem.type || 'Story',
           priority: workItem.priority || 'P1',
           assignedTo: workItem.assignedTo || null,
+          createdBy: currentUser?.id || 'unknown',
+          createdByName: currentUser?.name || 'Current User',
           createdAt: new Date().toISOString()
         };
         

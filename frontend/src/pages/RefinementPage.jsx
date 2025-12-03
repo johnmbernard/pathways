@@ -1,16 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MessageSquare, Plus, X, Calendar, Users, AlertTriangle } from 'lucide-react';
 import useRefinementStore from '../store/refinementStore';
 import { useProjectsStore } from '../store/projectsStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { useWorkItemsStore } from '../store/workItemsStore';
+import { useUserStore } from '../store/userStore';
 import styles from './RefinementPage.module.css';
 
 export default function RefinementPage() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   
+  const currentUser = useUserStore(state => state.currentUser);
   const getSession = useRefinementStore((state) => state.getSession);
   const addDiscussion = useRefinementStore((state) => state.addDiscussion);
   const addObjective = useRefinementStore((state) => state.addObjective);
@@ -22,7 +24,8 @@ export default function RefinementPage() {
   const completeSession = useRefinementStore((state) => state.completeSession);
   
   const getProject = useProjectsStore((state) => state.getProject);
-  const flatUnits = useOrganizationStore((state) => state.flatUnits);
+  const markObjectiveCompletedByUnit = useProjectsStore((state) => state.markObjectiveCompletedByUnit);
+  const { units, getUnitsByTier, getTierLevel } = useOrganizationStore();
   const addItem = useWorkItemsStore((state) => state.addItem);
   
   const session = getSession(sessionId);
@@ -47,21 +50,27 @@ export default function RefinementPage() {
   }
   
   const project = getProject(session.projectId);
+  const sessionUnit = units.find(u => u.id === session.organizationalUnit);
+  const actualTier = sessionUnit ? getTierLevel(sessionUnit.id) : session.tier;
   const isTeamTier = session.tier === 'team';
   
-  // Get available units for next tier
-  const getNextTierUnits = () => {
+  // Get available units for next tier - only subordinate units
+  const nextTierUnits = useMemo(() => {
     if (isTeamTier) return [];
     const nextTier = typeof session.tier === 'number' ? session.tier + 1 : null;
     if (!nextTier) return [];
-    return flatUnits.filter(unit => unit.tier === nextTier);
-  };
-  
-  const nextTierUnits = getNextTierUnits();
+    
+    const allNextTierUnits = getUnitsByTier(nextTier);
+    
+    // Filter to only units that are direct children of the session's organizational unit
+    if (!session?.organizationalUnit) return allNextTierUnits;
+    
+    return allNextTierUnits.filter(unit => unit.parentId === session.organizationalUnit);
+  }, [isTeamTier, session.tier, session.organizationalUnit, getUnitsByTier]);
   
   const handleSendMessage = () => {
     if (!message.trim()) return;
-    addDiscussion(sessionId, { text: message, type: 'comment' });
+    addDiscussion(sessionId, { text: message, type: 'comment' }, currentUser);
     setMessage('');
   };
   
@@ -69,7 +78,7 @@ export default function RefinementPage() {
     if (editingObjective) {
       updateObjective(sessionId, editingObjective.id, objectiveData);
     } else {
-      addObjective(sessionId, objectiveData);
+      addObjective(sessionId, objectiveData, currentUser);
     }
     setShowObjectiveModal(false);
     setEditingObjective(null);
@@ -79,7 +88,7 @@ export default function RefinementPage() {
     if (editingWorkItem) {
       updateWorkItem(sessionId, editingWorkItem.tempId, workItemData);
     } else {
-      addWorkItem(sessionId, workItemData);
+      addWorkItem(sessionId, workItemData, currentUser);
     }
     setShowWorkItemModal(false);
     setEditingWorkItem(null);
@@ -101,6 +110,15 @@ export default function RefinementPage() {
       });
     }
     
+    // Mark this objective as completed by this unit
+    if (session.assignedObjective?.id) {
+      markObjectiveCompletedByUnit(
+        session.projectId,
+        session.assignedObjective.id,
+        session.organizationalUnit
+      );
+    }
+    
     completeSession(sessionId);
     navigate('/projects');
   };
@@ -111,7 +129,7 @@ export default function RefinementPage() {
         <div>
           <h1>{project?.title || 'Unknown Project'}</h1>
           <p className={styles.subtitle}>
-            Your {isTeamTier ? 'Team' : `Tier ${session.tier}`}: {session.organizationalUnit}
+            Your {isTeamTier ? 'Team' : `Tier ${actualTier}`}: {sessionUnit?.name || session.organizationalUnit}
           </p>
         </div>
         <button onClick={() => navigate('/projects')} className={styles.backButton}>
@@ -150,7 +168,7 @@ export default function RefinementPage() {
                 session.discussion.map(msg => (
                   <div key={msg.id} className={styles.message}>
                     <div className={styles.messageHeader}>
-                      <strong>{msg.author}</strong>
+                      <strong>{msg.authorName}</strong>
                       <span className={styles.timestamp}>
                         {new Date(msg.timestamp).toLocaleString()}
                       </span>
@@ -224,6 +242,7 @@ export default function RefinementPage() {
                     <div className={styles.itemMeta}>
                       <span className={styles.badge}>{wi.type}</span>
                       <span className={styles.badge}>{wi.priority}</span>
+                      {wi.createdByName && <span>Created by: {wi.createdByName}</span>}
                       {wi.assignedTo && <span>Assigned: {wi.assignedTo}</span>}
                     </div>
                   </div>
@@ -256,6 +275,12 @@ export default function RefinementPage() {
                     </div>
                     <p className={styles.itemDescription}>{obj.description}</p>
                     <div className={styles.itemMeta}>
+                      {obj.createdByName && (
+                        <div className={styles.metaItem}>
+                          <Users size={14} />
+                          Created by: {obj.createdByName}
+                        </div>
+                      )}
                       {obj.targetDate && (
                         <div className={styles.metaItem}>
                           <Calendar size={14} />

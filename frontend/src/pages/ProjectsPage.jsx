@@ -1,18 +1,25 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProjectsStore } from '../store/projectsStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { useWorkItemsStore } from '../store/workItemsStore';
+import { useUserStore } from '../store/userStore';
+import useRefinementStore from '../store/refinementStore';
 import { PageHeader } from '../components/layout/Layout';
 import { Button, Badge } from '../components/ui';
-import { Plus, Calendar, DollarSign, Users, FolderOpen, AlertTriangle, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Calendar, DollarSign, Users, FolderOpen, AlertTriangle, Pencil, Trash2, X, PlayCircle } from 'lucide-react';
 import styles from './ProjectsPage.module.css';
 
 export default function ProjectsPage() {
+  const navigate = useNavigate();
+  const currentUser = useUserStore(state => state.currentUser);
   const { projects, addProject, updateProject, deleteProject } = useProjectsStore();
   const { units, flatUnits } = useOrganizationStore();
   const { items } = useWorkItemsStore();
+  const createSession = useRefinementStore((state) => state.createSession);
   const [isCreating, setIsCreating] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [refinementProject, setRefinementProject] = useState(null);
   const [tierFilter, setTierFilter] = useState('all');
 
   const allTeams = useMemo(() => [
@@ -20,11 +27,18 @@ export default function ProjectsPage() {
     ...flatUnits.map(u => ({ id: u.id, name: u.name }))
   ], [units, flatUnits]);
 
-  // Get unique tiers from organization
+  // Get unique tiers from organization (based on hierarchical depth)
+  const { getUnitsByTier, getTierLevel } = useOrganizationStore();
   const availableTiers = useMemo(() => {
-    const tiers = new Set(flatUnits.map(u => u.tier));
-    return Array.from(tiers).sort((a, b) => a - b);
-  }, [flatUnits]);
+    // Get max tier depth
+    const maxTier = units.reduce((max, unit) => {
+      const tier = getTierLevel(unit.id);
+      return Math.max(max, tier);
+    }, 0);
+    
+    // Create array of available tiers
+    return Array.from({ length: maxTier }, (_, i) => i + 1);
+  }, [units, getTierLevel]);
 
   // Filter projects by tier
   const filteredProjects = useMemo(() => {
@@ -111,17 +125,49 @@ export default function ProjectsPage() {
             </div>
           )}
         </div>
+        
+        {/* Show Start Refinement if: (1) user owns the project OR (2) user's unit is assigned to any objective */}
+        {project.objectives && project.objectives.length > 0 && (() => {
+          const isProjectOwner = project.ownerUnit === currentUser?.organizationalUnit;
+          const hasAssignedObjectives = project.objectives.some(obj => 
+            obj.assignedUnits?.includes(currentUser?.organizationalUnit)
+          );
+          
+          return (isProjectOwner || hasAssignedObjectives) && (
+            <button
+              onClick={() => setRefinementProject(project)}
+              className={styles.refinementButton}
+            >
+              <PlayCircle size={16} />
+              {isProjectOwner ? 'Start Refinement' : 'Continue Refinement'}
+            </button>
+          );
+        })()}
       </div>
     );
   };
 
   const ProjectModal = ({ project, onClose }) => {
+    // Get available tiers and units from organization store
+    const { units: modalUnits, getUnitsByTier, getTierLevel } = useOrganizationStore();
+    
+    const modalAvailableTiers = useMemo(() => {
+      // Get max tier depth
+      const maxTier = modalUnits.reduce((max, unit) => {
+        const tier = getTierLevel(unit.id);
+        return Math.max(max, tier);
+      }, 0);
+      
+      // Create array of available tiers
+      return Array.from({ length: maxTier }, (_, i) => i + 1);
+    }, [modalUnits, getTierLevel]);
+    
     const [formData, setFormData] = useState(project || {
       title: '',
       description: '',
       owner: '',
       ownerUnit: '',
-      ownerTier: availableTiers[0] || 1,
+      ownerTier: modalAvailableTiers[0] || 1,
       status: 'Planning',
       startDate: '',
       targetDate: '',
@@ -132,24 +178,41 @@ export default function ProjectsPage() {
     });
 
     const [newObjective, setNewObjective] = useState({ title: '', targetDate: '', assignedUnits: [] });
-
-    // Get units for next tier
-    const nextTierUnits = useMemo(() => {
-      const nextTier = formData.ownerTier + 1;
-      return flatUnits.filter(u => u.tier === nextTier);
-    }, [formData.ownerTier]);
+    const [editingObjectiveId, setEditingObjectiveId] = useState(null);
 
     // Get units for current tier
     const currentTierUnits = useMemo(() => {
-      return flatUnits.filter(u => u.tier === formData.ownerTier);
-    }, [formData.ownerTier]);
+      return getUnitsByTier(formData.ownerTier);
+    }, [formData.ownerTier, getUnitsByTier]);
+
+    // Get units for next tier - only subordinate units
+    const nextTierUnits = useMemo(() => {
+      const nextTier = formData.ownerTier + 1;
+      const allNextTierUnits = getUnitsByTier(nextTier);
+      if (!formData.ownerUnit) return allNextTierUnits;
+      return allNextTierUnits.filter(unit => unit.parentId === formData.ownerUnit);
+    }, [formData.ownerTier, formData.ownerUnit, getUnitsByTier]);
 
     const handleAddObjective = () => {
       if (newObjective.title && newObjective.targetDate) {
-        setFormData({
-          ...formData,
-          objectives: [...formData.objectives, { ...newObjective, id: `temp-${Date.now()}` }]
-        });
+        if (editingObjectiveId) {
+          // Update existing objective
+          setFormData({
+            ...formData,
+            objectives: formData.objectives.map(obj => 
+              obj.id === editingObjectiveId 
+                ? { ...newObjective, id: editingObjectiveId }
+                : obj
+            )
+          });
+          setEditingObjectiveId(null);
+        } else {
+          // Add new objective
+          setFormData({
+            ...formData,
+            objectives: [...formData.objectives, { ...newObjective, id: `temp-${Date.now()}` }]
+          });
+        }
         setNewObjective({ title: '', targetDate: '', assignedUnits: [] });
       }
     };
@@ -159,6 +222,25 @@ export default function ProjectsPage() {
         ...formData,
         objectives: formData.objectives.filter(obj => obj.id !== objId)
       });
+      // If we were editing this objective, clear the edit state
+      if (editingObjectiveId === objId) {
+        setEditingObjectiveId(null);
+        setNewObjective({ title: '', targetDate: '', assignedUnits: [] });
+      }
+    };
+
+    const handleEditObjective = (obj) => {
+      setEditingObjectiveId(obj.id);
+      setNewObjective({
+        title: obj.title,
+        targetDate: obj.targetDate,
+        assignedUnits: obj.assignedUnits || []
+      });
+    };
+
+    const handleCancelEdit = () => {
+      setEditingObjectiveId(null);
+      setNewObjective({ title: '', targetDate: '', assignedUnits: [] });
     };
 
     const toggleUnitForObjective = (unitId) => {
@@ -233,7 +315,7 @@ export default function ProjectsPage() {
                   onChange={(e) => setFormData({ ...formData, ownerTier: parseInt(e.target.value) })}
                   className={styles.select}
                 >
-                  {availableTiers.map(tier => (
+                  {modalAvailableTiers.map(tier => (
                     <option key={tier} value={tier}>Tier {tier}</option>
                   ))}
                 </select>
@@ -320,19 +402,42 @@ export default function ProjectsPage() {
                           {obj.assignedUnits.length} unit(s) assigned
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveObjective(obj.id)}
-                        className={styles.removeButton}
-                      >
-                        <X size={14} />
-                      </button>
+                      <div className={styles.objectiveActions}>
+                        <button
+                          type="button"
+                          onClick={() => handleEditObjective(obj)}
+                          className={styles.editButton}
+                          title="Edit objective"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveObjective(obj.id)}
+                          className={styles.removeButton}
+                          title="Remove objective"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
 
               <div className={styles.objectiveBuilder}>
+                {editingObjectiveId && (
+                  <div className={styles.editingIndicator}>
+                    ✏️ Editing objective
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className={styles.cancelEditButton}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
                 <input
                   type="text"
                   value={newObjective.title}
@@ -370,7 +475,7 @@ export default function ProjectsPage() {
                   disabled={!newObjective.title || !newObjective.targetDate}
                 >
                   <Plus size={16} />
-                  Add Objective
+                  {editingObjectiveId ? 'Update Objective' : 'Add Objective'}
                 </Button>
               </div>
             </div>
@@ -466,6 +571,230 @@ export default function ProjectsPage() {
           onClose={() => setEditingProject(null)}
         />
       )}
+
+      {refinementProject && (
+        <RefinementModal
+          project={refinementProject}
+          onClose={() => setRefinementProject(null)}
+          onStartRefinement={(objectiveId, assignedUnits) => {
+            const objective = refinementProject.objectives.find(obj => obj.id === objectiveId);
+            
+            if (objective && assignedUnits && assignedUnits.length > 0) {
+              // Create a refinement session for each assigned unit
+              assignedUnits.forEach(unit => {
+                const unitTier = getTierLevel(unit.id);
+                createSession(
+                  refinementProject.id,
+                  unitTier,
+                  unit.id,
+                  {
+                    id: objectiveId,
+                    title: objective.title,
+                    description: objective.description,
+                    targetDate: objective.targetDate,
+                    fromTier: refinementProject.ownerTier
+                  },
+                  currentUser
+                );
+              });
+              
+              // Close modal and show success message
+              setRefinementProject(null);
+              alert(`Objective "${objective.title}" released for refinement to ${assignedUnits.length} unit(s)`);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Refinement Modal Component
+function RefinementModal({ project, onClose, onStartRefinement }) {
+  const { units, getTierLevel } = useOrganizationStore();
+  const currentUser = useUserStore(state => state.currentUser);
+  
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h2>Start Refinement: {project.title}</h2>
+          <button onClick={onClose} className={styles.closeButton}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className={styles.modalBody}>
+          <p className={styles.refinementIntro}>
+            Select an objective and organizational unit to begin the refinement process.
+            This will create a refinement session where the unit can break down the objective
+            into more detailed work.
+          </p>
+
+          {(() => {
+            const isProjectOwner = project.ownerUnit === currentUser?.organizationalUnit;
+            
+            // Project owners see all objectives (to release for refinement)
+            // Assigned units only see their objectives (to work on them)
+            const relevantObjectives = isProjectOwner 
+              ? project.objectives
+              : project.objectives.filter(objective => 
+                  objective.assignedUnits?.includes(currentUser?.organizationalUnit)
+                );
+            
+            if (project.objectives.length === 0) {
+              return (
+                <div className={styles.emptyObjectives}>
+                  <AlertTriangle size={24} />
+                  <p>No objectives defined for this project yet.</p>
+                  <p className={styles.hint}>Edit the project to add objectives first.</p>
+                </div>
+              );
+            }
+            
+            if (relevantObjectives.length === 0) {
+              return (
+                <div className={styles.emptyObjectives}>
+                  <AlertTriangle size={24} />
+                  <p>No objectives assigned to your unit.</p>
+                  <p className={styles.hint}>This project's objectives are assigned to other units.</p>
+                </div>
+              );
+            }
+            
+            return (
+              <div className={styles.objectivesRefinementList}>
+                {isProjectOwner && (
+                  <div className={styles.refinementInfo}>
+                    <strong>Release Objectives for Refinement</strong>
+                    <p>Select objectives to release for refinement. All assigned units will receive the objective and can collaborate on breaking it down.</p>
+                  </div>
+                )}
+                {relevantObjectives.map((objective) => {
+                  // Filter assigned units to only show those at the correct tier (next tier after project owner)
+                  const expectedTier = project.ownerTier + 1;
+                  const assignedUnits = units.filter(u => 
+                    objective.assignedUnits.includes(u.id) && getTierLevel(u.id) === expectedTier
+                  );
+                  
+                  // Check if objective has been released (if any sessions exist for it)
+                  const sessions = useRefinementStore.getState().sessions;
+                  const objectiveSessions = sessions.filter(s => 
+                    s.projectId === project.id && s.assignedObjective.id === objective.id
+                  );
+                  const isReleased = objectiveSessions.length > 0;
+                  
+                  // Calculate completion status
+                  const completedUnits = assignedUnits.filter(unit => 
+                    objective.completedByUnits?.includes(unit.id)
+                  );
+                  const completionPercentage = assignedUnits.length > 0 
+                    ? Math.round((completedUnits.length / assignedUnits.length) * 100)
+                    : 0;
+
+                return (
+                  <div key={objective.id} className={styles.objectiveRefinementCard}>
+                    <div className={styles.objectiveHeader}>
+                      <h3>{objective.title}</h3>
+                      <div className={styles.objectiveMeta}>
+                        {objective.targetDate && (
+                          <span className={styles.targetDate}>
+                            <Calendar size={14} />
+                            {new Date(objective.targetDate).toLocaleDateString()}
+                          </span>
+                        )}
+                        {isReleased && (
+                          <span className={styles.releasedBadge}>
+                            ✓ Released
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {objective.description && (
+                      <p className={styles.objectiveDescription}>{objective.description}</p>
+                    )}
+
+                    <div className={styles.assignedUnits}>
+                      <label>Assigned Units (Tier {expectedTier}):</label>
+                      {assignedUnits.length === 0 ? (
+                        <div>
+                          <p className={styles.noUnits}>
+                            {objective.assignedUnits.length > 0 
+                              ? `⚠️ Units were assigned but are not at the correct tier (Tier ${expectedTier}). Please edit the project to reassign.`
+                              : 'No units assigned to this objective'}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className={styles.unitsChips}>
+                            {assignedUnits.map(unit => {
+                              const isCompleted = objective.completedByUnits?.includes(unit.id);
+                              return (
+                                <span 
+                                  key={unit.id} 
+                                  className={`${styles.unitChip} ${isCompleted ? styles.unitChipCompleted : ''}`}
+                                >
+                                  <Users size={12} />
+                                  {unit.name}
+                                  {isCompleted && <span className={styles.checkmark}>✓</span>}
+                                </span>
+                              );
+                            })}
+                          </div>
+                          
+                          {isReleased && (
+                            <div className={styles.progressBar}>
+                              <div className={styles.progressBarFill} style={{ width: `${completionPercentage}%` }} />
+                              <span className={styles.progressText}>
+                                {completedUnits.length} of {assignedUnits.length} completed
+                              </span>
+                            </div>
+                          )}
+                          
+                          {isProjectOwner && !isReleased && (
+                            <button
+                              onClick={() => onStartRefinement(objective.id, assignedUnits)}
+                              className={styles.releaseButton}
+                            >
+                              <PlayCircle size={16} />
+                              Release for Refinement
+                            </button>
+                          )}
+                          
+                          {!isProjectOwner && isReleased && (
+                            <button
+                              onClick={() => {
+                                // Find the session for this user's unit
+                                const mySession = objectiveSessions.find(s => 
+                                  s.organizationalUnit === currentUser?.organizationalUnit
+                                );
+                                if (mySession) {
+                                  navigate(`/refinement/${mySession.id}`);
+                                }
+                              }}
+                              className={styles.openRefinementButton}
+                            >
+                              Open Refinement →
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            );
+          })()}
+        </div>
+
+        <div className={styles.modalFooter}>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

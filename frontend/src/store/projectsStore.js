@@ -113,6 +113,25 @@ export const useProjectsStore = create((set, get) => ({
     ),
   })),
 
+  // Mark objective as completed by a specific unit
+  markObjectiveCompletedByUnit: (projectId, objectiveId, unitId) => set((state) => ({
+    projects: state.projects.map(project =>
+      project.id === projectId
+        ? {
+            ...project,
+            objectives: project.objectives.map(obj =>
+              obj.id === objectiveId
+                ? {
+                    ...obj,
+                    completedByUnits: [...(obj.completedByUnits || []), unitId]
+                  }
+                : obj
+            )
+          }
+        : project
+    ),
+  })),
+
   // Update calculated timeline
   updateCalculatedTimeline: (projectId, timeline) => set((state) => ({
     projects: state.projects.map(project =>

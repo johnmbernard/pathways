@@ -1,13 +1,28 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { ChevronRight, ChevronDown, List, Building2, Map, ListChecks, Kanban, BarChart3, FolderKanban } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ChevronRight, ChevronDown, List, Building2, Map, ListChecks, Kanban, BarChart3, FolderKanban, ClipboardList, LogOut, User, Users, Settings } from 'lucide-react';
+import { useUserStore } from '../store/userStore';
+import { useOrganizationStore } from '../store/organizationStore';
 import styles from './NavBar.module.css';
 
 export default function NavBar({ onOpenHierarchy }) {
   const loc = useLocation();
+  const navigate = useNavigate();
   const [orgPlanningExpanded, setOrgPlanningExpanded] = React.useState(true);
   const [teamPlanningExpanded, setTeamPlanningExpanded] = React.useState(true);
+  const [settingsExpanded, setSettingsExpanded] = React.useState(true);
   const isActive = (path) => loc.pathname === path;
+  
+  const currentUser = useUserStore(state => state.currentUser);
+  const logout = useUserStore(state => state.logout);
+  const units = useOrganizationStore(state => state.units);
+  
+  const userUnit = units.find(u => u.id === currentUser?.organizationalUnit);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
   
   return (
     <aside className={styles.sidebar}>
@@ -15,6 +30,26 @@ export default function NavBar({ onOpenHierarchy }) {
       <div className={styles.brand}>
         <h1 className={styles.brandTitle}>Pathways</h1>
       </div>
+
+      {/* User Info */}
+      {currentUser && (
+        <div className={styles.userInfo}>
+          <div className={styles.userAvatar}>
+            <User size={20} />
+          </div>
+          <div className={styles.userDetails}>
+            <div className={styles.userName}>{currentUser.name}</div>
+            <div className={styles.userUnit}>{userUnit?.name || 'No Unit'}</div>
+          </div>
+          <button 
+            onClick={handleLogout}
+            className={styles.logoutButton}
+            title="Logout"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Navigation Sections */}
       <nav className={styles.nav}>
@@ -52,6 +87,13 @@ export default function NavBar({ onOpenHierarchy }) {
               >
                 <FolderKanban className={styles.navItemIcon} size={18} />
                 Projects
+              </Link>
+              <Link
+                to="/my-refinements"
+                className={`${styles.navItem} ${isActive('/my-refinements') ? styles.active : ''}`}
+              >
+                <ClipboardList className={styles.navItemIcon} size={18} />
+                My Refinements
               </Link>
               <Link
                 to="/roadmap"
@@ -98,6 +140,31 @@ export default function NavBar({ onOpenHierarchy }) {
               >
                 <BarChart3 className={styles.navItemIcon} size={18} />
                 Analysis
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Settings Section */}
+        <div className={styles.section}>
+          <button
+            onClick={() => setSettingsExpanded(!settingsExpanded)}
+            className={styles.sectionHeader}
+          >
+            <span className={styles.sectionTitle}>Settings</span>
+            <span className={styles.sectionIcon}>
+              {settingsExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+            </span>
+          </button>
+          
+          {settingsExpanded && (
+            <div className={styles.sectionContent}>
+              <Link
+                to="/users"
+                className={`${styles.navItem} ${isActive('/users') ? styles.active : ''}`}
+              >
+                <Users className={styles.navItemIcon} size={18} />
+                Users
               </Link>
             </div>
           )}
