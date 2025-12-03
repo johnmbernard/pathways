@@ -1,0 +1,228 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+model User {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  password           String   // Will be hashed with bcrypt
+  name               String
+  role               String   // "Unit Leader", "Team Lead", "Member"
+  organizationalUnit String?  // ID of the unit they belong to
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  // Relationships
+  createdProjects      Project[]          @relation("ProjectCreator")
+  createdObjectives    Objective[]        @relation("ObjectiveCreator")
+  createdWorkItems     WorkItem[]         @relation("WorkItemCreator")
+  refinementSessions   RefinementSession[] @relation("SessionCreator")
+  discussionMessages   DiscussionMessage[]
+  
+  @@map("users")
+}
+
+// ============================================
+// ORGANIZATIONAL STRUCTURE
+// ============================================
+
+model OrganizationalUnit {
+  id          String   @id @default(cuid())
+  name        String
+  parentId    String?  // null for root units
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Self-referential relationship for hierarchy
+  parent      OrganizationalUnit?  @relation("UnitHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    OrganizationalUnit[] @relation("UnitHierarchy")
+  
+  // Relationships
+  projects    Project[]
+  objectives  ObjectiveAssignment[]
+  sessions    RefinementSession[]
+  
+  @@map("organizational_units")
+}
+
+// ============================================
+// PROJECT MANAGEMENT
+// ============================================
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  owner       String?  // Name of project owner/sponsor
+  ownerUnit   String   // ID of owning organizational unit
+  ownerTier   Int      // Tier level (1, 2, 3, etc.)
+  status      String   @default("Planning") // Planning, In Progress, At Risk, Completed
+  startDate   String   // Stored as string for simplicity
+  targetDate  String
+  budget      Float    @default(0)
+  notes       String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  creator         User                  @relation("ProjectCreator", fields: [createdBy], references: [id])
+  owningUnit      OrganizationalUnit    @relation(fields: [ownerUnit], references: [id])
+  objectives      Objective[]
+  refinementSessions RefinementSession[]
+  risks           Risk[]
+  
+  @@map("projects")
+}
+
+model Objective {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  targetDate  String
+  projectId   String
+  fromTier    Int      // Which tier created this objective
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  project             Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator             User                   @relation("ObjectiveCreator", fields: [createdBy], references: [id])
+  assignedUnits       ObjectiveAssignment[]
+  completedByUnits    ObjectiveCompletion[]
+  refinementSessions  RefinementSession[]
+  risks               Risk[]
+  
+  @@map("objectives")
+}
+
+// Junction table for many-to-many relationship between Objectives and Units
+model ObjectiveAssignment {
+  id         String   @id @default(cuid())
+  objectiveId String
+  unitId     String
+  assignedAt DateTime @default(now())
+  
+  objective  Objective          @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  unit       OrganizationalUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  
+  @@unique([objectiveId, unitId])
+  @@map("objective_assignments")
+}
+
+// Track which units have completed refining an objective
+model ObjectiveCompletion {
+  id          String   @id @default(cuid())
+  objectiveId String
+  unitId      String
+  completedAt DateTime @default(now())
+  
+  objective   Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  
+  @@unique([objectiveId, unitId])
+  @@map("objective_completions")
+}
+
+model Risk {
+  id          String   @id @default(cuid())
+  description String
+  projectId   String?
+  objectiveId String?
+  createdAt   DateTime @default(now())
+  
+  project     Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  objective   Objective? @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  
+  @@map("risks")
+}
+
+// ============================================
+// REFINEMENT SESSIONS
+// ============================================
+
+model RefinementSession {
+  id                  String   @id @default(cuid())
+  projectId           String
+  tier                Int
+  organizationalUnit  String
+  assignedObjectiveId String
+  status              String   @default("in_progress") // not_started, in_progress, completed, escalated
+  createdBy           String
+  createdAt           DateTime @default(now())
+  completedAt         DateTime?
+  updatedAt           DateTime @updatedAt
+  
+  // Relationships
+  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  unit                OrganizationalUnit   @relation(fields: [organizationalUnit], references: [id], onDelete: Cascade)
+  assignedObjective   Objective            @relation(fields: [assignedObjectiveId], references: [id], onDelete: Cascade)
+  creator             User                 @relation("SessionCreator", fields: [createdBy], references: [id])
+  refinedObjectives   RefinedObjective[]
+  workItems           WorkItem[]
+  discussion          DiscussionMessage[]
+  
+  @@map("refinement_sessions")
+}
+
+// Objectives created during a refinement session
+model RefinedObjective {
+  id          String   @id @default(cuid())
+  sessionId   String
+  title       String
+  description String?
+  targetDate  String
+  createdAt   DateTime @default(now())
+  
+  session     RefinementSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@map("refined_objectives")
+}
+
+// Work items created during team-level refinement
+model WorkItem {
+  id          String   @id @default(cuid())
+  sessionId   String
+  title       String
+  description String?
+  status      String   @default("not_started") // not_started, in_progress, completed
+  priority    String?  // high, medium, low
+  assignee    String?
+  estimatedHours Float?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  session     RefinementSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  creator     User              @relation("WorkItemCreator", fields: [createdBy], references: [id])
+  
+  @@map("work_items")
+}
+
+// Collaboration/discussion messages in refinement sessions
+model DiscussionMessage {
+  id          String   @id @default(cuid())
+  sessionId   String
+  authorId    String
+  authorName  String
+  content     String
+  createdAt   DateTime @default(now())
+  
+  session     RefinementSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  author      User              @relation(fields: [authorId], references: [id])
+  
+  @@map("discussion_messages")
+}
+
