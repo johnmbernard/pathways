@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MessageSquare, Plus, X, Calendar, Users, AlertTriangle } from 'lucide-react';
 import useRefinementStore from '../store/refinementStore';
@@ -14,6 +14,8 @@ export default function RefinementPage() {
   
   const currentUser = useUserStore(state => state.currentUser);
   const getSession = useRefinementStore((state) => state.getSession);
+  const sessions = useRefinementStore((state) => state.sessions);
+  const fetchSessions = useRefinementStore((state) => state.fetchSessions);
   const addDiscussion = useRefinementStore((state) => state.addDiscussion);
   const addObjective = useRefinementStore((state) => state.addObjective);
   const updateObjective = useRefinementStore((state) => state.updateObjective);
@@ -22,18 +24,62 @@ export default function RefinementPage() {
   const updateWorkItem = useRefinementStore((state) => state.updateWorkItem);
   const removeWorkItem = useRefinementStore((state) => state.removeWorkItem);
   const completeSession = useRefinementStore((state) => state.completeSession);
+  const markUnitComplete = useRefinementStore((state) => state.markUnitComplete);
+  const removeUnitCompletion = useRefinementStore((state) => state.removeUnitCompletion);
   
   const getProject = useProjectsStore((state) => state.getProject);
   const markObjectiveCompletedByUnit = useProjectsStore((state) => state.markObjectiveCompletedByUnit);
   const { units, getUnitsByTier, getTierLevel } = useOrganizationStore();
   const addItem = useWorkItemsStore((state) => state.addItem);
   
-  const session = getSession(sessionId);
+  // All useState hooks must be declared before any conditional returns
+  const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [showObjectiveModal, setShowObjectiveModal] = useState(false);
   const [showWorkItemModal, setShowWorkItemModal] = useState(false);
   const [editingObjective, setEditingObjective] = useState(null);
   const [editingWorkItem, setEditingWorkItem] = useState(null);
+  
+  // Fetch sessions on mount to get latest data
+  useEffect(() => {
+    const loadSessions = async () => {
+      await fetchSessions();
+      setIsLoading(false);
+    };
+    loadSessions();
+  }, [fetchSessions]);
+  
+  const session = getSession(sessionId);
+  const project = session ? getProject(session.projectId) : null;
+  const currentUserUnit = units.find(u => u.id === currentUser?.organizationalUnit);
+  const actualTier = currentUserUnit?.tier || 1;
+  const isTeamTier = currentUserUnit?.tier === 3;
+  
+  // Get available units for next tier - only subordinate units
+  const nextTierUnits = useMemo(() => {
+    if (isTeamTier) return [];
+    const nextTier = actualTier + 1;
+    if (nextTier > 3) return [];
+    
+    const allNextTierUnits = getUnitsByTier(nextTier);
+    
+    // Filter to only units that are direct children of the current user's organizational unit
+    const unitId = currentUser?.organizationalUnit;
+    if (!unitId) return allNextTierUnits;
+    
+    return allNextTierUnits.filter(unit => unit.parentId === unitId);
+  }, [isTeamTier, actualTier, currentUser?.organizationalUnit, getUnitsByTier]);
+  
+  // Conditional returns AFTER all hooks
+  if (isLoading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loading}>
+          <p>Loading refinement session...</p>
+        </div>
+      </div>
+    );
+  }
   
   if (!session) {
     return (
@@ -48,25 +94,6 @@ export default function RefinementPage() {
       </div>
     );
   }
-  
-  const project = getProject(session.projectId);
-  const sessionUnit = units.find(u => u.id === session.organizationalUnit);
-  const actualTier = sessionUnit ? getTierLevel(sessionUnit.id) : session.tier;
-  const isTeamTier = session.tier === 'team';
-  
-  // Get available units for next tier - only subordinate units
-  const nextTierUnits = useMemo(() => {
-    if (isTeamTier) return [];
-    const nextTier = typeof session.tier === 'number' ? session.tier + 1 : null;
-    if (!nextTier) return [];
-    
-    const allNextTierUnits = getUnitsByTier(nextTier);
-    
-    // Filter to only units that are direct children of the session's organizational unit
-    if (!session?.organizationalUnit) return allNextTierUnits;
-    
-    return allNextTierUnits.filter(unit => unit.parentId === session.organizationalUnit);
-  }, [isTeamTier, session.tier, session.organizationalUnit, getUnitsByTier]);
   
   const handleSendMessage = () => {
     if (!message.trim()) return;
@@ -104,18 +131,18 @@ export default function RefinementPage() {
           type: wi.type,
           priority: wi.priority,
           projectId: session.projectId,
-          objectiveId: session.assignedObjective.id,
+          objectiveId: session.objectiveId || session.objective?.id,
           assignedTo: wi.assignedTo
         });
       });
     }
     
-    // Mark this objective as completed by this unit
-    if (session.assignedObjective?.id) {
+    // Mark this objective as completed by the current user's unit
+    if (session.objectiveId || session.objective?.id) {
       markObjectiveCompletedByUnit(
         session.projectId,
-        session.assignedObjective.id,
-        session.organizationalUnit
+        session.objectiveId || session.objective?.id,
+        currentUser?.organizationalUnit
       );
     }
     
@@ -129,7 +156,7 @@ export default function RefinementPage() {
         <div>
           <h1>{project?.title || 'Unknown Project'}</h1>
           <p className={styles.subtitle}>
-            Your {isTeamTier ? 'Team' : `Tier ${actualTier}`}: {sessionUnit?.name || session.organizationalUnit}
+            Your {isTeamTier ? 'Team' : `Tier ${actualTier}`}: {currentUserUnit?.name || 'Unit'}
           </p>
         </div>
         <button onClick={() => navigate('/projects')} className={styles.backButton}>
@@ -141,17 +168,71 @@ export default function RefinementPage() {
         {/* Assigned Objective */}
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>
-            📋 Objective from {session.assignedObjective.fromTier ? `Tier ${session.assignedObjective.fromTier}` : 'Leadership'}
+            📋 Objective from {session.objective?.fromTier ? `Tier ${session.objective.fromTier}` : project?.ownerTier ? `Tier ${project.ownerTier}` : 'Leadership'}
           </h2>
           <div className={styles.objectiveCard}>
-            <h3>{session.assignedObjective.title}</h3>
-            <p>{session.assignedObjective.description}</p>
-            {session.assignedObjective.targetDate && (
+            <h3>{session.objective?.title || 'General Refinement'}</h3>
+            {session.objective?.description && <p>{session.objective.description}</p>}
+            {session.objective?.targetDate && (
               <div className={styles.meta}>
                 <Calendar size={16} />
-                <span>Target Date: {new Date(session.assignedObjective.targetDate).toLocaleDateString()}</span>
+                <span>Target Date: {new Date(session.objective.targetDate).toLocaleDateString()}</span>
               </div>
             )}
+          </div>
+        </section>
+        
+        {/* Unit Completion Status */}
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>
+            👥 Unit Completion Status
+          </h2>
+          <div className={styles.unitCompletionList}>
+            {session.objective?.assignedUnits?.map(assignment => {
+              const unit = assignment.unit;
+              const completion = session.unitCompletions?.find(
+                uc => uc.organizationalUnitId === unit.id
+              );
+              const isMyUnit = unit.id === currentUser?.organizationalUnit;
+              
+              return (
+                <div key={unit.id} className={styles.unitCompletionCard}>
+                  <div>
+                    <strong>{unit.name}</strong>
+                    {isMyUnit && <span className={styles.myUnitBadge}> (Your Unit)</span>}
+                  </div>
+                  {completion ? (
+                    <div className={styles.completionInfo}>
+                      <span className={styles.completedBadge}>✓ Complete</span>
+                      <span className={styles.completedBy}>
+                        by {completion.completedByUser?.name} on{' '}
+                        {new Date(completion.completedAt).toLocaleDateString()}
+                      </span>
+                      {isMyUnit && (
+                        <button
+                          onClick={() => removeUnitCompletion(sessionId, unit.id)}
+                          className={styles.reopenButton}
+                        >
+                          Reopen
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <span className={styles.inProgressBadge}>In Progress</span>
+                      {isMyUnit && (
+                        <button
+                          onClick={() => markUnitComplete(sessionId, unit.id, currentUser)}
+                          className={styles.completeButton}
+                        >
+                          Mark My Unit Complete
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
         
@@ -162,19 +243,19 @@ export default function RefinementPage() {
           </h2>
           <div className={styles.discussionContainer}>
             <div className={styles.discussionList}>
-              {session.discussion.length === 0 ? (
+              {(session.discussionMessages?.length || 0) === 0 ? (
                 <p className={styles.emptyState}>No messages yet. Start the conversation!</p>
               ) : (
-                session.discussion.map(msg => (
+                session.discussionMessages.map(msg => (
                   <div key={msg.id} className={styles.message}>
                     <div className={styles.messageHeader}>
-                      <strong>{msg.authorName}</strong>
+                      <strong>{msg.author?.name || msg.authorName}</strong>
                       <span className={styles.timestamp}>
-                        {new Date(msg.timestamp).toLocaleString()}
+                        {new Date(msg.createdAt || msg.timestamp).toLocaleString()}
                       </span>
                     </div>
-                    <p>{msg.message}</p>
-                    {msg.type !== 'comment' && (
+                    <p>{msg.content || msg.message}</p>
+                    {msg.type && msg.type !== 'comment' && (
                       <span className={styles.messageType}>[{msg.type}]</span>
                     )}
                   </div>

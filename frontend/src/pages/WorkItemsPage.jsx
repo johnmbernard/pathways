@@ -19,17 +19,16 @@ function WorkItemRow({ item, depth = 0, onEdit }) {
   const { updateItem, deleteItem, toggleExpanded, getChildren, expandedItems, addItem } = useWorkItemsStore();
   const { getProject } = useProjectsStore();
   const { tiers, flatTypes } = useHierarchyStore();
-  const { units, flatUnits, getTierLevel } = useOrganizationStore();
+  const { units, getTierLevel } = useOrganizationStore();
   const project = item.projectId ? getProject(item.projectId) : null;
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   // Actions are now always visible; remove hover state
 
-  // Combine tree units and flat units for dropdown with tier info
+  // Use tree units for dropdown with tier info
   const allOrgUnits = useMemo(() => [
     ...units.map(u => ({ id: u.id, name: u.name, isFlat: false, tierLevel: getTierLevel(u.id) })),
-    ...flatUnits.map(u => ({ id: u.id, name: u.name, isFlat: true, tierLevel: null }))
-  ], [units, flatUnits, getTierLevel]);
+  ], [units, getTierLevel]);
 
   // Color palette for org tiers
   const getTierColor = (tierLevel) => {

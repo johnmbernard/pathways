@@ -573,3 +573,87 @@
   padding-top: 1.5rem;
   border-top: 1px solid var(--border-color, #e5e7eb);
 }
+
+/* Unit Completion Styles */
+.unitCompletionList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.unitCompletionCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--bg-secondary, #f9fafb);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+}
+
+.myUnitBadge {
+  color: var(--primary-color, #3b82f6);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.completionInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.completedBadge {
+  background: var(--success-bg, #dcfce7);
+  color: var(--success-text, #166534);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.inProgressBadge {
+  background: var(--warning-bg, #fef3c7);
+  color: var(--warning-text, #92400e);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-right: 1rem;
+}
+
+.completedBy {
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.875rem;
+}
+
+.completeButton {
+  padding: 0.5rem 1rem;
+  background: var(--success-color, #10b981);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.completeButton:hover {
+  background: var(--success-hover, #059669);
+}
+
+.reopenButton {
+  padding: 0.25rem 0.75rem;
+  background: transparent;
+  color: var(--text-secondary, #6b7280);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reopenButton:hover {
+  background: var(--bg-secondary, #f3f4f6);
+  color: var(--text-primary, #111827);
+}

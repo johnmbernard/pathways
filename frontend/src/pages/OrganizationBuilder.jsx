@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOrganizationStore } from '../store/organizationStore';
 import { useNavigate } from 'react-router-dom';
 import { Plus, ChevronRight, ChevronDown, Trash2, Building2, Tag } from 'lucide-react';
@@ -16,20 +16,30 @@ function OrgUnitRow({ unit, depth = 0 }) {
   const isExpanded = expandedUnits.has(unit.id);
   const tierLevel = getTierLevel(unit.id);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editName.trim()) {
-      updateUnit(unit.id, { name: editName.trim() });
+      try {
+        await updateUnit(unit.id, { name: editName.trim() });
+      } catch (error) {
+        console.error('Failed to update unit:', error);
+      }
     }
     setIsEditing(false);
   };
 
-  const handleAddChild = () => {
-    addUnit({
-      name: 'New Unit',
-      parentId: unit.id,
-    });
-    if (!isExpanded) {
-      toggleExpanded(unit.id);
+  const handleAddChild = async () => {
+    try {
+      await addUnit({
+        id: `org-${Date.now()}`,
+        name: 'New Unit',
+        parentId: unit.id,
+        tier: tierLevel + 1,
+      });
+      if (!isExpanded) {
+        toggleExpanded(unit.id);
+      }
+    } catch (error) {
+      console.error('Failed to add child unit:', error);
     }
   };
 
@@ -97,7 +107,15 @@ function OrgUnitRow({ unit, depth = 0 }) {
             <Plus size={16} />
           </button>
           <button
-            onClick={() => deleteUnit(unit.id)}
+            onClick={async () => {
+              if (window.confirm(`Delete "${unit.name}"? This will also delete all child units.`)) {
+                try {
+                  await deleteUnit(unit.id);
+                } catch (error) {
+                  alert(error.message || 'Failed to delete unit');
+                }
+              }
+            }}
             className={`${styles.actionButton} ${styles.delete}`}
             title="Delete unit and all children"
           >
@@ -116,13 +134,38 @@ function OrgUnitRow({ unit, depth = 0 }) {
 
 export default function OrganizationBuilder() {
   const navigate = useNavigate();
-  const { getRootUnits, addUnit, flatUnits, addFlatUnit, updateFlatUnit, deleteFlatUnit } = useOrganizationStore();
+  const { getRootUnits, addUnit, fetchUnits, loading } = useOrganizationStore();
   const rootUnits = getRootUnits();
-  const [newFlatUnitName, setNewFlatUnitName] = useState('');
 
-  const handleNewRootUnit = () => {
-    addUnit({ name: 'New Organization', parentId: null });
+  // Fetch organizational units on mount
+  useEffect(() => {
+    fetchUnits();
+  }, [fetchUnits]);
+
+  const handleNewRootUnit = async () => {
+    try {
+      await addUnit({ 
+        id: `org-${Date.now()}`,
+        name: 'New Organization', 
+        parentId: null, 
+        tier: 1 
+      });
+    } catch (error) {
+      console.error('Failed to create root unit:', error);
+      alert('Failed to create organization');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <PageHeader title="Organization Builder" subtitle="Loading..." />
+        <div className={styles.container}>
+          <div style={{ padding: '2rem', textAlign: 'center' }}>Loading organizational units...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
@@ -177,66 +220,6 @@ export default function OrganizationBuilder() {
             <li>• Delete units (and all their children) with the trash icon</li>
             <li>• Example: Tier 1: Company → Tier 2: Departments → Tier 3: Teams → Tier 4: Squads</li>
           </ul>
-        </div>
-
-        <div className={styles.flatSection}>
-          <h3 className={styles.flatTitle}>Flat (Non-Tiered) Organization Units</h3>
-          <p className={styles.flatDescription}>
-            These are organization units that don't fit into the hierarchical structure (e.g., Contractors, Consultants, Vendors).
-          </p>
-
-          <div className={styles.flatList}>
-            {flatUnits.length === 0 ? (
-              <div className={styles.flatEmpty}>
-                No flat units yet. Add one below.
-              </div>
-            ) : (
-              flatUnits.map((unit) => (
-                <div key={unit.id} className={styles.flatRow}>
-                  <Tag size={18} className={styles.flatIcon} />
-                  <input
-                    value={unit.name}
-                    onChange={(e) => updateFlatUnit(unit.id, e.target.value)}
-                    className={styles.flatInput}
-                  />
-                  <button
-                    onClick={() => deleteFlatUnit(unit.id)}
-                    className={styles.flatDeleteButton}
-                    title="Remove flat unit"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className={styles.addForm}>
-            <input
-              placeholder="New flat unit (e.g., Contractors, Vendors)"
-              value={newFlatUnitName}
-              onChange={(e) => setNewFlatUnitName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newFlatUnitName.trim()) {
-                  addFlatUnit(newFlatUnitName.trim());
-                  setNewFlatUnitName('');
-                }
-              }}
-              className={styles.addInput}
-            />
-            <Button
-              onClick={() => {
-                if (newFlatUnitName.trim()) {
-                  addFlatUnit(newFlatUnitName.trim());
-                  setNewFlatUnitName('');
-                }
-              }}
-              variant="primary"
-            >
-              <Plus size={18} />
-              Add Flat Unit
-            </Button>
-          </div>
         </div>
       </div>
     </div>

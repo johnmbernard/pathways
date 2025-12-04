@@ -5,7 +5,7 @@ import { UserPlus, Edit, Trash2, Users as UsersIcon } from 'lucide-react';
 import styles from './UsersPage.module.css';
 
 export default function UsersPage() {
-  const { units, flatUnits } = useOrganizationStore();
+  const { units, fetchUnits } = useOrganizationStore();
   const getTierLevel = useOrganizationStore(state => state.getTierLevel);
   
   const [users, setUsers] = useState([]);
@@ -22,10 +22,11 @@ export default function UsersPage() {
     role: 'Member',
   });
 
-  // Fetch users on mount
+  // Fetch users and units on mount
   useEffect(() => {
     fetchUsers();
-  }, []);
+    fetchUnits();
+  }, [fetchUnits]);
 
   const fetchUsers = async () => {
     try {

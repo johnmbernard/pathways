@@ -1,70 +1,99 @@
 import { create } from 'zustand';
-
-const STORAGE_KEY = 'pathways_projects_v1';
-
-function loadProjects() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return [
-    {
-      id: 'proj-1',
-      title: 'Enterprise Observability Platform',
-      description: 'Centralized logging, metrics, and APM across all applications',
-      owner: 'VP Engineering',
-      ownerUnit: 'engineering', // Org unit that created project
-      ownerTier: 2, // Tier level for filtering
-      status: 'In Progress',
-      startDate: '2025-01-15',
-      targetDate: '2025-06-30',
-      budget: 500000,
-      teams: ['org-2'], // Engineering team
-      objectives: [], // Objectives defined for next tier
-      workItems: [], // IDs of work items assigned to this project
-      risks: [],
-      notes: '',
-      createdDate: '2024-12-01',
-      calculatedTimeline: null, // Auto-calculated from lead time engine
-    },
-  ];
-}
+import { API_BASE_URL } from '../config';
 
 export const useProjectsStore = create((set, get) => ({
-  projects: loadProjects(),
-  nextId: 2,
+  projects: [],
+  loading: false,
+  error: null,
+
+  // Fetch all projects from backend
+  fetchProjects: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await fetch(`${API_BASE_URL}/projects`);
+      if (!response.ok) throw new Error('Failed to fetch projects');
+      const projects = await response.json();
+      set({ projects, loading: false });
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      set({ error: error.message, loading: false });
+    }
+  },
 
   // Add new project
-  addProject: (project) => set((state) => {
-    const id = `proj-${state.nextId}`;
-    return {
-      projects: [...state.projects, {
-        ...project,
-        id,
-        ownerUnit: project.ownerUnit || '',
-        ownerTier: project.ownerTier || 1,
-        objectives: project.objectives || [],
-        workItems: project.workItems || [],
-        teams: project.teams || [],
-        risks: project.risks || [],
-        calculatedTimeline: project.calculatedTimeline || null,
-        createdDate: new Date().toISOString().split('T')[0],
-      }],
-      nextId: state.nextId + 1,
-    };
-  }),
+  addProject: async (project) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(project),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create project');
+      }
+      
+      const newProject = await response.json();
+      set((state) => ({
+        projects: [...state.projects, newProject],
+      }));
+      
+      return newProject;
+    } catch (error) {
+      console.error('Error creating project:', error);
+      throw error;
+    }
+  },
 
   // Update project
-  updateProject: (id, updates) => set((state) => ({
-    projects: state.projects.map(project =>
-      project.id === id ? { ...project, ...updates } : project
-    ),
-  })),
+  updateProject: async (id, updates) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update project');
+      }
+      
+      const updatedProject = await response.json();
+      set((state) => ({
+        projects: state.projects.map(project =>
+          project.id === id ? updatedProject : project
+        ),
+      }));
+      
+      return updatedProject;
+    } catch (error) {
+      console.error('Error updating project:', error);
+      throw error;
+    }
+  },
 
   // Delete project
-  deleteProject: (id) => set((state) => ({
-    projects: state.projects.filter(project => project.id !== id),
-  })),
+  deleteProject: async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete project');
+      }
+      
+      set((state) => ({
+        projects: state.projects.filter(project => project.id !== id),
+      }));
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      throw error;
+    }
+  },
 
   // Get project by ID
   getProject: (id) => {
@@ -177,28 +206,4 @@ export const useProjectsStore = create((set, get) => ({
     ),
   })),
 
-  // Add risk to project
-  addRisk: (projectId, risk) => set((state) => ({
-    projects: state.projects.map(project =>
-      project.id === projectId
-        ? { ...project, risks: [...project.risks, { ...risk, id: Date.now() }] }
-        : project
-    ),
-  })),
-
-  // Remove risk from project
-  removeRisk: (projectId, riskId) => set((state) => ({
-    projects: state.projects.map(project =>
-      project.id === projectId
-        ? { ...project, risks: project.risks.filter(r => r.id !== riskId) }
-        : project
-    ),
-  })),
 }));
-
-// Persist projects on any change
-useProjectsStore.subscribe((state) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.projects));
-  } catch {}
-});

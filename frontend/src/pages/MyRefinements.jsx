@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Calendar, PlayCircle, CheckCircle, Clock } from 'lucide-react';
 import useRefinementStore from '../store/refinementStore';
@@ -12,27 +12,43 @@ import styles from './MyRefinements.module.css';
 export default function MyRefinements() {
   const navigate = useNavigate();
   const sessions = useRefinementStore((state) => state.sessions);
+  const fetchSessions = useRefinementStore((state) => state.fetchSessions);
   const { projects } = useProjectsStore();
-  const { flatUnits } = useOrganizationStore();
   const currentUser = useUserStore((state) => state.currentUser);
   
-  const currentUserUnit = currentUser?.organizationalUnit;
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
   
-  // Filter sessions for current user's unit
+  const currentUserUnitId = currentUser?.organizationalUnit;
+  
+  // Filter sessions for current user's unit - check if unit is assigned to the objective
   const mySessions = useMemo(() => {
-    return sessions.filter(s => s.organizationalUnit === currentUserUnit);
-  }, [sessions, currentUserUnit]);
+    if (!currentUserUnitId) return [];
+    
+    return sessions.filter(s => {
+      if (!s.objective?.id) return false;
+      
+      // Check if current user's unit is in the objective's assigned units
+      // The session.objective includes assignedUnits from the backend
+      const isAssigned = s.objective.assignedUnits?.some(
+        assignment => assignment.unitId === currentUserUnitId
+      );
+      
+      return isAssigned;
+    });
+  }, [sessions, currentUserUnitId]);
   
   // Group by status
-  const inProgressSessions = mySessions.filter(s => s.status === 'in_progress');
+  const inProgressSessions = mySessions.filter(s => s.status === 'in-progress');
   const completedSessions = mySessions.filter(s => s.status === 'completed');
-  const notStartedSessions = mySessions.filter(s => s.status === 'not_started');
+  const notStartedSessions = mySessions.filter(s => s.status === 'not-started');
   
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'not_started':
+      case 'not-started':
         return <Badge variant="secondary">Not Started</Badge>;
-      case 'in_progress':
+      case 'in-progress':
         return <Badge variant="warning">In Progress</Badge>;
       case 'completed':
         return <Badge variant="success">Completed</Badge>;
@@ -45,7 +61,16 @@ export default function MyRefinements() {
   
   const SessionCard = ({ session }) => {
     const project = projects.find(p => p.id === session.projectId);
-    const isTeamTier = session.tier === 'team';
+    const objective = session.objective;
+    
+    // Determine if this is a team-level refinement by checking assigned units
+    const assignedUnits = objective?.assignedUnits?.map(a => a.unit) || [];
+    const isTeamTier = assignedUnits.some(u => u?.tier === 3);
+    
+    // Check if current user's unit has completed their portion
+    const myCompletion = session.unitCompletions?.find(
+      uc => uc.organizationalUnitId === currentUserUnitId
+    );
     
     return (
       <div 
@@ -54,23 +79,26 @@ export default function MyRefinements() {
       >
         <div className={styles.cardHeader}>
           <div>
-            <h3 className={styles.objectiveTitle}>{session.assignedObjective.title}</h3>
+            <h3 className={styles.objectiveTitle}>{objective?.title || 'General Refinement'}</h3>
             <p className={styles.projectName}>
               Project: {project?.title || 'Unknown Project'}
             </p>
           </div>
-          {getStatusBadge(session.status)}
+          <div className={styles.badges}>
+            {getStatusBadge(session.status)}
+            {myCompletion && <Badge variant="success">Your Unit Complete</Badge>}
+          </div>
         </div>
         
-        {session.assignedObjective.description && (
-          <p className={styles.description}>{session.assignedObjective.description}</p>
+        {objective?.description && (
+          <p className={styles.description}>{objective.description}</p>
         )}
         
         <div className={styles.cardMeta}>
-          {session.assignedObjective.targetDate && (
+          {objective?.targetDate && (
             <div className={styles.metaItem}>
               <Calendar size={14} />
-              <span>Target: {new Date(session.assignedObjective.targetDate).toLocaleDateString()}</span>
+              <span>Target: {new Date(objective.targetDate).toLocaleDateString()}</span>
             </div>
           )}
           
@@ -83,16 +111,22 @@ export default function MyRefinements() {
             </span>
           </div>
           
-          {session.discussion?.length > 0 && (
+          {session.discussionMessages?.length > 0 && (
             <div className={styles.metaItem}>
-              <span>💬 {session.discussion.length} comments</span>
+              <span>💬 {session.discussionMessages.length} comments</span>
+            </div>
+          )}
+          
+          {assignedUnits.length > 0 && (
+            <div className={styles.metaItem}>
+              <span>👥 {session.unitCompletions?.length || 0}/{assignedUnits.length} units complete</span>
             </div>
           )}
         </div>
         
         <div className={styles.cardFooter}>
           <span className={styles.tierBadge}>
-            {isTeamTier ? 'Team Level' : `Tier ${session.tier}`}
+            {isTeamTier ? 'Team Level' : 'Collaborative Refinement'}
           </span>
           <span className={styles.continueLink}>
             Continue Refinement →

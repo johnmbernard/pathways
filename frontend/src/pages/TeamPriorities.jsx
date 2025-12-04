@@ -8,14 +8,13 @@ import styles from './TeamPriorities.module.css';
 
 export default function TeamPriorities() {
   const { items, updateItem } = useWorkItemsStore();
-  const { units, flatUnits } = useOrganizationStore();
+  const { units } = useOrganizationStore();
   const [selectedTeam, setSelectedTeam] = useState('all');
 
-  // Combine all org units for team selector
+  // Use org units for team selector
   const allTeams = useMemo(() => [
     ...units.map(u => ({ id: u.id, name: u.name, isFlat: false })),
-    ...flatUnits.map(u => ({ id: u.id, name: u.name, isFlat: true }))
-  ], [units, flatUnits]);
+  ], [units]);
 
   // Filter items based on selected team
   const filteredItems = useMemo(() => {
@@ -132,15 +131,6 @@ export default function TeamPriorities() {
                 </option>
               ))}
             </optgroup>
-            {flatUnits.length > 0 && (
-              <optgroup label="Flat Units">
-                {flatUnits.map(unit => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </option>
-                ))}
-              </optgroup>
-            )}
           </select>
         </div>
 

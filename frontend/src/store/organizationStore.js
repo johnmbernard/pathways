@@ -1,74 +1,110 @@
 import { create } from 'zustand';
+import { API_BASE_URL } from '../config';
 
-const STORAGE_KEY = 'pathways_organization_config_v1';
+const STORAGE_KEY = 'pathways_organization_expanded';
 
-function loadInitial() {
+function loadExpandedState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const data = JSON.parse(raw);
-      return {
-        units: data.units || [],
-        flatUnits: data.flatUnits || [],
-        nextId: data.nextId || 1,
-        nextFlatId: data.nextFlatId || 1,
-        expandedUnits: new Set(data.expandedUnits || []),
-      };
+      return new Set(JSON.parse(raw));
     }
   } catch {}
-  return {
-    units: [
-      { id: 'org-1', name: 'Synapse Solutions LLC', parentId: null, order: 0 },
-      { id: 'org-2', name: 'Engineering', parentId: 'org-1', order: 0 },
-      { id: 'org-3', name: 'Marketing', parentId: 'org-1', order: 1 },
-      { id: 'org-4', name: 'Sales', parentId: 'org-1', order: 2 },
-    ],
-    flatUnits: [
-      { id: 'flat-1', name: 'Contractors' },
-      { id: 'flat-2', name: 'Consultants' },
-    ],
-    nextId: 5,
-    nextFlatId: 3,
-    expandedUnits: new Set(['org-1']),
-  };
+  return new Set(['org-1']);
 }
 
 export const useOrganizationStore = create((set, get) => ({
-  ...loadInitial(),
+  units: [],
+  loading: false,
+  error: null,
+  expandedUnits: loadExpandedState(),
+
+  // Fetch all organizational units from backend
+  fetchUnits: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await fetch(`${API_BASE_URL}/organizational-units`);
+      if (!response.ok) throw new Error('Failed to fetch organizational units');
+      const units = await response.json();
+      set({ units, loading: false });
+    } catch (error) {
+      console.error('Error fetching organizational units:', error);
+      set({ error: error.message, loading: false });
+    }
+  },
 
   // Add new organization unit
-  addUnit: (unit) => set((state) => {
-    const id = `org-${state.nextId}`;
-    const parentId = unit.parentId ?? null;
-    const order = state.units.filter(u => u.parentId === parentId).length;
-    return {
-      units: [...state.units, { ...unit, id, parentId, order }],
-      nextId: state.nextId + 1,
-    };
-  }),
+  addUnit: async (unit) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/organizational-units`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(unit),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create unit');
+      }
+      
+      const newUnit = await response.json();
+      set((state) => ({
+        units: [...state.units, newUnit],
+      }));
+      
+      return newUnit;
+    } catch (error) {
+      console.error('Error creating organizational unit:', error);
+      throw error;
+    }
+  },
 
   // Update organization unit
-  updateUnit: (id, updates) => set((state) => ({
-    units: state.units.map(u => (u.id === id ? { ...u, ...updates } : u)),
-  })),
-
-  // Delete organization unit (and all children)
-  deleteUnit: (id) => set((state) => {
-    const toDelete = new Set([id]);
-    let changed = true;
-    while (changed) {
-      changed = false;
-      state.units.forEach(u => {
-        if (u.parentId && toDelete.has(u.parentId) && !toDelete.has(u.id)) {
-          toDelete.add(u.id);
-          changed = true;
-        }
+  updateUnit: async (id, updates) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/organizational-units/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update unit');
+      }
+      
+      const updatedUnit = await response.json();
+      set((state) => ({
+        units: state.units.map(u => (u.id === id ? updatedUnit : u)),
+      }));
+      
+      return updatedUnit;
+    } catch (error) {
+      console.error('Error updating organizational unit:', error);
+      throw error;
     }
-    return {
-      units: state.units.filter(u => !toDelete.has(u.id)),
-    };
-  }),
+  },
+
+  // Delete organization unit
+  deleteUnit: async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/organizational-units/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete unit');
+      }
+      
+      set((state) => ({
+        units: state.units.filter(u => u.id !== id),
+      }));
+    } catch (error) {
+      console.error('Error deleting organizational unit:', error);
+      throw error;
+    }
+  },
 
   // Toggle expanded state
   toggleExpanded: (id) => set((state) => {
@@ -85,60 +121,36 @@ export const useOrganizationStore = create((set, get) => ({
   getChildren: (parentId) => {
     return get().units
       .filter(u => u.parentId === parentId)
-      .sort((a, b) => a.order - b.order);
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   },
 
   // Get root units (no parent)
   getRootUnits: () => {
     return get().units
       .filter(u => u.parentId === null)
-      .sort((a, b) => a.order - b.order);
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   },
 
-  // Get tier level for a unit (based on depth in tree)
+  // Get tier level for a unit (returns the tier from database)
   getTierLevel: (unitId) => {
-    const state = get();
-    let level = 1;
-    let currentId = unitId;
-    
-    while (currentId) {
-      const unit = state.units.find(u => u.id === currentId);
-      if (!unit || !unit.parentId) break;
-      currentId = unit.parentId;
-      level++;
-    }
-    
-    return level;
+    const unit = get().units.find(u => u.id === unitId);
+    return unit?.tier || 1;
   },
 
   // Get all units at a specific tier level
   getUnitsByTier: (tierLevel) => {
-    const state = get();
-    return state.units.filter(u => state.getTierLevel(u.id) === tierLevel);
+    return get().units.filter(u => u.tier === tierLevel);
   },
 
-  // CRUD for flat units
-  addFlatUnit: (name) => set((state) => ({
-    flatUnits: [...state.flatUnits, { id: `flat-${state.nextFlatId}`, name }],
-    nextFlatId: state.nextFlatId + 1,
-  })),
-  updateFlatUnit: (id, name) => set((state) => ({
-    flatUnits: state.flatUnits.map(u => (u.id === id ? { ...u, name } : u)),
-  })),
-  deleteFlatUnit: (id) => set((state) => ({
-    flatUnits: state.flatUnits.filter(u => u.id !== id),
-  })),
+  // Get unit by ID
+  getUnitById: (id) => {
+    return get().units.find(u => u.id === id);
+  },
 }));
 
-// Persist to localStorage on any change
+// Persist expanded state to localStorage on change
 useOrganizationStore.subscribe((state) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      units: state.units,
-      flatUnits: state.flatUnits,
-      nextId: state.nextId,
-      nextFlatId: state.nextFlatId,
-      expandedUnits: Array.from(state.expandedUnits),
-    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(state.expandedUnits)));
   } catch {}
 });

@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProjectsStore } from '../store/projectsStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { useWorkItemsStore } from '../store/workItemsStore';
 import { useUserStore } from '../store/userStore';
 import useRefinementStore from '../store/refinementStore';
+import { API_BASE_URL } from '../config';
 import { PageHeader } from '../components/layout/Layout';
 import { Button, Badge } from '../components/ui';
 import { Plus, Calendar, DollarSign, Users, FolderOpen, AlertTriangle, Pencil, Trash2, X, PlayCircle } from 'lucide-react';
@@ -13,19 +14,24 @@ import styles from './ProjectsPage.module.css';
 export default function ProjectsPage() {
   const navigate = useNavigate();
   const currentUser = useUserStore(state => state.currentUser);
-  const { projects, addProject, updateProject, deleteProject } = useProjectsStore();
-  const { units, flatUnits } = useOrganizationStore();
+  const { projects, addProject, updateProject, deleteProject, fetchProjects, loading } = useProjectsStore();
+  const { units, fetchUnits } = useOrganizationStore();
   const { items } = useWorkItemsStore();
   const createSession = useRefinementStore((state) => state.createSession);
   const [isCreating, setIsCreating] = useState(false);
+
+  // Fetch projects and units on mount
+  useEffect(() => {
+    fetchProjects();
+    fetchUnits();
+  }, [fetchProjects, fetchUnits]);
   const [editingProject, setEditingProject] = useState(null);
   const [refinementProject, setRefinementProject] = useState(null);
   const [tierFilter, setTierFilter] = useState('all');
 
   const allTeams = useMemo(() => [
     ...units.map(u => ({ id: u.id, name: u.name })),
-    ...flatUnits.map(u => ({ id: u.id, name: u.name }))
-  ], [units, flatUnits]);
+  ], [units]);
 
   // Get unique tiers from organization (based on hierarchical depth)
   const { getUnitsByTier, getTierLevel } = useOrganizationStore();
@@ -57,8 +63,8 @@ export default function ProjectsPage() {
   };
 
   const ProjectCard = ({ project }) => {
-    const projectWorkItems = items.filter(item => project.workItems.includes(item.id));
-    const projectTeams = allTeams.filter(team => project.teams.includes(team.id));
+    const projectWorkItems = items.filter(item => item.projectId === project.id);
+    const owningUnit = allTeams.find(team => team.id === project.ownerUnit);
     
     return (
       <div className={styles.projectCard}>
@@ -82,9 +88,13 @@ export default function ProjectsPage() {
               <Pencil size={16} />
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (window.confirm(`Delete project "${project.title}"?`)) {
-                  deleteProject(project.id);
+                  try {
+                    await deleteProject(project.id);
+                  } catch (error) {
+                    alert('Failed to delete project');
+                  }
                 }
               }}
               className={`${styles.iconButton} ${styles.danger}`}
@@ -110,7 +120,7 @@ export default function ProjectsPage() {
           )}
           <div className={styles.metaItem}>
             <Users size={14} />
-            <span>{projectTeams.length} team{projectTeams.length !== 1 ? 's' : ''}</span>
+            <span>{owningUnit ? owningUnit.name : 'No unit'}</span>
           </div>
         </div>
 
@@ -234,7 +244,8 @@ export default function ProjectsPage() {
       setNewObjective({
         title: obj.title,
         targetDate: obj.targetDate,
-        assignedUnits: obj.assignedUnits || []
+        // Extract unit IDs from assignedUnits array (which contains assignment objects with unit property)
+        assignedUnits: obj.assignedUnits?.map(assignment => assignment.unitId || assignment.unit?.id || assignment) || []
       });
     };
 
@@ -252,14 +263,84 @@ export default function ProjectsPage() {
       }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
-      if (project) {
-        updateProject(project.id, formData);
-      } else {
-        addProject(formData);
+      try {
+        let savedProject;
+        if (project) {
+          savedProject = await updateProject(project.id, formData);
+          
+          // Save objectives for existing project
+          if (formData.objectives && formData.objectives.length > 0) {
+            for (const obj of formData.objectives) {
+              if (obj.id && !obj.id.startsWith('temp-')) {
+                // Update existing objective
+                // Extract unit IDs from assignedUnits (handles both array of IDs and array of objects)
+                const unitIds = obj.assignedUnits?.map(item => 
+                  typeof item === 'string' ? item : (item.unitId || item.unit?.id || item.id)
+                ).filter(Boolean) || [];
+                
+                await fetch(`${API_BASE_URL}/objectives/${obj.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    title: obj.title,
+                    targetDate: obj.targetDate,
+                    assignedUnits: unitIds,
+                  }),
+                });
+              } else {
+                // Create new objective
+                // Extract unit IDs from assignedUnits (handles both array of IDs and array of objects)
+                const unitIds = obj.assignedUnits?.map(item => 
+                  typeof item === 'string' ? item : (item.unitId || item.unit?.id || item.id)
+                ).filter(Boolean) || [];
+                
+                await fetch(`${API_BASE_URL}/objectives`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    title: obj.title,
+                    targetDate: obj.targetDate,
+                    projectId: project.id,
+                    assignedUnits: unitIds,
+                    createdBy: currentUser?.id,
+                  }),
+                });
+              }
+            }
+          }
+        } else {
+          savedProject = await addProject({
+            ...formData,
+            createdBy: currentUser?.id,
+          });
+          
+          // Save objectives for new project
+          if (formData.objectives && formData.objectives.length > 0 && savedProject.id) {
+            for (const obj of formData.objectives) {
+              await fetch(`${API_BASE_URL}/objectives`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: obj.title,
+                  targetDate: obj.targetDate,
+                  projectId: savedProject.id,
+                  assignedUnits: obj.assignedUnits || [],
+                  createdBy: currentUser?.id,
+                }),
+              });
+            }
+          }
+        }
+        
+        // Refresh projects to get updated objectives
+        await fetchProjects();
+        onClose();
+      } catch (error) {
+        console.error('Error saving project:', error);
+        alert('Failed to save project');
       }
-      onClose();
     };
 
     return (
@@ -576,31 +657,26 @@ export default function ProjectsPage() {
         <RefinementModal
           project={refinementProject}
           onClose={() => setRefinementProject(null)}
-          onStartRefinement={(objectiveId, assignedUnits) => {
+          onStartRefinement={async (objectiveId, assignedUnits) => {
             const objective = refinementProject.objectives.find(obj => obj.id === objectiveId);
             
             if (objective && assignedUnits && assignedUnits.length > 0) {
-              // Create a refinement session for each assigned unit
-              assignedUnits.forEach(unit => {
-                const unitTier = getTierLevel(unit.id);
-                createSession(
+              // Create ONE collaborative refinement session for the objective
+              // All assigned units will share this session
+              try {
+                await createSession(
                   refinementProject.id,
-                  unitTier,
-                  unit.id,
-                  {
-                    id: objectiveId,
-                    title: objective.title,
-                    description: objective.description,
-                    targetDate: objective.targetDate,
-                    fromTier: refinementProject.ownerTier
-                  },
+                  objectiveId,
                   currentUser
                 );
-              });
-              
-              // Close modal and show success message
-              setRefinementProject(null);
-              alert(`Objective "${objective.title}" released for refinement to ${assignedUnits.length} unit(s)`);
+                
+                // Close modal and show success message
+                setRefinementProject(null);
+                alert(`Objective "${objective.title}" released for collaborative refinement to ${assignedUnits.length} unit(s)`);
+              } catch (error) {
+                console.error('Error creating refinement session:', error);
+                alert('Failed to create refinement session');
+              }
             }
           }}
         />
@@ -673,14 +749,14 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
                 {relevantObjectives.map((objective) => {
                   // Filter assigned units to only show those at the correct tier (next tier after project owner)
                   const expectedTier = project.ownerTier + 1;
-                  const assignedUnits = units.filter(u => 
-                    objective.assignedUnits.includes(u.id) && getTierLevel(u.id) === expectedTier
-                  );
+                  const assignedUnits = objective.assignedUnits
+                    .map(assignment => assignment.unit)
+                    .filter(unit => unit && unit.tier === expectedTier);
                   
                   // Check if objective has been released (if any sessions exist for it)
                   const sessions = useRefinementStore.getState().sessions;
                   const objectiveSessions = sessions.filter(s => 
-                    s.projectId === project.id && s.assignedObjective.id === objective.id
+                    s.projectId === project.id && s.objectiveId === objective.id
                   );
                   const isReleased = objectiveSessions.length > 0;
                   
