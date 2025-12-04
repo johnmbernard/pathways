@@ -3,6 +3,10 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
+import organizationalUnitsRoutes from './routes/organizationalUnits.js';
+import projectsRoutes from './routes/projects.js';
+import objectivesRoutes from './routes/objectives.js';
+import refinementsRoutes from './routes/refinements.js';
 
 dotenv.config();
 
@@ -20,6 +24,10 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/organizational-units', organizationalUnitsRoutes);
+app.use('/api/projects', projectsRoutes);
+app.use('/api/objectives', objectivesRoutes);
+app.use('/api/refinements', refinementsRoutes);
 
 // 404 handler
 app.use((req, res) => {

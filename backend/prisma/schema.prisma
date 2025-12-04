@@ -7,6 +7,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 // ============================================
@@ -24,11 +25,12 @@ model User {
   updatedAt          DateTime @updatedAt
   
   // Relationships
-  createdProjects      Project[]          @relation("ProjectCreator")
-  createdObjectives    Objective[]        @relation("ObjectiveCreator")
-  createdWorkItems     WorkItem[]         @relation("WorkItemCreator")
-  refinementSessions   RefinementSession[] @relation("SessionCreator")
-  discussionMessages   DiscussionMessage[]
+  createdProjects          Project[]                      @relation("ProjectCreator")
+  createdObjectives        Objective[]                    @relation("ObjectiveCreator")
+  createdWorkItems         WorkItem[]                     @relation("WorkItemCreator")
+  refinementSessions       RefinementSession[]            @relation("SessionCreator")
+  discussionMessages       DiscussionMessage[]
+  completedRefinements     RefinementUnitCompletion[]     @relation("CompletedRefinements")
   
   @@map("users")
 }
@@ -41,6 +43,7 @@ model OrganizationalUnit {
   id          String   @id @default(cuid())
   name        String
   parentId    String?  // null for root units
+  tier        Int      @default(1) // 1 = top level, 2 = second level, 3 = third level
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -50,9 +53,10 @@ model OrganizationalUnit {
   children    OrganizationalUnit[] @relation("UnitHierarchy")
   
   // Relationships
-  projects    Project[]
-  objectives  ObjectiveAssignment[]
-  sessions    RefinementSession[]
+  projects                Project[]                      @relation
+  objectives              ObjectiveAssignment[]
+  completedObjectives     ObjectiveCompletion[]          @relation("CompletedObjectives")
+  refinementCompletions   RefinementUnitCompletion[]     @relation("RefinementCompletions")
   
   @@map("organizational_units")
 }
@@ -130,7 +134,8 @@ model ObjectiveCompletion {
   unitId      String
   completedAt DateTime @default(now())
   
-  objective   Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  objective   Objective          @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  unit        OrganizationalUnit @relation("CompletedObjectives", fields: [unitId], references: [id], onDelete: Cascade)
   
   @@unique([objectiveId, unitId])
   @@map("objective_completions")
@@ -154,74 +159,90 @@ model Risk {
 // ============================================
 
 model RefinementSession {
-  id                  String   @id @default(cuid())
-  projectId           String
-  tier                Int
-  organizationalUnit  String
-  assignedObjectiveId String
-  status              String   @default("in_progress") // not_started, in_progress, completed, escalated
-  createdBy           String
-  createdAt           DateTime @default(now())
-  completedAt         DateTime?
-  updatedAt           DateTime @updatedAt
+  id                     String   @id @default(cuid())
+  projectId              String
+  objectiveId            String   // Required - each session is for one objective
+  status                 String   @default("in-progress") // not-started, in-progress, completed, escalated
+  createdBy              String
+  createdAt              DateTime @default(now())
+  completedAt            DateTime?
+  updatedAt              DateTime @updatedAt
   
   // Relationships
-  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  unit                OrganizationalUnit   @relation(fields: [organizationalUnit], references: [id], onDelete: Cascade)
-  assignedObjective   Objective            @relation(fields: [assignedObjectiveId], references: [id], onDelete: Cascade)
-  creator             User                 @relation("SessionCreator", fields: [createdBy], references: [id])
-  refinedObjectives   RefinedObjective[]
-  workItems           WorkItem[]
-  discussion          DiscussionMessage[]
+  project                Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  objective              Objective                    @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  creator                User                         @relation("SessionCreator", fields: [createdBy], references: [id])
+  refinedObjectives      RefinedObjective[]
+  workItems              WorkItem[]
+  discussionMessages     DiscussionMessage[]
+  unitCompletions        RefinementUnitCompletion[]
   
+  @@unique([projectId, objectiveId])
   @@map("refinement_sessions")
+}
+
+// Track which units have completed their refinement
+model RefinementUnitCompletion {
+  id                     String   @id @default(cuid())
+  refinementSessionId    String
+  organizationalUnitId   String
+  completedBy            String
+  completedAt            DateTime @default(now())
+  
+  refinementSession      RefinementSession  @relation(fields: [refinementSessionId], references: [id], onDelete: Cascade)
+  organizationalUnit     OrganizationalUnit @relation("RefinementCompletions", fields: [organizationalUnitId], references: [id], onDelete: Cascade)
+  completedByUser        User               @relation("CompletedRefinements", fields: [completedBy], references: [id])
+  
+  @@unique([refinementSessionId, organizationalUnitId])
+  @@map("refinement_unit_completions")
 }
 
 // Objectives created during a refinement session
 model RefinedObjective {
-  id          String   @id @default(cuid())
-  sessionId   String
-  title       String
-  description String?
-  targetDate  String
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  refinementSessionId String
+  title          String
+  description    String?
+  targetDate     String
+  assignedUnits  String   @default("[]") // JSON array of unit IDs
+  createdAt      DateTime @default(now())
   
-  session     RefinementSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  refinementSession RefinementSession @relation(fields: [refinementSessionId], references: [id], onDelete: Cascade)
   
   @@map("refined_objectives")
 }
 
 // Work items created during team-level refinement
 model WorkItem {
-  id          String   @id @default(cuid())
-  sessionId   String
-  title       String
-  description String?
-  status      String   @default("not_started") // not_started, in_progress, completed
-  priority    String?  // high, medium, low
-  assignee    String?
-  estimatedHours Float?
-  createdBy   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  refinementSessionId String?  // Optional - work items can exist independently
+  title               String
+  description         String?
+  type                String   @default("Story") // Story, Bug, Task, etc.
+  priority            String   @default("Medium") // High, Medium, Low
+  status              String   @default("Backlog") // Backlog, In Progress, Done, etc.
+  estimatedEffort     Float?
+  assignedOrgUnit     String?
+  createdBy           String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
   
-  session     RefinementSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  creator     User              @relation("WorkItemCreator", fields: [createdBy], references: [id])
+  refinementSession   RefinementSession? @relation(fields: [refinementSessionId], references: [id], onDelete: Cascade)
+  creator             User               @relation("WorkItemCreator", fields: [createdBy], references: [id])
   
   @@map("work_items")
 }
 
 // Collaboration/discussion messages in refinement sessions
 model DiscussionMessage {
-  id          String   @id @default(cuid())
-  sessionId   String
-  authorId    String
-  authorName  String
-  content     String
-  createdAt   DateTime @default(now())
+  id                  String   @id @default(cuid())
+  refinementSessionId String
+  authorId            String
+  content             String
+  createdAt           DateTime @default(now())
   
-  session     RefinementSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  author      User              @relation(fields: [authorId], references: [id])
+  refinementSession   RefinementSession @relation(fields: [refinementSessionId], references: [id], onDelete: Cascade)
+  author              User              @relation(fields: [authorId], references: [id])
   
   @@map("discussion_messages")
 }

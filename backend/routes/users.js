@@ -1,145 +1,165 @@
 import express from 'express';
+import bcrypt from 'bcrypt';
+import prisma from '../lib/prisma.js';
+
 const router = express.Router();
 
-// In-memory user storage (same as auth.js - should be shared in production)
-let users = [
-  {
-    id: 'user-1',
-    email: 'kessel.lead@pathways.dev',
-    password: 'demo123',
-    name: 'Kessel Lead',
-    organizationalUnit: 'unit-1',
-    role: 'Unit Leader',
-  },
-  {
-    id: 'user-2',
-    email: 'opsc2.lead@pathways.dev',
-    password: 'demo123',
-    name: 'OpsC2 Lead',
-    organizationalUnit: 'unit-2',
-    role: 'Unit Leader',
-  },
-  {
-    id: 'user-3',
-    email: 'krados.lead@pathways.dev',
-    password: 'demo123',
-    name: 'KRADOS Team Lead',
-    organizationalUnit: 'unit-3',
-    role: 'Team Lead',
-  },
-  {
-    id: 'user-4',
-    email: 'wingc2.lead@pathways.dev',
-    password: 'demo123',
-    name: 'WingC2 Lead',
-    organizationalUnit: 'unit-9',
-    role: 'Unit Leader',
-  },
-  {
-    id: 'user-5',
-    email: 'security.lead@pathways.dev',
-    password: 'demo123',
-    name: 'Security Lead',
-    organizationalUnit: 'unit-12',
-    role: 'Unit Leader',
-  },
-  {
-    id: 'user-6',
-    email: 'janus.lead@pathways.dev',
-    password: 'demo123',
-    name: 'Janus Team Lead',
-    organizationalUnit: 'unit-10',
-    role: 'Team Lead',
-  },
-];
-
 // GET /api/users - Get all users
-router.get('/', (req, res) => {
-  // Don't send passwords
-  const usersWithoutPasswords = users.map(({ password, ...user }) => user);
-  res.json(usersWithoutPasswords);
-});
+router.get('/', async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        organizationalUnit: true,
+        createdAt: true,
+        updatedAt: true,
+        // Exclude password from response
+      }
+    });
 
-// GET /api/users/:id - Get single user
-router.get('/:id', (req, res) => {
-  const user = users.find(u => u.id === req.params.id);
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
+    res.json(users);
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({ message: 'Failed to fetch users' });
   }
-  const { password, ...userWithoutPassword } = user;
-  res.json(userWithoutPassword);
 });
 
 // POST /api/users - Create new user
-router.post('/', (req, res) => {
-  const { name, email, password, organizationalUnit, role } = req.body;
+router.post('/', async (req, res) => {
+  try {
+    const { email, password, name, role, organizationalUnit } = req.body;
 
-  if (!name || !email || !password || !organizationalUnit || !role) {
-    return res.status(400).json({ message: 'All fields are required' });
+    // Validation
+    if (!email || !password || !name) {
+      return res.status(400).json({ message: 'Email, password, and name are required' });
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+        role: role || 'Member',
+        organizationalUnit,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        organizationalUnit: true,
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
+
+    res.status(201).json(user);
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ message: 'Failed to create user' });
   }
-
-  // Check if email already exists
-  if (users.find(u => u.email === email)) {
-    return res.status(409).json({ message: 'Email already exists' });
-  }
-
-  const newUser = {
-    id: `user-${Date.now()}`,
-    name,
-    email,
-    password, // In production, hash this!
-    organizationalUnit,
-    role,
-  };
-
-  users.push(newUser);
-
-  const { password: _, ...userWithoutPassword } = newUser;
-  res.status(201).json(userWithoutPassword);
 });
 
 // PUT /api/users/:id - Update user
-router.put('/:id', (req, res) => {
-  const { name, email, password, organizationalUnit, role } = req.body;
-  const userId = req.params.id;
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, password, name, role, organizationalUnit } = req.body;
 
-  const userIndex = users.findIndex(u => u.id === userId);
-  if (userIndex === -1) {
-    return res.status(404).json({ message: 'User not found' });
-  }
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id }
+    });
 
-  // Check if email is taken by another user
-  if (email && email !== users[userIndex].email) {
-    if (users.find(u => u.email === email && u.id !== userId)) {
-      return res.status(409).json({ message: 'Email already exists' });
+    if (!existingUser) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    // If email is being changed, check for conflicts
+    if (email && email !== existingUser.email) {
+      const emailConflict = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (emailConflict) {
+        return res.status(400).json({ message: 'Email already in use' });
+      }
+    }
+
+    // Prepare update data
+    const updateData = {};
+    if (email) updateData.email = email;
+    if (name) updateData.name = name;
+    if (role) updateData.role = role;
+    if (organizationalUnit !== undefined) updateData.organizationalUnit = organizationalUnit;
+    
+    // Hash new password if provided
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    // Update user
+    const user = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        organizationalUnit: true,
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
+
+    res.json(user);
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ message: 'Failed to update user' });
   }
-
-  // Update user
-  users[userIndex] = {
-    ...users[userIndex],
-    name: name || users[userIndex].name,
-    email: email || users[userIndex].email,
-    password: password || users[userIndex].password,
-    organizationalUnit: organizationalUnit || users[userIndex].organizationalUnit,
-    role: role || users[userIndex].role,
-  };
-
-  const { password: _, ...userWithoutPassword } = users[userIndex];
-  res.json(userWithoutPassword);
 });
 
 // DELETE /api/users/:id - Delete user
-router.delete('/:id', (req, res) => {
-  const userId = req.params.id;
-  const userIndex = users.findIndex(u => u.id === userId);
-  
-  if (userIndex === -1) {
-    return res.status(404).json({ message: 'User not found' });
-  }
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
 
-  users.splice(userIndex, 1);
-  res.json({ message: 'User deleted successfully' });
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Delete user
+    await prisma.user.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ message: 'Failed to delete user' });
+  }
 });
 
 export default router;

@@ -12,7 +12,7 @@ import { PrismaClient } from '@prisma/client';
 
 // Create the Prisma Client instance
 const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'], // Log database queries for debugging
+  log: ['error', 'warn'],
 });
 
 export default prisma;
