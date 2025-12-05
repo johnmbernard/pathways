@@ -92,19 +92,22 @@ model Project {
 }
 
 model Objective {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  targetDate  String
-  projectId   String
-  fromTier    Int      // Which tier created this objective
-  createdBy   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  title               String
+  description         String?
+  targetDate          String
+  projectId           String
+  fromTier            Int      // Which tier created this objective
+  parentObjectiveId   String?  // Link to parent objective if this was refined from another
+  createdBy           String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
   
   // Relationships
   project             Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
   creator             User                   @relation("ObjectiveCreator", fields: [createdBy], references: [id])
+  parentObjective     Objective?             @relation("ObjectiveHierarchy", fields: [parentObjectiveId], references: [id], onDelete: SetNull)
+  childObjectives     Objective[]            @relation("ObjectiveHierarchy")
   assignedUnits       ObjectiveAssignment[]
   completedByUnits    ObjectiveCompletion[]
   refinementSessions  RefinementSession[]
@@ -172,7 +175,6 @@ model RefinementSession {
   project                Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   objective              Objective                    @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
   creator                User                         @relation("SessionCreator", fields: [createdBy], references: [id])
-  refinedObjectives      RefinedObjective[]
   workItems              WorkItem[]
   discussionMessages     DiscussionMessage[]
   unitCompletions        RefinementUnitCompletion[]
@@ -195,21 +197,6 @@ model RefinementUnitCompletion {
   
   @@unique([refinementSessionId, organizationalUnitId])
   @@map("refinement_unit_completions")
-}
-
-// Objectives created during a refinement session
-model RefinedObjective {
-  id             String   @id @default(cuid())
-  refinementSessionId String
-  title          String
-  description    String?
-  targetDate     String
-  assignedUnits  String   @default("[]") // JSON array of unit IDs
-  createdAt      DateTime @default(now())
-  
-  refinementSession RefinementSession @relation(fields: [refinementSessionId], references: [id], onDelete: Cascade)
-  
-  @@map("refined_objectives")
 }
 
 // Work items created during team-level refinement

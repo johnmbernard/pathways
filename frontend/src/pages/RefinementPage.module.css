@@ -245,9 +245,21 @@
 .actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.actions .completedBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .input {

@@ -139,7 +139,7 @@ const useRefinementStore = create((set, get) => ({
     }
   },
   
-  // Add refined objective (for non-team tiers)
+  // Add refined objective (creates real Objective and new refinement session for next tier)
   addObjective: async (sessionId, objective, currentUser) => {
     try {
       const response = await fetch(`${API_BASE_URL}/refinements/${sessionId}/refined-objectives`, {
@@ -150,55 +150,25 @@ const useRefinementStore = create((set, get) => ({
           description: objective.description || '',
           targetDate: objective.targetDate,
           assignedUnits: objective.assignedUnits || [],
+          createdBy: currentUser?.id,
         }),
       });
       
       if (!response.ok) throw new Error('Failed to add refined objective');
-      const newObjective = await response.json();
+      const result = await response.json();
       
+      // Result now contains { objective, session }
+      // The new session will appear in the next fetchSessions call
+      // Optionally add it to the local state immediately
       set((state) => ({
-        sessions: state.sessions.map(s =>
-          s.id === sessionId
-            ? { ...s, refinedObjectives: [...(s.refinedObjectives || []), newObjective] }
-            : s
-        )
+        sessions: [...state.sessions, result.session]
       }));
       
-      return newObjective.id;
+      return result.objective.id;
     } catch (error) {
       console.error('Error adding refined objective:', error);
       throw error;
     }
-  },
-  
-  // Update objective (not implemented in backend yet - would need a separate endpoint)
-  updateObjective: (sessionId, objectiveId, updates) => {
-    set((state) => ({
-      sessions: state.sessions.map(s =>
-        s.id === sessionId
-          ? {
-              ...s,
-              refinedObjectives: (s.refinedObjectives || []).map(obj =>
-                obj.id === objectiveId ? { ...obj, ...updates } : obj
-              )
-            }
-          : s
-      )
-    }));
-  },
-  
-  // Remove objective (not implemented in backend yet - would need a separate endpoint)
-  removeObjective: (sessionId, objectiveId) => {
-    set((state) => ({
-      sessions: state.sessions.map(s =>
-        s.id === sessionId
-          ? {
-              ...s,
-              refinedObjectives: (s.refinedObjectives || []).filter(obj => obj.id !== objectiveId)
-            }
-          : s
-      )
-    }));
   },
   
   // Add work item (for team tier only)

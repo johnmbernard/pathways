@@ -18,7 +18,7 @@ async function main() {
   console.log('🗑️  Clearing existing data...');
   await prisma.discussionMessage.deleteMany();
   await prisma.workItem.deleteMany();
-  await prisma.refinedObjective.deleteMany();
+  await prisma.refinementUnitCompletion.deleteMany();
   await prisma.refinementSession.deleteMany();
   await prisma.risk.deleteMany();
   await prisma.objectiveCompletion.deleteMany();

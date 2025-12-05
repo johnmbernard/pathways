@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useWorkItemsStore } from '../store/workItemsStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { PageHeader } from '../components/layout/Layout';
@@ -7,9 +7,14 @@ import { Building2, GripVertical } from 'lucide-react';
 import styles from './TeamPriorities.module.css';
 
 export default function TeamPriorities() {
-  const { items, updateItem } = useWorkItemsStore();
+  const { items, updateItem, fetchWorkItems } = useWorkItemsStore();
   const { units } = useOrganizationStore();
   const [selectedTeam, setSelectedTeam] = useState('all');
+
+  // Fetch work items on mount
+  useEffect(() => {
+    fetchWorkItems();
+  }, [fetchWorkItems]);
 
   // Use org units for team selector
   const allTeams = useMemo(() => [

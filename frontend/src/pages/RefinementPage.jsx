@@ -18,8 +18,6 @@ export default function RefinementPage() {
   const fetchSessions = useRefinementStore((state) => state.fetchSessions);
   const addDiscussion = useRefinementStore((state) => state.addDiscussion);
   const addObjective = useRefinementStore((state) => state.addObjective);
-  const updateObjective = useRefinementStore((state) => state.updateObjective);
-  const removeObjective = useRefinementStore((state) => state.removeObjective);
   const addWorkItem = useRefinementStore((state) => state.addWorkItem);
   const updateWorkItem = useRefinementStore((state) => state.updateWorkItem);
   const removeWorkItem = useRefinementStore((state) => state.removeWorkItem);
@@ -28,6 +26,9 @@ export default function RefinementPage() {
   const removeUnitCompletion = useRefinementStore((state) => state.removeUnitCompletion);
   
   const getProject = useProjectsStore((state) => state.getProject);
+  const fetchProjects = useProjectsStore((state) => state.fetchProjects);
+  const updateObjective = useProjectsStore((state) => state.updateObjective);
+  const deleteObjective = useProjectsStore((state) => state.deleteObjective);
   const markObjectiveCompletedByUnit = useProjectsStore((state) => state.markObjectiveCompletedByUnit);
   const { units, getUnitsByTier, getTierLevel } = useOrganizationStore();
   const addItem = useWorkItemsStore((state) => state.addItem);
@@ -40,26 +41,94 @@ export default function RefinementPage() {
   const [editingObjective, setEditingObjective] = useState(null);
   const [editingWorkItem, setEditingWorkItem] = useState(null);
   
-  // Fetch sessions on mount to get latest data
+  // Fetch sessions and projects on mount to get latest data
   useEffect(() => {
-    const loadSessions = async () => {
-      await fetchSessions();
+    const loadData = async () => {
+      console.log('RefinementPage - Current User:', currentUser);
+      console.log('RefinementPage - User Unit:', currentUser?.organizationalUnit);
+      await Promise.all([fetchSessions(), fetchProjects()]);
       setIsLoading(false);
     };
-    loadSessions();
-  }, [fetchSessions]);
+    loadData();
+  }, [fetchSessions, fetchProjects, currentUser]);
   
   const session = getSession(sessionId);
   const project = session ? getProject(session.projectId) : null;
   const currentUserUnit = units.find(u => u.id === currentUser?.organizationalUnit);
   const actualTier = currentUserUnit?.tier || 1;
-  const isTeamTier = currentUserUnit?.tier === 3;
+  
+  // Check if this is a leaf unit (no subordinate units) - these refine into work items
+  const hasSubordinateUnits = useMemo(() => {
+    const unitId = currentUser?.organizationalUnit;
+    if (!unitId) return false;
+    return units.some(unit => unit.parentId === unitId);
+  }, [units, currentUser?.organizationalUnit]);
+  
+  const isLeafUnit = !hasSubordinateUnits;
+  
+  // Check if current user's unit owns the project (project initiator)
+  const isProjectOwner = project?.ownerUnit === currentUser?.organizationalUnit;
+  
+  // Check if current user's unit is assigned to this objective
+  const isAssignedToObjective = useMemo(() => {
+    if (!session?.objective) return false;
+    return session.objective.assignedUnits?.some(
+      assignment => assignment.unitId === currentUser?.organizationalUnit
+    );
+  }, [session, currentUser?.organizationalUnit]);
+  
+  // Check if current user's unit has completed their portion
+  const hasMyUnitCompleted = useMemo(() => {
+    if (!session) return false;
+    return session.unitCompletions?.some(
+      completion => completion.organizationalUnitId === currentUser?.organizationalUnit
+    );
+  }, [session, currentUser?.organizationalUnit]);
+  
+  // Check if ALL assigned units have completed
+  const allUnitsCompleted = useMemo(() => {
+    if (!session?.objective) return false;
+    const assignedUnitIds = session.objective.assignedUnits?.map(a => a.unitId) || [];
+    if (assignedUnitIds.length === 0) return false;
+    
+    const completedUnitIds = session.unitCompletions?.map(c => c.organizationalUnitId) || [];
+    return assignedUnitIds.every(unitId => completedUnitIds.includes(unitId));
+  }, [session]);
+  
+  // Check if current user's unit created the parent objective (responsible for approval/release)
+  // For root objectives (no parent), check project ownership
+  // For child objectives, check if current user's unit is in the parent's assignedUnits
+  const canApproveRefinement = useMemo(() => {
+    if (!session?.objective) return false;
+    
+    const objective = session.objective;
+    
+    // If this is a root objective (no parent), only project owner can approve
+    if (!objective.parentObjectiveId) {
+      return isProjectOwner;
+    }
+    
+    // If this is a child objective, find the parent objective to see who created it
+    const parentObjective = project?.objectives?.find(obj => obj.id === objective.parentObjectiveId);
+    if (!parentObjective) return false;
+    
+    // The units assigned to the parent objective are the ones who created this child
+    // So check if current user's unit is assigned to the parent
+    return parentObjective.assignedUnits?.some(
+      assignment => assignment.unitId === currentUser?.organizationalUnit
+    );
+  }, [session, project, isProjectOwner, currentUser?.organizationalUnit]);
+  
+  // Get child objectives that were created during this refinement
+  const childObjectives = useMemo(() => {
+    if (!session || !project) return [];
+    return project.objectives?.filter(obj => obj.parentObjectiveId === session.objectiveId) || [];
+  }, [session, project]);
   
   // Get available units for next tier - only subordinate units
   const nextTierUnits = useMemo(() => {
-    if (isTeamTier) return [];
+    if (isLeafUnit) return []; // Leaf units don't cascade to subordinates
     const nextTier = actualTier + 1;
-    if (nextTier > 3) return [];
     
     const allNextTierUnits = getUnitsByTier(nextTier);
     
@@ -68,7 +137,7 @@ export default function RefinementPage() {
     if (!unitId) return allNextTierUnits;
     
     return allNextTierUnits.filter(unit => unit.parentId === unitId);
-  }, [isTeamTier, actualTier, currentUser?.organizationalUnit, getUnitsByTier]);
+  }, [isLeafUnit, actualTier, currentUser?.organizationalUnit, getUnitsByTier]);
   
   // Conditional returns AFTER all hooks
   if (isLoading) {
@@ -101,14 +170,25 @@ export default function RefinementPage() {
     setMessage('');
   };
   
-  const handleSaveObjective = (objectiveData) => {
+  const handleSaveObjective = async (objectiveData) => {
     if (editingObjective) {
-      updateObjective(sessionId, editingObjective.id, objectiveData);
+      // Update existing objective
+      await updateObjective(session.projectId, editingObjective.id, objectiveData);
+      await fetchProjects();
     } else {
-      addObjective(sessionId, objectiveData, currentUser);
+      // Create new child objective
+      await addObjective(sessionId, objectiveData, currentUser);
+      await fetchProjects();
     }
     setShowObjectiveModal(false);
     setEditingObjective(null);
+  };
+  
+  const handleDeleteObjective = async (objectiveId) => {
+    if (confirm('Are you sure you want to delete this objective?')) {
+      await deleteObjective(session.projectId, objectiveId);
+      await fetchProjects();
+    }
   };
   
   const handleSaveWorkItem = (workItemData) => {
@@ -121,8 +201,18 @@ export default function RefinementPage() {
     setEditingWorkItem(null);
   };
   
+  const handleMarkComplete = async () => {
+    try {
+      await markUnitComplete(sessionId, currentUser?.organizationalUnit, currentUser);
+      await fetchSessions(); // Refresh to show updated completion status
+    } catch (error) {
+      console.error('Error marking unit complete:', error);
+      alert('Failed to mark complete');
+    }
+  };
+  
   const handleComplete = () => {
-    if (isTeamTier) {
+    if (isLeafUnit) {
       // Add work items to backlog
       session.workItems.forEach(wi => {
         addItem({
@@ -156,7 +246,7 @@ export default function RefinementPage() {
         <div>
           <h1>{project?.title || 'Unknown Project'}</h1>
           <p className={styles.subtitle}>
-            Your {isTeamTier ? 'Team' : `Tier ${actualTier}`}: {currentUserUnit?.name || 'Unit'}
+            Your {isLeafUnit ? 'Team' : `Tier ${actualTier}`}: {currentUserUnit?.name || 'Unit'}
           </p>
         </div>
         <button onClick={() => navigate('/projects')} className={styles.backButton}>
@@ -282,19 +372,19 @@ export default function RefinementPage() {
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              {isTeamTier ? '✅ Break Down into Work Items' : '🎯 Your Refined Objectives for Next Tier'}
+              {isLeafUnit ? '✅ Break Down into Work Items' : '🎯 Your Refined Objectives for Next Tier'}
             </h2>
             <button
-              onClick={() => isTeamTier ? setShowWorkItemModal(true) : setShowObjectiveModal(true)}
+              onClick={() => isLeafUnit ? setShowWorkItemModal(true) : setShowObjectiveModal(true)}
               className={styles.addButton}
             >
               <Plus size={16} />
-              {isTeamTier ? 'Add Work Item' : 'Add Objective'}
+              {isLeafUnit ? 'Add Work Item' : 'Add Objective'}
             </button>
           </div>
           
           <div className={styles.itemsList}>
-            {isTeamTier ? (
+            {isLeafUnit ? (
               session.workItems.length === 0 ? (
                 <p className={styles.emptyState}>No work items yet. Add requirements from the objective above.</p>
               ) : (
@@ -330,10 +420,10 @@ export default function RefinementPage() {
                 ))
               )
             ) : (
-              session.refinedObjectives.length === 0 ? (
+              childObjectives.length === 0 ? (
                 <p className={styles.emptyState}>No objectives yet. Define what needs to happen next.</p>
               ) : (
-                session.refinedObjectives.map((obj, index) => (
+                childObjectives.map((obj, index) => (
                   <div key={obj.id} className={styles.itemCard}>
                     <div className={styles.itemHeader}>
                       <span className={styles.itemNumber}>{index + 1}.</span>
@@ -348,7 +438,7 @@ export default function RefinementPage() {
                         Edit
                       </button>
                       <button
-                        onClick={() => removeObjective(sessionId, obj.id)}
+                        onClick={() => handleDeleteObjective(obj.id)}
                         className={styles.removeButton}
                       >
                         <X size={16} />
@@ -356,12 +446,6 @@ export default function RefinementPage() {
                     </div>
                     <p className={styles.itemDescription}>{obj.description}</p>
                     <div className={styles.itemMeta}>
-                      {obj.createdByName && (
-                        <div className={styles.metaItem}>
-                          <Users size={14} />
-                          Created by: {obj.createdByName}
-                        </div>
-                      )}
                       {obj.targetDate && (
                         <div className={styles.metaItem}>
                           <Calendar size={14} />
@@ -371,21 +455,10 @@ export default function RefinementPage() {
                       {obj.assignedUnits?.length > 0 && (
                         <div className={styles.metaItem}>
                           <Users size={14} />
-                          {obj.assignedUnits.length} unit(s)
-                        </div>
-                      )}
-                      {obj.risks?.length > 0 && (
-                        <div className={styles.metaItem}>
-                          <AlertTriangle size={14} />
-                          {obj.risks.length} risk(s)
+                          {obj.assignedUnits.length} unit(s) assigned
                         </div>
                       )}
                     </div>
-                    {obj.dependencies?.length > 0 && (
-                      <div className={styles.dependencies}>
-                        Dependencies: {obj.dependencies.join(', ')}
-                      </div>
-                    )}
                   </div>
                 ))
               )
@@ -398,13 +471,37 @@ export default function RefinementPage() {
           <button onClick={() => navigate('/projects')} className={styles.secondaryButton}>
             Save Draft
           </button>
-          <button
-            onClick={handleComplete}
-            className={styles.primaryButton}
-            disabled={isTeamTier ? session.workItems.length === 0 : session.refinedObjectives.length === 0}
-          >
-            {isTeamTier ? 'Complete & Add to Backlog' : 'Complete Refinement & Notify Next Tier'}
-          </button>
+          
+          {/* Mark My Portion Complete - for assigned units */}
+          {isAssignedToObjective && !hasMyUnitCompleted && (
+            <button
+              onClick={handleMarkComplete}
+              className={styles.secondaryButton}
+              disabled={isLeafUnit ? session.workItems.length === 0 : childObjectives.length === 0}
+            >
+              Mark My Portion Complete
+            </button>
+          )}
+          
+          {/* Show completion status if already completed */}
+          {hasMyUnitCompleted && !canApproveRefinement && (
+            <span className={styles.completedBadge}>
+              ✓ Your unit has completed this refinement
+            </span>
+          )}
+          
+          {/* Release button - for parent tier who created the objective */}
+          {canApproveRefinement && (
+            <button
+              onClick={handleComplete}
+              className={styles.primaryButton}
+              disabled={!allUnitsCompleted}
+              title={!allUnitsCompleted ? 'Waiting for all assigned units to complete their portions' : ''}
+            >
+              {isLeafUnit ? 'Release to Backlog' : 'Release to Next Tier'}
+              {!allUnitsCompleted && ` (${session.unitCompletions?.length || 0}/${session.objective?.assignedUnits?.length || 0} complete)`}
+            </button>
+          )}
         </div>
       </div>
       
@@ -442,7 +539,7 @@ function ObjectiveModal({ objective, nextTierUnits, onSave, onClose }) {
     title: objective?.title || '',
     description: objective?.description || '',
     targetDate: objective?.targetDate || '',
-    assignedUnits: objective?.assignedUnits || [],
+    assignedUnits: objective?.assignedUnits?.map(a => a.unitId || a.id || a) || [],
     dependencies: objective?.dependencies || [],
     risks: objective?.risks || []
   });

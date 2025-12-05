@@ -664,15 +664,19 @@ export default function ProjectsPage() {
               // Create ONE collaborative refinement session for the objective
               // All assigned units will share this session
               try {
-                await createSession(
+                const sessionId = await createSession(
                   refinementProject.id,
                   objectiveId,
                   currentUser
                 );
                 
-                // Close modal and show success message
+                // Close modal and navigate to the refinement session
                 setRefinementProject(null);
-                alert(`Objective "${objective.title}" released for collaborative refinement to ${assignedUnits.length} unit(s)`);
+                
+                // Navigate to the refinement session
+                if (sessionId) {
+                  navigate(`/refinement/${sessionId}`);
+                }
               } catch (error) {
                 console.error('Error creating refinement session:', error);
                 alert('Failed to create refinement session');

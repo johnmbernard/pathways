@@ -1,71 +1,46 @@
 import { create } from 'zustand';
-
-const STORAGE_KEY = 'pathways_work_items_v1';
-const IDS_MIGRATED_KEY = 'pathways_work_items_ids_normalized_v1';
-
-function loadItems() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return [
-    { id: '1', title: 'Example Epic', state: 'New', type: 'Epic', parentId: null, order: 0, assignedOrgUnit: null, startDate: '', targetDate: '', description: '', acceptanceCriteria: [], priority: 'P2', projectId: 'proj-1' },
-    { id: '2', title: 'Feature 1', state: 'New', type: 'Feature', parentId: '1', order: 0, assignedOrgUnit: null, startDate: '', targetDate: '', description: '', acceptanceCriteria: [], priority: 'P1', projectId: 'proj-1' },
-    { id: '3', title: 'User Story A', state: 'Committed', type: 'User Story', parentId: '2', order: 0, assignedOrgUnit: null, startDate: '', targetDate: '', description: '', acceptanceCriteria: [], priority: 'P3', projectId: 'proj-1' },
-  ];
-}
-
-function maybeNormalizeIds(items) {
-  try {
-    if (localStorage.getItem(IDS_MIGRATED_KEY) === '1') {
-      return { items, nextId: computeNextId(items) };
-    }
-  } catch {}
-
-  const needsMigration = items.some(it => !/^\d+$/.test(String(it.id)) || parseInt(it.id, 10) > 1000000);
-  if (!needsMigration) return { items, nextId: computeNextId(items) };
-
-  const mapping = new Map();
-  const newItems = items.map((it, idx) => {
-    const newId = String(idx + 1);
-    mapping.set(String(it.id), newId);
-    return { ...it, id: newId };
-  });
-
-  const remapped = newItems.map(it => {
-    const pid = it.parentId != null ? mapping.get(String(it.parentId)) ?? null : null;
-    return { ...it, parentId: pid };
-  });
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(remapped));
-    localStorage.setItem(IDS_MIGRATED_KEY, '1');
-  } catch {}
-
-  return { items: remapped, nextId: remapped.length + 1 };
-}
-
-// Work item store with hierarchical structure
-function computeNextId(items) {
-  const nums = items
-    .map(i => parseInt(i.id, 10))
-    .filter(n => !Number.isNaN(n));
-  const max = nums.length ? Math.max(...nums) : 0;
-  return max + 1;
-}
-
-const initialLoad = loadItems();
-const normalized = maybeNormalizeIds(initialLoad);
+import { API_BASE_URL } from '../config';
 
 export const useWorkItemsStore = create((set, get) => ({
-  items: normalized.items,
-  nextId: normalized.nextId,
+  items: [],
   expandedItems: new Set(['1', '2']), // Track expanded state
 
-  // Add new work item
+  // Fetch work items from backend
+  fetchWorkItems: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/work-items`);
+      if (!response.ok) throw new Error('Failed to fetch work items');
+      const workItems = await response.json();
+      
+      // Transform backend work items to match the expected format
+      const transformedItems = workItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        type: item.type || 'Story',
+        priority: item.priority || 'P3',
+        status: item.status || 'Backlog',
+        assignedOrgUnit: item.assignedOrgUnit,
+        estimatedEffort: item.estimatedEffort,
+        createdBy: item.createdBy,
+        refinementSessionId: item.refinementSessionId,
+        projectId: item.refinementSession?.project?.id,
+        objectiveTitle: item.refinementSession?.objective?.title,
+        parentId: null, // Work items from refinements don't have parent hierarchy
+        order: 0,
+        acceptanceCriteria: [],
+      }));
+      
+      set({ items: transformedItems });
+    } catch (error) {
+      console.error('Error fetching work items:', error);
+    }
+  },
+
+  // Add new work item (local only - for demo purposes)
   addItem: (item) => set((state) => {
-    const id = String(state.nextId);
-    const parentId = item.parentId ?? null; // default to root if not provided
+    const id = String(Date.now());
+    const parentId = item.parentId ?? null;
     const order = state.items.filter(i => i.parentId === parentId).length;
     return {
       items: [...state.items, { 
@@ -75,10 +50,9 @@ export const useWorkItemsStore = create((set, get) => ({
         order, 
         description: item.description || '', 
         acceptanceCriteria: item.acceptanceCriteria || [],
-        priority: item.priority || 'P3', // default to P3 if not specified
-        projectId: item.projectId || null, // link to project if specified
+        priority: item.priority || 'P3',
+        projectId: item.projectId || null,
       }],
-      nextId: state.nextId + 1,
     };
   }),
 
@@ -87,20 +61,6 @@ export const useWorkItemsStore = create((set, get) => ({
     items: state.items.map(item => 
       item.id === id ? { ...item, ...updates } : item
     ),
-  })),
-
-  // Bulk rename types and normalize to valid types list
-  bulkRenameTypes: (mapping, validTypes) => set((state) => ({
-    items: state.items.map(item => {
-      let type = item.type;
-      if (mapping && mapping[type]) {
-        type = mapping[type];
-      }
-      if (Array.isArray(validTypes) && validTypes.length > 0 && !validTypes.includes(type)) {
-        type = validTypes[0];
-      }
-      return { ...item, type };
-    })
   })),
 
   // Delete work item
@@ -152,10 +112,3 @@ export const useWorkItemsStore = create((set, get) => ({
       .sort((a, b) => a.order - b.order);
   },
 }));
-
-// Persist items on any change
-useWorkItemsStore.subscribe((state) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
-  } catch {}
-});

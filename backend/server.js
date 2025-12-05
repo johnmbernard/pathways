@@ -7,6 +7,7 @@ import organizationalUnitsRoutes from './routes/organizationalUnits.js';
 import projectsRoutes from './routes/projects.js';
 import objectivesRoutes from './routes/objectives.js';
 import refinementsRoutes from './routes/refinements.js';
+import workItemsRoutes from './routes/workItems.js';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api/organizational-units', organizationalUnitsRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/objectives', objectivesRoutes);
 app.use('/api/refinements', refinementsRoutes);
+app.use('/api/work-items', workItemsRoutes);
 
 // 404 handler
 app.use((req, res) => {

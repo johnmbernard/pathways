@@ -13,6 +13,7 @@ router.get('/', async (req, res) => {
             id: true,
             title: true,
             ownerTier: true,
+            ownerUnit: true,
           },
         },
         objective: {
@@ -21,6 +22,8 @@ router.get('/', async (req, res) => {
             title: true,
             description: true,
             targetDate: true,
+            fromTier: true,
+            parentObjectiveId: true,
             assignedUnits: {
               include: {
                 unit: {
@@ -69,7 +72,6 @@ router.get('/', async (req, res) => {
             },
           },
         },
-        refinedObjectives: true,
         discussionMessages: {
           include: {
             author: {
@@ -89,16 +91,7 @@ router.get('/', async (req, res) => {
       },
     });
 
-    // Parse assignedUnits JSON strings in refinedObjectives
-    const sessionsWithParsedData = sessions.map(session => ({
-      ...session,
-      refinedObjectives: session.refinedObjectives?.map(obj => ({
-        ...obj,
-        assignedUnits: JSON.parse(obj.assignedUnits || '[]'),
-      })) || [],
-    }));
-
-    res.json(sessionsWithParsedData);
+    res.json(sessions);
   } catch (error) {
     console.error('Error fetching refinement sessions:', error);
     res.status(500).json({ error: 'Failed to fetch refinement sessions' });
@@ -158,7 +151,6 @@ router.get('/:id', async (req, res) => {
             },
           },
         },
-        refinedObjectives: true,
         discussionMessages: {
           include: {
             author: {
@@ -179,16 +171,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Refinement session not found' });
     }
 
-    // Parse assignedUnits JSON strings in refinedObjectives
-    const sessionWithParsedData = {
-      ...session,
-      refinedObjectives: session.refinedObjectives?.map(obj => ({
-        ...obj,
-        assignedUnits: JSON.parse(obj.assignedUnits || '[]'),
-      })) || [],
-    };
-
-    res.json(sessionWithParsedData);
+    res.json(session);
   } catch (error) {
     console.error('Error fetching refinement session:', error);
     res.status(500).json({ error: 'Failed to fetch refinement session' });
@@ -225,12 +208,26 @@ router.post('/', async (req, res) => {
             id: true,
             title: true,
             ownerTier: true,
+            ownerUnit: true,
           },
         },
         objective: {
           select: {
             id: true,
             title: true,
+            description: true,
+            targetDate: true,
+            assignedUnits: {
+              include: {
+                unit: {
+                  select: {
+                    id: true,
+                    name: true,
+                    tier: true,
+                  },
+                },
+              },
+            },
           },
         },
         creator: {
@@ -280,12 +277,26 @@ router.post('/', async (req, res) => {
             id: true,
             title: true,
             ownerTier: true,
+            ownerUnit: true,
           },
         },
         objective: {
           select: {
             id: true,
             title: true,
+            description: true,
+            targetDate: true,
+            assignedUnits: {
+              include: {
+                unit: {
+                  select: {
+                    id: true,
+                    name: true,
+                    tier: true,
+                  },
+                },
+              },
+            },
           },
         },
         creator: {
@@ -344,11 +355,59 @@ router.put('/:id', async (req, res) => {
         status: status || existingSession.status,
       },
       include: {
-        project: true,
-        objective: true,
-        organizationalUnit: true,
+        project: {
+          select: {
+            id: true,
+            title: true,
+            ownerTier: true,
+            ownerUnit: true,
+          },
+        },
+        objective: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            targetDate: true,
+            assignedUnits: {
+              include: {
+                unit: {
+                  select: {
+                    id: true,
+                    name: true,
+                    tier: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        unitCompletions: {
+          include: {
+            organizationalUnit: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+              },
+            },
+            completedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
         workItems: true,
-        refinedObjectives: true,
         discussionMessages: {
           include: {
             author: {
@@ -463,35 +522,121 @@ router.delete('/:sessionId/work-items/:workItemId', async (req, res) => {
   }
 });
 
-// POST add refined objective to session
+// POST add refined objective to session (creates real Objective and spawns new refinement sessions)
 router.post('/:id/refined-objectives', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, targetDate, assignedUnits } = req.body;
+    const { title, description, targetDate, assignedUnits, createdBy } = req.body;
 
-    if (!title || !targetDate) {
+    if (!title || !targetDate || !createdBy) {
       return res.status(400).json({ 
-        error: 'Missing required fields: title, targetDate' 
+        error: 'Missing required fields: title, targetDate, createdBy' 
       });
     }
 
-    const refinedObjective = await prisma.refinedObjective.create({
+    // Get the parent session to determine project and parent objective
+    const parentSession = await prisma.refinementSession.findUnique({
+      where: { id },
+      include: {
+        objective: {
+          select: {
+            id: true,
+            fromTier: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!parentSession) {
+      return res.status(404).json({ error: 'Refinement session not found' });
+    }
+
+    // Create the objective as a child of the parent objective
+    const newObjective = await prisma.objective.create({
       data: {
         title,
         description,
         targetDate,
-        assignedUnits: JSON.stringify(assignedUnits || []),
-        refinementSessionId: id,
+        projectId: parentSession.project.id,
+        parentObjectiveId: parentSession.objective.id,
+        fromTier: parentSession.objective.fromTier + 1, // Next tier down
+        createdBy,
+        assignedUnits: {
+          create: (assignedUnits || []).map(unitId => ({
+            unitId,
+          })),
+        },
+      },
+      include: {
+        assignedUnits: {
+          include: {
+            unit: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+              },
+            },
+          },
+        },
       },
     });
-    
-    // Parse assignedUnits back to array for response
-    const response = {
-      ...refinedObjective,
-      assignedUnits: JSON.parse(refinedObjective.assignedUnits),
-    };
 
-    res.status(201).json(response);
+    // Automatically create a refinement session for the new objective
+    const newSession = await prisma.refinementSession.create({
+      data: {
+        projectId: parentSession.project.id,
+        objectiveId: newObjective.id,
+        status: 'in-progress',
+        createdBy,
+      },
+      include: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            ownerTier: true,
+            ownerUnit: true,
+          },
+        },
+        objective: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            targetDate: true,
+            assignedUnits: {
+              include: {
+                unit: {
+                  select: {
+                    id: true,
+                    name: true,
+                    tier: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      objective: newObjective,
+      session: newSession,
+    });
   } catch (error) {
     console.error('Error creating refined objective:', error);
     res.status(500).json({ error: 'Failed to create refined objective' });
