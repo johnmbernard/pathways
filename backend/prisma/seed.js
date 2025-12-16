@@ -1,9 +1,12 @@
 /**
- * Database Seed Script
+ * Database Seed Script - Large Scale Organization
  * 
- * This script populates the database with initial data:
+ * This script populates the database with comprehensive test data:
+ * - Large organizational structure (3 tiers, 50+ units)
+ * - Multiple active projects at various stages
+ * - 500+ work items distributed across teams
+ * - Realistic capacity data for forecasting
  * - Demo users with hashed passwords
- * - Organizational structure (Kessel Run hierarchy)
  * 
  * Run with: node prisma/seed.js
  */
@@ -11,8 +14,60 @@
 import prisma from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
 
+// Utility functions for generating realistic data
+const workItemTitles = {
+  Story: [
+    'Implement user authentication flow',
+    'Add real-time notifications',
+    'Create dashboard analytics view',
+    'Build mobile responsive layout',
+    'Integrate third-party API',
+    'Add data export functionality',
+    'Implement search with filters',
+    'Create admin panel interface',
+    'Add multi-language support',
+    'Build reporting module',
+  ],
+  Task: [
+    'Update database schema',
+    'Refactor legacy code module',
+    'Write API documentation',
+    'Set up CI/CD pipeline',
+    'Configure monitoring alerts',
+    'Optimize database queries',
+    'Update dependencies',
+    'Create unit tests',
+    'Deploy to staging environment',
+    'Perform security audit',
+  ],
+  Bug: [
+    'Fix login redirect issue',
+    'Resolve memory leak in background process',
+    'Correct timezone calculation bug',
+    'Fix broken pagination on mobile',
+    'Resolve API timeout errors',
+    'Fix data validation issues',
+    'Correct calculation errors in reports',
+    'Fix race condition in async code',
+    'Resolve CORS issues',
+    'Fix broken links in navigation',
+  ],
+};
+
+const priorities = ['P1', 'P2', 'P3'];
+const statuses = ['Backlog', 'Ready', 'In Progress', 'Done'];
+
+function randomChoice(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function generateWorkItemTitle(type) {
+  const titles = workItemTitles[type];
+  return randomChoice(titles);
+}
+
 async function main() {
-  console.log('🌱 Starting database seed...');
+  console.log('🌱 Starting large-scale database seed...');
 
   // Clear existing data (in reverse order of dependencies)
   console.log('🗑️  Clearing existing data...');
@@ -28,7 +83,7 @@ async function main() {
   await prisma.organizationalUnit.deleteMany();
   await prisma.user.deleteMany();
 
-  // Create organizational structure
+  // Create large organizational structure
   console.log('🏢 Creating organizational units...');
   
   // Tier 1 - Root
@@ -42,90 +97,62 @@ async function main() {
     },
   });
 
-  // Tier 2 - Child units
-  const opsC2 = await prisma.organizationalUnit.create({
-    data: {
-      id: 'org-2',
-      name: 'OpsC2',
-      parentId: kesselRun.id,
-      tier: 2,
-      order: 0,
-    },
-  });
+  // Tier 2 - Departments (10 major departments)
+  const tier2Units = [];
+  const tier2Names = [
+    'Operations C2',
+    'Wing C2', 
+    'Security',
+    'Application Dev',
+    'Infrastructure',
+    'Data & Analytics',
+    'Platform Engineering',
+    'DevSecOps',
+    'Cloud Services',
+    'Enterprise Systems'
+  ];
 
-  const wingC2 = await prisma.organizationalUnit.create({
-    data: {
-      id: 'org-3',
-      name: 'WingC2',
-      parentId: kesselRun.id,
-      tier: 2,
-      order: 1,
-    },
-  });
+  for (let i = 0; i < tier2Names.length; i++) {
+    const unit = await prisma.organizationalUnit.create({
+      data: {
+        id: `org-2-${i + 1}`,
+        name: tier2Names[i],
+        parentId: kesselRun.id,
+        tier: 2,
+        order: i,
+      },
+    });
+    tier2Units.push(unit);
+  }
 
-  const security = await prisma.organizationalUnit.create({
-    data: {
-      id: 'org-4',
-      name: 'Security',
-      parentId: kesselRun.id,
-      tier: 2,
-      order: 2,
-    },
-  });
+  // Tier 3 - Teams (4-6 teams per department = ~50 teams)
+  const tier3Units = [];
+  const tier3TeamNames = [
+    'Alpha Team',
+    'Bravo Team',
+    'Charlie Team',
+    'Delta Team',
+    'Echo Team',
+    'Foxtrot Team',
+  ];
 
-  const adcp = await prisma.organizationalUnit.create({
-    data: {
-      id: 'org-5',
-      name: 'ADCP',
-      parentId: kesselRun.id,
-      tier: 2,
-      order: 3,
-    },
-  });
+  for (const tier2Unit of tier2Units) {
+    const teamCount = 4 + Math.floor(Math.random() * 3); // 4-6 teams
+    for (let i = 0; i < teamCount; i++) {
+      const unit = await prisma.organizationalUnit.create({
+        data: {
+          id: `org-3-${tier2Unit.id}-${i + 1}`,
+          name: `${tier2Unit.name} - ${tier3TeamNames[i]}`,
+          parentId: tier2Unit.id,
+          tier: 3,
+          order: i,
+        },
+      });
+      tier3Units.push(unit);
+    }
+  }
 
-  const iaas = await prisma.organizationalUnit.create({
-    data: {
-      id: 'org-6',
-      name: 'IaaS',
-      parentId: kesselRun.id,
-      tier: 2,
-      order: 4,
-    },
-  });
-
-  // Tier 3 - Grandchild units under OpsC2
-  const krados = await prisma.organizationalUnit.create({
-    data: {
-      id: 'org-7',
-      name: 'KRADOS',
-      parentId: opsC2.id,
-      tier: 3,
-      order: 0,
-    },
-  });
-
-  const marauder = await prisma.organizationalUnit.create({
-    data: {
-      id: 'org-8',
-      name: 'Marauder',
-      parentId: opsC2.id,
-      tier: 3,
-      order: 1,
-    },
-  });
-
-  // Tier 3 - Grandchild units under WingC2
-  const janus = await prisma.organizationalUnit.create({
-    data: {
-      id: 'org-9',
-      name: 'Janus',
-      parentId: wingC2.id,
-      tier: 3,
-      order: 0,
-    },
-  });
-
-  console.log('✅ Created organizational structure');
+  console.log(`✅ Created organizational structure: ${tier2Units.length} departments, ${tier3Units.length} teams`);
 
   // Hash password for all demo users
   const hashedPassword = await bcrypt.hash('demo123', 10);
@@ -133,84 +160,286 @@ async function main() {
   // Create users
   console.log('👥 Creating users...');
   
-  const users = await Promise.all([
-    prisma.user.create({
-      data: {
-        id: 'user-1',
-        email: 'kessel.lead@pathways.dev',
-        password: hashedPassword,
-        name: 'Kessel Lead',
-        organizationalUnit: kesselRun.id,
-        role: 'Unit Leader',
-      },
-    }),
-    prisma.user.create({
-      data: {
-        id: 'user-2',
-        email: 'opsc2.lead@pathways.dev',
-        password: hashedPassword,
-        name: 'OpsC2 Lead',
-        organizationalUnit: opsC2.id,
-        role: 'Unit Leader',
-      },
-    }),
-    prisma.user.create({
-      data: {
-        id: 'user-3',
-        email: 'krados.lead@pathways.dev',
-        password: hashedPassword,
-        name: 'KRADOS Team Lead',
-        organizationalUnit: krados.id,
-        role: 'Team Lead',
-      },
-    }),
-    prisma.user.create({
-      data: {
-        id: 'user-4',
-        email: 'wingc2.lead@pathways.dev',
-        password: hashedPassword,
-        name: 'WingC2 Lead',
-        organizationalUnit: wingC2.id,
-        role: 'Unit Leader',
-      },
-    }),
-    prisma.user.create({
-      data: {
-        id: 'user-5',
-        email: 'security.lead@pathways.dev',
-        password: hashedPassword,
-        name: 'Security Lead',
-        organizationalUnit: security.id,
-        role: 'Unit Leader',
-      },
-    }),
-    prisma.user.create({
-      data: {
-        id: 'user-6',
-        email: 'janus.lead@pathways.dev',
-        password: hashedPassword,
-        name: 'Janus Team Lead',
-        organizationalUnit: janus.id,
-        role: 'Team Lead',
-      },
-    }),
-  ]);
+  // Tier 1 leader
+  const tier1User = await prisma.user.create({
+    data: {
+      id: 'user-1',
+      email: 'kessel.lead@pathways.dev',
+      password: hashedPassword,
+      name: 'Admiral Kessel',
+      organizationalUnit: kesselRun.id,
+      role: 'Organization Leader',
+    },
+  });
 
-  console.log('✅ Created users');
+  // Tier 2 department leads
+  const tier2Users = [];
+  for (let i = 0; i < tier2Units.length; i++) {
+    const user = await prisma.user.create({
+      data: {
+        id: `user-2-${i + 1}`,
+        email: `dept${i + 1}.lead@pathways.dev`,
+        password: hashedPassword,
+        name: `${tier2Units[i].name} Director`,
+        organizationalUnit: tier2Units[i].id,
+        role: 'Department Lead',
+      },
+    });
+    tier2Users.push(user);
+  }
+
+  // Tier 3 team leads (one per team)
+  const tier3Users = [];
+  for (let i = 0; i < tier3Units.length; i++) {
+    const user = await prisma.user.create({
+      data: {
+        id: `user-3-${i + 1}`,
+        email: `team${i + 1}.lead@pathways.dev`,
+        password: hashedPassword,
+        name: `${tier3Units[i].name} Lead`,
+        organizationalUnit: tier3Units[i].id,
+        role: 'Team Lead',
+      },
+    });
+    tier3Users.push(user);
+  }
+
+  console.log(`✅ Created ${tier2Users.length + tier3Users.length + 1} users`);
+
+  // Create projects
+  console.log('📁 Creating projects...');
+  
+  const projects = [];
+  const projectNames = [
+    'Digital Modernization Initiative',
+    'Cloud Migration Phase 2',
+    'Security Compliance Upgrade',
+    'Customer Portal Redesign',
+    'Data Platform Consolidation',
+    'API Gateway Implementation',
+    'Zero Trust Architecture',
+    'AI/ML Platform Development',
+  ];
+
+  for (let i = 0; i < projectNames.length; i++) {
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 1); // Started last month
+    
+    const targetDate = new Date();
+    targetDate.setMonth(targetDate.getMonth() + 3 + i); // Stagger target dates
+    
+    const project = await prisma.project.create({
+      data: {
+        id: `proj-${i + 1}`,
+        title: projectNames[i],
+        description: `Strategic initiative to improve organizational capabilities through ${projectNames[i].toLowerCase()}`,
+        status: i < 4 ? 'In Progress' : 'Planning',
+        startDate: startDate.toISOString().split('T')[0], // YYYY-MM-DD format
+        targetDate: targetDate.toISOString().split('T')[0],
+        budget: 50000 + (i * 25000), // Varying budgets
+        ownerUnit: kesselRun.id,
+        createdBy: tier1User.id,
+        ownerTier: 1,
+      },
+    });
+    projects.push(project);
+  }
+
+  console.log(`✅ Created ${projects.length} projects`);
+
+  // Create work items distributed across teams with historical throughput
+  console.log('📋 Creating work items and throughput history...');
+  
+  let workItemCount = 0;
+  let completedItemCount = 0;
+  const currentWorkItemsPerTeam = 12; // Current backlog items per team
+  const completedItemsPerWeek = 8; // Avg items completed per team per week
+  const weeksOfHistory = 8; // 8 weeks of historical data
+  
+  const throughputByTeam = new Map(); // Track weekly throughput for each team
+
+  for (const team of tier3Units) {
+    const teamLead = tier3Users.find(u => u.organizationalUnit === team.id);
+    
+    // Create COMPLETED work items for last 8 weeks (for throughput calculation)
+    for (let weekAgo = weeksOfHistory; weekAgo > 0; weekAgo--) {
+      const itemsThisWeek = completedItemsPerWeek + Math.floor(Math.random() * 5) - 2; // 6-10 items
+      
+      for (let i = 0; i < itemsThisWeek; i++) {
+        const type = randomChoice(['Story', 'Task', 'Bug']);
+        const project = randomChoice(projects);
+        
+        // Completion date spread across the week
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - (weekAgo * 7));
+        const daysIntoWeek = Math.floor(Math.random() * 7);
+        const completedDate = new Date(weekStart);
+        completedDate.setDate(completedDate.getDate() + daysIntoWeek);
+        
+        // Created 1-2 weeks before completion
+        const createdDate = new Date(completedDate);
+        createdDate.setDate(createdDate.getDate() - (7 + Math.floor(Math.random() * 7)));
+        
+        await prisma.workItem.create({
+          data: {
+            id: `work-${team.id}-completed-${weekAgo}-${i + 1}`,
+            title: `${generateWorkItemTitle(type)} - ${team.name}`,
+            description: `Completed work item for ${project.title}`,
+            type: type,
+            priority: randomChoice(priorities),
+            stackRank: i,
+            status: 'Done',
+            assignedOrgUnit: team.id,
+            createdBy: teamLead.id,
+            createdAt: createdDate,
+            completedAt: completedDate,
+            refinementSessionId: null,
+          },
+        });
+        
+        completedItemCount++;
+      }
+      
+      // Track throughput for this week
+      const weekKey = `${team.id}-${weekAgo}`;
+      throughputByTeam.set(weekKey, itemsThisWeek);
+    }
+    
+    // Create CURRENT backlog items (not yet completed)
+    let stackRankCounter = 0;
+    for (const priority of priorities) {
+      const itemsInPriority = Math.floor(currentWorkItemsPerTeam / 3) + Math.floor(Math.random() * 3);
+      
+      for (let i = 0; i < itemsInPriority; i++) {
+        const type = randomChoice(['Story', 'Task', 'Bug']);
+        const project = randomChoice(projects);
+        
+        await prisma.workItem.create({
+          data: {
+            id: `work-${team.id}-backlog-${priority}-${i + 1}`,
+            title: `${generateWorkItemTitle(type)} - ${team.name}`,
+            description: `Current backlog item for ${project.title}`,
+            type: type,
+            priority: priority,
+            stackRank: stackRankCounter++,
+            status: randomChoice(['Backlog', 'Ready', 'In Progress']),
+            assignedOrgUnit: team.id,
+            createdBy: teamLead.id,
+            refinementSessionId: null,
+          },
+        });
+        
+        workItemCount++;
+      }
+    }
+  }
+
+  console.log(`✅ Created ${completedItemCount} completed work items (historical)`);
+  console.log(`✅ Created ${workItemCount} current backlog items`);
+  
+  // Create TeamThroughput records from the completed items
+  console.log('📊 Calculating team throughput...');
+  
+  let throughputRecordCount = 0;
+  for (const team of tier3Units) {
+    for (let weekAgo = weeksOfHistory; weekAgo > 0; weekAgo--) {
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - (weekAgo * 7));
+      // Set to Monday of that week
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const weekKey = `${team.id}-${weekAgo}`;
+      const itemsCompleted = throughputByTeam.get(weekKey) || 0;
+      
+      await prisma.teamThroughput.create({
+        data: {
+          teamId: team.id,
+          weekStartDate: weekStart,
+          itemsCompleted: itemsCompleted,
+        },
+      });
+      
+      throughputRecordCount++;
+    }
+  }
+  
+  console.log(`✅ Created ${throughputRecordCount} throughput records`);
+
+  // Create some objectives for active projects
+  console.log('🎯 Creating objectives...');
+  
+  let objectiveCount = 0;
+  for (const project of projects.slice(0, 4)) { // First 4 active projects
+    // Create 2-3 objectives per project
+    const numObjectives = 2 + Math.floor(Math.random() * 2);
+    
+    for (let i = 0; i < numObjectives; i++) {
+      const baseDate = new Date(project.targetDate);
+      baseDate.setMonth(baseDate.getMonth() - (numObjectives - i)); // Earlier objectives first
+      const targetDate = baseDate.toISOString().split('T')[0]; // Convert to YYYY-MM-DD
+      
+      // Assign to 2-3 random tier 2 departments
+      const assignedDepts = tier2Units
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 2 + Math.floor(Math.random() * 2));
+      
+      const objective = await prisma.objective.create({
+        data: {
+          id: `obj-${project.id}-${i + 1}`,
+          title: `${project.title} - Phase ${i + 1}`,
+          description: `Deliver phase ${i + 1} capabilities`,
+          targetDate: targetDate,
+          projectId: project.id,
+          fromTier: 1,
+          createdBy: tier1User.id,
+          assignedUnits: {
+            create: assignedDepts.map(dept => ({
+              unitId: dept.id,
+            })),
+          },
+        },
+      });
+      
+      // Create ONE collaborative refinement session for this objective
+      // All assigned departments work in the same session
+      await prisma.refinementSession.create({
+        data: {
+          id: `session-${objective.id}`,
+          status: 'in-progress',
+          objectiveId: objective.id,
+          projectId: project.id,
+          createdBy: tier1User.id,
+        },
+      });
+      
+      objectiveCount++;
+    }
+  }
+
+  console.log(`✅ Created ${objectiveCount} objectives with refinement sessions`);
   console.log('');
-  console.log('📊 Summary:');
-  console.log(`   - ${await prisma.organizationalUnit.count()} organizational units`);
+  console.log('📊 Final Summary:');
+  console.log(`   - ${await prisma.organizationalUnit.count()} organizational units (1 root + ${tier2Units.length} depts + ${tier3Units.length} teams)`);
   console.log(`   - ${await prisma.user.count()} users`);
+  console.log(`   - ${await prisma.project.count()} projects`);
+  console.log(`   - ${await prisma.objective.count()} objectives`);
+  console.log(`   - ${await prisma.workItem.count()} work items`);
+  console.log(`   - ${await prisma.refinementSession.count()} refinement sessions`);
   console.log('');
-  console.log('🎉 Database seeded successfully!');
+  console.log('🎉 Large-scale database seeded successfully!');
   console.log('');
-  console.log('👤 Demo Accounts (all passwords: demo123):');
-  console.log('   - kessel.lead@pathways.dev (Tier 1)');
-  console.log('   - opsc2.lead@pathways.dev (Tier 2)');
-  console.log('   - wingc2.lead@pathways.dev (Tier 2)');
-  console.log('   - security.lead@pathways.dev (Tier 2)');
-  console.log('   - krados.lead@pathways.dev (Tier 3)');
-  console.log('   - janus.lead@pathways.dev (Tier 3)');
+  console.log('👤 Sample Login Accounts (all passwords: demo123):');
+  console.log('   - kessel.lead@pathways.dev (Tier 1 - Org Leader)');
+  console.log('   - dept1.lead@pathways.dev (Tier 2 - Department Lead)');
+  console.log('   - team1.lead@pathways.dev (Tier 3 - Team Lead)');
+  console.log('   - team2.lead@pathways.dev (Tier 3 - Team Lead)');
+  console.log('   ... and many more team leads');
+  console.log('');
+  console.log('💡 Tips:');
+  console.log('   - Teams have 10-15 work items each for prioritization');
+  console.log('   - Work items span multiple projects and priorities');
+  console.log('   - Active refinement sessions ready for testing');
 }
 
 main()

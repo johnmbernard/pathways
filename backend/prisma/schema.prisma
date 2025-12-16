@@ -57,6 +57,7 @@ model OrganizationalUnit {
   objectives              ObjectiveAssignment[]
   completedObjectives     ObjectiveCompletion[]          @relation("CompletedObjectives")
   refinementCompletions   RefinementUnitCompletion[]     @relation("RefinementCompletions")
+  throughputHistory       TeamThroughput[]
   
   @@map("organizational_units")
 }
@@ -201,23 +202,41 @@ model RefinementUnitCompletion {
 
 // Work items created during team-level refinement
 model WorkItem {
-  id                  String   @id @default(cuid())
-  refinementSessionId String?  // Optional - work items can exist independently
+  id                  String    @id @default(cuid())
+  refinementSessionId String?   // Optional - work items can exist independently
   title               String
   description         String?
-  type                String   @default("Story") // Story, Bug, Task, etc.
-  priority            String   @default("Medium") // High, Medium, Low
-  status              String   @default("Backlog") // Backlog, In Progress, Done, etc.
-  estimatedEffort     Float?
-  assignedOrgUnit     String?
+  type                String    @default("Story") // Story, Bug, Task, etc.
+  priority            String    @default("Medium") // P1, P2, P3
+  stackRank           Int       @default(0) // Order within priority bucket (lower = higher priority)
+  status              String    @default("Backlog") // Backlog, Ready, In Progress, Review, Done
+  estimatedEffort     Float?    // Optional story points (not required for forecasting)
+  assignedOrgUnit     String?   // Team assignment
+  assignedTo          String?   // Individual assignment
   createdBy           String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  completedAt         DateTime? // When work item reached "Done" status
   
   refinementSession   RefinementSession? @relation(fields: [refinementSessionId], references: [id], onDelete: Cascade)
   creator             User               @relation("WorkItemCreator", fields: [createdBy], references: [id])
   
   @@map("work_items")
+}
+
+// Track team throughput over time for forecasting
+model TeamThroughput {
+  id              String   @id @default(cuid())
+  teamId          String   // Organizational unit ID
+  weekStartDate   DateTime // Start of the week (Monday)
+  itemsCompleted  Int      @default(0) // Number of items completed this week
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  team            OrganizationalUnit @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  @@unique([teamId, weekStartDate])
+  @@map("team_throughput")
 }
 
 // Collaboration/discussion messages in refinement sessions

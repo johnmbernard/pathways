@@ -3,18 +3,148 @@ import { useWorkItemsStore } from '../store/workItemsStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { PageHeader } from '../components/layout/Layout';
 import { Badge } from '../components/ui';
-import { Building2, GripVertical } from 'lucide-react';
+import { Building2, GripVertical, Calendar, TrendingUp, Clock } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { API_BASE_URL } from '../config';
 import styles from './TeamPriorities.module.css';
+
+// Sortable Item Component
+function SortableWorkItem({ item, team, forecast, onPriorityChange }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={styles.priorityItem}
+    >
+      <div className={styles.dragHandle} {...attributes} {...listeners}>
+        <GripVertical size={16} />
+      </div>
+      <div className={styles.itemContent}>
+        <div className={styles.itemHeader}>
+          <span className={styles.itemId}>#{item.id.slice(-8)}</span>
+          <span className={styles.itemTitle}>{item.title}</span>
+        </div>
+        <div className={styles.itemMeta}>
+          <Badge variant="primary" className={styles.typeBadge}>
+            {item.type}
+          </Badge>
+          {item.assignedOrgUnit && (
+            <span className={styles.teamBadge}>
+              <Building2 size={12} />
+              {team ? team.name : item.assignedOrgUnit}
+            </span>
+          )}
+          {forecast && (
+            <span className={styles.forecastBadge}>
+              <Calendar size={12} />
+              {forecast.estimatedDate} ({forecast.leadTimeWeeks}w)
+            </span>
+          )}
+        </div>
+      </div>
+      <div className={styles.priorityControls}>
+        <select
+          value={item.priority}
+          onChange={(e) => onPriorityChange(item.id, e.target.value)}
+          className={styles.prioritySelect}
+        >
+          <option value="P1">P1</option>
+          <option value="P2">P2</option>
+          <option value="P3">P3</option>
+        </select>
+      </div>
+    </div>
+  );
+}
 
 export default function TeamPriorities() {
   const { items, updateItem, fetchWorkItems } = useWorkItemsStore();
   const { units } = useOrganizationStore();
   const [selectedTeam, setSelectedTeam] = useState('all');
+  const [teamLoad, setTeamLoad] = useState(null);
+  const [forecasts, setForecasts] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Fetch work items on mount
   useEffect(() => {
     fetchWorkItems();
   }, [fetchWorkItems]);
+
+  // Fetch team load and forecasts when team selected
+  useEffect(() => {
+    if (selectedTeam !== 'all') {
+      fetchTeamData(selectedTeam);
+    } else {
+      setTeamLoad(null);
+      setForecasts({});
+    }
+  }, [selectedTeam, items]);
+
+  // Fetch team load and forecast data
+  const fetchTeamData = async (teamId) => {
+    setLoading(true);
+    try {
+      // Fetch team load
+      const loadRes = await fetch(`${API_BASE_URL}/forecasts/load/${teamId}`);
+      if (loadRes.ok) {
+        const loadData = await loadRes.json();
+        setTeamLoad(loadData);
+      }
+
+      // Fetch backlog forecasts
+      const forecastRes = await fetch(`${API_BASE_URL}/forecasts/backlog/${teamId}`);
+      if (forecastRes.ok) {
+        const forecastData = await forecastRes.json();
+        const forecastMap = {};
+        forecastData.forecasts.forEach(f => {
+          forecastMap[f.workItemId] = f;
+        });
+        setForecasts(forecastMap);
+      }
+    } catch (error) {
+      console.error('Error fetching team data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Use org units for team selector
   const allTeams = useMemo(() => [
@@ -24,24 +154,32 @@ export default function TeamPriorities() {
   // Filter items based on selected team
   const filteredItems = useMemo(() => {
     if (selectedTeam === 'all') {
-      return items;
+      return items.filter(item => item.status !== 'Done'); // Hide completed items
     }
-    return items.filter(item => item.assignedOrgUnit === selectedTeam);
+    return items.filter(item => 
+      item.assignedOrgUnit === selectedTeam && item.status !== 'Done'
+    );
   }, [items, selectedTeam]);
 
-  // Group items by priority
+  // Group items by priority with stack ranking
   const p1Items = useMemo(() => 
-    filteredItems.filter(item => item.priority === 'P1').sort((a, b) => a.order - b.order),
+    filteredItems
+      .filter(item => item.priority === 'P1')
+      .sort((a, b) => (a.stackRank || 0) - (b.stackRank || 0)),
     [filteredItems]
   );
 
   const p2Items = useMemo(() => 
-    filteredItems.filter(item => item.priority === 'P2').sort((a, b) => a.order - b.order),
+    filteredItems
+      .filter(item => item.priority === 'P2')
+      .sort((a, b) => (a.stackRank || 0) - (b.stackRank || 0)),
     [filteredItems]
   );
 
   const p3Items = useMemo(() => 
-    filteredItems.filter(item => item.priority === 'P3').sort((a, b) => a.order - b.order),
+    filteredItems
+      .filter(item => item.priority === 'P3')
+      .sort((a, b) => (a.stackRank || 0) - (b.stackRank || 0)),
     [filteredItems]
   );
 
@@ -49,71 +187,78 @@ export default function TeamPriorities() {
     updateItem(itemId, { priority: newPriority });
   };
 
-  const PriorityBucket = ({ priority, title, description, items, color }) => (
-    <div className={styles.bucket}>
-      <div className={styles.bucketHeader} style={{ borderLeftColor: color }}>
-        <div>
-          <h3 className={styles.bucketTitle}>{title}</h3>
-          <p className={styles.bucketDescription}>{description}</p>
-        </div>
-        <Badge variant={priority === 'P1' ? 'danger' : priority === 'P2' ? 'warning' : 'secondary'}>
-          {items.length} items
-        </Badge>
-      </div>
-      <div className={styles.bucketBody}>
-        {items.length === 0 ? (
-          <div className={styles.emptyBucket}>
-            No items in this priority bucket
+  const handleDragEnd = (event, priority) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const itemsList = priority === 'P1' ? p1Items : priority === 'P2' ? p2Items : p3Items;
+    const oldIndex = itemsList.findIndex(item => item.id === active.id);
+    const newIndex = itemsList.findIndex(item => item.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Reorder items
+    const reorderedItems = arrayMove(itemsList, oldIndex, newIndex);
+
+    // Update stack ranks
+    reorderedItems.forEach((item, index) => {
+      updateItem(item.id, { stackRank: index });
+    });
+  };
+
+  const PriorityBucket = ({ priority, title, description, items, color }) => {
+    const itemIds = items.map(item => item.id);
+    
+    return (
+      <div className={styles.bucket}>
+        <div className={styles.bucketHeader} style={{ borderLeftColor: color }}>
+          <div>
+            <h3 className={styles.bucketTitle}>{title}</h3>
+            <p className={styles.bucketDescription}>{description}</p>
           </div>
-        ) : (
-          items.map((item) => {
-            const team = allTeams.find(t => t.id === item.assignedOrgUnit);
-            return (
-              <div key={item.id} className={styles.priorityItem}>
-                <div className={styles.dragHandle}>
-                  <GripVertical size={16} />
+          <Badge variant={priority === 'P1' ? 'danger' : priority === 'P2' ? 'warning' : 'secondary'}>
+            {items.length} items
+          </Badge>
+        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(event) => handleDragEnd(event, priority)}
+        >
+          <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+            <div className={styles.bucketBody}>
+              {items.length === 0 ? (
+                <div className={styles.emptyBucket}>
+                  No items in this priority bucket
                 </div>
-                <div className={styles.itemContent}>
-                  <div className={styles.itemHeader}>
-                    <span className={styles.itemId}>#{item.id}</span>
-                    <span className={styles.itemTitle}>{item.title}</span>
-                  </div>
-                  <div className={styles.itemMeta}>
-                    <Badge variant="primary" className={styles.typeBadge}>
-                      {item.type}
-                    </Badge>
-                    {team && (
-                      <span className={styles.teamBadge}>
-                        <Building2 size={12} />
-                        {team.name}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className={styles.priorityControls}>
-                  <select
-                    value={item.priority}
-                    onChange={(e) => handlePriorityChange(item.id, e.target.value)}
-                    className={styles.prioritySelect}
-                  >
-                    <option value="P1">P1</option>
-                    <option value="P2">P2</option>
-                    <option value="P3">P3</option>
-                  </select>
-                </div>
-              </div>
-            );
-          })
-        )}
+              ) : (
+                items.map((item) => {
+                  const team = allTeams.find(t => t.id === item.assignedOrgUnit);
+                  const forecast = forecasts[item.id];
+                  return (
+                    <SortableWorkItem
+                      key={item.id}
+                      item={item}
+                      team={team}
+                      forecast={forecast}
+                      onPriorityChange={handlePriorityChange}
+                    />
+                  );
+                })
+              )}
+            </div>
+          </SortableContext>
+        </DndContext>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className={styles.page}>
       <PageHeader
         title="Team Priorities"
-        subtitle="Organize work into priority buckets"
+        subtitle="Stack rank work items and forecast completion dates"
       />
 
       <div className={styles.container}>
@@ -129,8 +274,8 @@ export default function TeamPriorities() {
             className={styles.teamSelect}
           >
             <option value="all">All Teams (Organization View)</option>
-            <optgroup label="Hierarchical Units">
-              {units.map(unit => (
+            <optgroup label="Teams">
+              {units.filter(u => u.tier === 3).map(unit => (
                 <option key={unit.id} value={unit.id}>
                   {unit.name}
                 </option>
@@ -138,6 +283,56 @@ export default function TeamPriorities() {
             </optgroup>
           </select>
         </div>
+
+        {/* Team Load Dashboard */}
+        {teamLoad && selectedTeam !== 'all' && (
+          <div className={styles.loadDashboard}>
+            <h3 className={styles.dashboardTitle}>
+              <TrendingUp size={20} />
+              Team Capacity & Forecast
+            </h3>
+            <div className={styles.metricsGrid}>
+              <div className={styles.metric}>
+                <div className={styles.metricLabel}>Throughput</div>
+                <div className={styles.metricValue}>
+                  {teamLoad.throughput} <span className={styles.metricUnit}>items/week</span>
+                </div>
+              </div>
+              <div className={styles.metric}>
+                <div className={styles.metricLabel}>P1 Load</div>
+                <div className={styles.metricValue}>
+                  {teamLoad.p1LoadWeeks} <span className={styles.metricUnit}>weeks</span>
+                </div>
+                <div className={styles.metricSubtext}>{teamLoad.queue.p1} items</div>
+              </div>
+              <div className={styles.metric}>
+                <div className={styles.metricLabel}>P1 + P2 Load</div>
+                <div className={styles.metricValue}>
+                  {teamLoad.p2LoadWeeks} <span className={styles.metricUnit}>weeks</span>
+                </div>
+                <div className={styles.metricSubtext}>{teamLoad.queue.p1 + teamLoad.queue.p2} items</div>
+              </div>
+              <div className={styles.metric}>
+                <div className={styles.metricLabel}>Total Queue</div>
+                <div className={styles.metricValue}>
+                  {teamLoad.totalLoadWeeks} <span className={styles.metricUnit}>weeks</span>
+                </div>
+                <div className={styles.metricSubtext}>{teamLoad.queue.total} items</div>
+              </div>
+              <div className={`${styles.metric} ${styles.metricStatus}`}>
+                <div className={styles.metricLabel}>Queue Health</div>
+                <div className={styles.metricValue}>
+                  <Badge variant={
+                    teamLoad.status === 'healthy' ? 'success' :
+                    teamLoad.status === 'busy' ? 'warning' : 'danger'
+                  }>
+                    {teamLoad.status}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Priority Buckets */}
         <div className={styles.bucketsGrid}>

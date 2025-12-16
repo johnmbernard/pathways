@@ -19,6 +19,7 @@ export const useWorkItemsStore = create((set, get) => ({
         description: item.description || '',
         type: item.type || 'Story',
         priority: item.priority || 'P3',
+        stackRank: item.stackRank || 0,
         status: item.status || 'Backlog',
         assignedOrgUnit: item.assignedOrgUnit,
         estimatedEffort: item.estimatedEffort,
@@ -29,6 +30,7 @@ export const useWorkItemsStore = create((set, get) => ({
         parentId: null, // Work items from refinements don't have parent hierarchy
         order: 0,
         acceptanceCriteria: [],
+        completedAt: item.completedAt,
       }));
       
       set({ items: transformedItems });
@@ -52,6 +54,7 @@ export const useWorkItemsStore = create((set, get) => ({
         acceptanceCriteria: item.acceptanceCriteria || [],
         priority: item.priority || 'P3',
         projectId: item.projectId || null,
+        assignedOrgUnit: item.teamId || item.assignedOrgUnit || null, // Map teamId to assignedOrgUnit
       }],
     };
   }),

@@ -7,6 +7,8 @@ import RefinementPage from './pages/RefinementPage'
 import MyRefinements from './pages/MyRefinements'
 import RoadmapPage from './pages/RoadmapPage'
 import TeamPriorities from './pages/TeamPriorities'
+import BoardsPage from './pages/BoardsPage'
+import AnalysisPage from './pages/AnalysisPage'
 import LoginPage from './pages/LoginPage'
 import UsersPage from './pages/UsersPage'
 import NavBar from './components/NavBar'
@@ -39,8 +41,8 @@ function App() {
                 <Route path="/my-refinements" element={<ProtectedRoute><MyRefinements /></ProtectedRoute>} />
                 <Route path="/roadmap" element={<ProtectedRoute><RoadmapPage /></ProtectedRoute>} />
                 <Route path="/team/priorities" element={<ProtectedRoute><TeamPriorities /></ProtectedRoute>} />
-                <Route path="/team/boards" element={<ProtectedRoute><div className="p-6">Boards view coming soon...</div></ProtectedRoute>} />
-                <Route path="/team/analysis" element={<ProtectedRoute><div className="p-6">Analysis view coming soon...</div></ProtectedRoute>} />
+                <Route path="/team/boards" element={<ProtectedRoute><BoardsPage /></ProtectedRoute>} />
+                <Route path="/team/analysis" element={<ProtectedRoute><AnalysisPage /></ProtectedRoute>} />
                 <Route path="/login" element={<Navigate to="/" replace />} />
               </Routes>
             </main>

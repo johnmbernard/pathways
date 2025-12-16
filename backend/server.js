@@ -8,6 +8,7 @@ import projectsRoutes from './routes/projects.js';
 import objectivesRoutes from './routes/objectives.js';
 import refinementsRoutes from './routes/refinements.js';
 import workItemsRoutes from './routes/workItems.js';
+import forecastsRoutes from './routes/forecasts.js';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use('/api/projects', projectsRoutes);
 app.use('/api/objectives', objectivesRoutes);
 app.use('/api/refinements', refinementsRoutes);
 app.use('/api/work-items', workItemsRoutes);
+app.use('/api/forecasts', forecastsRoutes);
 
 // 404 handler
 app.use((req, res) => {

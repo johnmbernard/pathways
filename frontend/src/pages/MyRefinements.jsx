@@ -23,151 +23,23 @@ export default function MyRefinements() {
   
   useEffect(() => {
     const loadData = async () => {
-      console.log('MyRefinements - Loading data...');
       await Promise.all([fetchSessions(), fetchProjects()]);
-      console.log('MyRefinements - Data loaded');
-      console.log('MyRefinements - Sessions:', sessions.length);
-      console.log('MyRefinements - Projects:', projects.length);
-      console.log('MyRefinements - Current User:', currentUser);
-      console.log('MyRefinements - Current User Unit:', currentUserUnitId);
     };
     loadData();
   }, [fetchSessions, fetchProjects]);
   
   const currentUserUnitId = currentUser?.organizationalUnit;
   
-  console.log('MyRefinements - Render - currentUserUnitId:', currentUserUnitId);
-  console.log('MyRefinements - Render - sessions count:', sessions.length);
-  console.log('MyRefinements - Render - projects count:', projects.length);
-  
-  // Get IDs of all subordinate units (children, grandchildren, etc.)
-  const subordinateUnitIds = useMemo(() => {
-    if (!currentUserUnitId) return [];
-    const ids = new Set();
-    
-    const addSubordinates = (parentId) => {
-      const children = units.filter(u => u.parentId === parentId);
-      children.forEach(child => {
-        ids.add(child.id);
-        addSubordinates(child.id); // Recursively add grandchildren
-      });
-    };
-    
-    addSubordinates(currentUserUnitId);
-    return Array.from(ids);
-  }, [currentUserUnitId, units]);
-  
-  // Filter sessions for current user's unit
-  // Show sessions where:
-  // 1. User's unit owns the project (Tier 1 sees all), OR
-  // 2. User's unit is assigned to the objective AND it's ready:
-  //    - Root objective (no parent), OR
-  //    - Parent session is completed (released), OR
-  //    - User created parent objective (oversight before release)
-  // 3. User created this objective (assigned to parent) - for oversight
+  // Simplified RBAC: Everyone sees all refinements for visibility and "heads up"
+  // Write access (add objectives/work items) controlled in RefinementPage by assigned units
+  // Approval access controlled in RefinementPage by supervising units (lower tier)
   const mySessions = useMemo(() => {
     if (!currentUserUnitId) return [];
     
-    console.log('=== Filtering sessions for unit:', currentUserUnitId);
-    console.log('Total sessions:', sessions.length);
-    console.log('Total projects:', projects.length);
-    if (projects.length > 0) {
-      console.log('Project objectives:');
-      projects[0].objectives?.forEach(obj => {
-        console.log(`  - ${obj.title} (id: ${obj.id}, parent: ${obj.parentObjectiveId})`);
-      });
-    }
-    
+    // Show ALL sessions to everyone for visibility
     let filtered = sessions.filter(s => {
-      if (!s.objective?.id) {
-        console.log('❌ Session', s.id, '- No objective');
-        return false;
-      }
-      
-      console.log('\n--- Checking session:', s.id, s.objective?.title);
-      
-      // Rule 1: Project owner sees everything
-      const isProjectOwner = s.project?.ownerUnit === currentUserUnitId;
-      console.log('  Is project owner?', isProjectOwner, '(project owner:', s.project?.ownerUnit, ')');
-      if (isProjectOwner) {
-        console.log('  ✅ PASS - Project owner');
-        return true;
-      }
-      
-      const objective = s.objective;
-      const project = projects.find(p => p.id === s.projectId);
-      console.log('  Objective parent:', objective.parentObjectiveId);
-      console.log('  Project found:', !!project);
-      
-      // Rule 2: Check if user created this objective (assigned to the parent objective)
-      // This allows oversight of subordinates' refinements
-      if (objective.parentObjectiveId) {
-        const parentObjective = project?.objectives?.find(obj => obj.id === objective.parentObjectiveId);
-        console.log('  Parent objective found:', !!parentObjective, parentObjective?.title);
-        if (parentObjective) {
-          const parentAssignedUnits = parentObjective.assignedUnits?.map(a => a.unitId);
-          console.log('  Parent assigned to units:', parentAssignedUnits);
-          const createdThisObjective = parentObjective.assignedUnits?.some(
-            assignment => assignment.unitId === currentUserUnitId
-          );
-          console.log('  Did I create this objective?', createdThisObjective);
-          if (createdThisObjective) {
-            console.log('  ✅ PASS - Created this objective (oversight)');
-            return true;
-          }
-        }
-      }
-      
-      // Rule 3: Check if current user's unit is assigned to this objective
-      const assignedUnitIds = objective.assignedUnits?.map(a => a.unitId);
-      console.log('  This objective assigned to units:', assignedUnitIds);
-      const isAssigned = objective.assignedUnits?.some(
-        assignment => assignment.unitId === currentUserUnitId
-      );
-      console.log('  Am I assigned?', isAssigned);
-      
-      if (isAssigned) {
-        // If no parent, this is a root objective - always visible
-        if (!objective.parentObjectiveId) {
-          console.log('  ✅ PASS - Root objective and assigned');
-          return true;
-        }
-        
-        // Find parent objective to check its session status
-        const parentObjective = project?.objectives?.find(obj => obj.id === objective.parentObjectiveId);
-        if (!parentObjective) {
-          console.log('  ❌ FAIL - Parent objective not found');
-          return false;
-        }
-        
-        // Check if current user created the parent (can see before release for coordination)
-        const createdParent = parentObjective.assignedUnits?.some(
-          assignment => assignment.unitId === currentUserUnitId
-        );
-        console.log('  Did I create parent?', createdParent);
-        if (createdParent) {
-          console.log('  ✅ PASS - Created parent (coordination)');
-          return true;
-        }
-        
-        // Otherwise, only show if parent session is completed (released)
-        const parentSession = sessions.find(sess => sess.objectiveId === objective.parentObjectiveId);
-        console.log('  Parent session found:', !!parentSession, 'status:', parentSession?.status);
-        const result = parentSession?.status === 'completed';
-        console.log('  ', result ? '✅ PASS' : '❌ FAIL', '- Parent session completed?', result);
-        return result;
-      }
-      
-      // Rule 3: Check if subordinate assigned AND parent session completed (for oversight)
-      const isSubordinateAssigned = s.objective.assignedUnits?.some(
-        assignment => subordinateUnitIds.includes(assignment.unitId)
-      );
-      
-      if (isSubordinateAssigned && s.status === 'completed') {
-        return true;
-      }
-      
-      return false;
+      if (!s.objective?.id) return false;
+      return true; // Everyone sees everything
     });
     // Apply filters
     if (filterProject !== 'all') {
@@ -183,7 +55,7 @@ export default function MyRefinements() {
     }
     
     return filtered;
-  }, [sessions, currentUserUnitId, subordinateUnitIds, filterProject, filterTier, filterStatus]);
+  }, [sessions, currentUserUnitId, filterProject, filterTier, filterStatus]);
   
   // Group by status
   const inProgressSessions = mySessions.filter(s => s.status === 'in-progress');

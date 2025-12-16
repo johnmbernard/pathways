@@ -95,29 +95,20 @@ export default function RefinementPage() {
     return assignedUnitIds.every(unitId => completedUnitIds.includes(unitId));
   }, [session]);
   
-  // Check if current user's unit created the parent objective (responsible for approval/release)
-  // For root objectives (no parent), check project ownership
-  // For child objectives, check if current user's unit is in the parent's assignedUnits
+  // Check if current user can approve this refinement
+  // Supervising units (lower tier numbers) can approve higher tier objectives
+  // Example: Tier 1 and Tier 2 can approve a fromTier 3 objective
   const canApproveRefinement = useMemo(() => {
-    if (!session?.objective) return false;
+    if (!session?.objective || !currentUserUnit) return false;
     
     const objective = session.objective;
+    const userTier = currentUserUnit.tier;
+    const objectiveFromTier = objective.fromTier;
     
-    // If this is a root objective (no parent), only project owner can approve
-    if (!objective.parentObjectiveId) {
-      return isProjectOwner;
-    }
-    
-    // If this is a child objective, find the parent objective to see who created it
-    const parentObjective = project?.objectives?.find(obj => obj.id === objective.parentObjectiveId);
-    if (!parentObjective) return false;
-    
-    // The units assigned to the parent objective are the ones who created this child
-    // So check if current user's unit is assigned to the parent
-    return parentObjective.assignedUnits?.some(
-      assignment => assignment.unitId === currentUser?.organizationalUnit
-    );
-  }, [session, project, isProjectOwner, currentUser?.organizationalUnit]);
+    // User's tier must be lower (smaller number) than objective's tier to approve
+    // Example: Tier 2 (userTier=2) can approve fromTier 3 objectives
+    return userTier < objectiveFromTier;
+  }, [session, currentUserUnit]);
   
   // Get child objectives that were created during this refinement
   const childObjectives = useMemo(() => {
@@ -192,10 +183,19 @@ export default function RefinementPage() {
   };
   
   const handleSaveWorkItem = (workItemData) => {
+    // Automatically assign team from objective's assigned units
+    const assignedTeamIds = session.objective?.assignedUnits?.map(a => a.unitId) || [];
+    const teamId = assignedTeamIds.length > 0 ? assignedTeamIds[0] : currentUser?.organizationalUnit;
+    
+    const dataWithTeam = {
+      ...workItemData,
+      assignedOrgUnit: teamId
+    };
+    
     if (editingWorkItem) {
-      updateWorkItem(sessionId, editingWorkItem.tempId, workItemData);
+      updateWorkItem(sessionId, editingWorkItem.tempId, dataWithTeam);
     } else {
-      addWorkItem(sessionId, workItemData, currentUser);
+      addWorkItem(sessionId, dataWithTeam, currentUser);
     }
     setShowWorkItemModal(false);
     setEditingWorkItem(null);
@@ -213,7 +213,10 @@ export default function RefinementPage() {
   
   const handleComplete = () => {
     if (isLeafUnit) {
-      // Add work items to backlog
+      // Add work items to backlog with team assignment
+      // Work items are assigned to the units that are assigned to the objective
+      const assignedTeamIds = session.objective?.assignedUnits?.map(a => a.unitId) || [];
+      
       session.workItems.forEach(wi => {
         addItem({
           title: wi.title,
@@ -222,7 +225,8 @@ export default function RefinementPage() {
           priority: wi.priority,
           projectId: session.projectId,
           objectiveId: session.objectiveId || session.objective?.id,
-          assignedTo: wi.assignedTo
+          assignedTo: wi.assignedTo,
+          teamId: assignedTeamIds.length > 0 ? assignedTeamIds[0] : currentUser?.organizationalUnit // Use first assigned team or current user's team
         });
       });
     }
