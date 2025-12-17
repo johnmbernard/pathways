@@ -3,7 +3,7 @@ import { useWorkItemsStore } from '../store/workItemsStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { PageHeader } from '../components/layout/Layout';
 import { Badge } from '../components/ui';
-import { Building2, GripVertical, Calendar, TrendingUp, Clock } from 'lucide-react';
+import { Building2, GripVertical, Calendar, TrendingUp, Clock, Plus } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -11,6 +11,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -88,12 +89,14 @@ function SortableWorkItem({ item, team, forecast, onPriorityChange }) {
 }
 
 export default function TeamPriorities() {
-  const { items, updateItem, fetchWorkItems } = useWorkItemsStore();
+  const { items, updateItem, addItem, fetchWorkItems } = useWorkItemsStore();
   const { units } = useOrganizationStore();
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [teamLoad, setTeamLoad] = useState(null);
   const [forecasts, setForecasts] = useState({});
   const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [activeId, setActiveId] = useState(null);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -187,24 +190,86 @@ export default function TeamPriorities() {
     updateItem(itemId, { priority: newPriority });
   };
 
-  const handleDragEnd = (event, priority) => {
+  const handleDragStart = (event) => {
+    setActiveId(event.active.id);
+  };
+
+  const handleDragEnd = async (event) => {
     const { active, over } = event;
+    setActiveId(null);
 
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
-    const itemsList = priority === 'P1' ? p1Items : priority === 'P2' ? p2Items : p3Items;
-    const oldIndex = itemsList.findIndex(item => item.id === active.id);
-    const newIndex = itemsList.findIndex(item => item.id === over.id);
+    const activeItem = items.find(item => item.id === active.id);
+    if (!activeItem) return;
 
-    if (oldIndex === -1 || newIndex === -1) return;
+    // Determine which priority bucket the item was dropped on
+    const overId = over.id;
+    let targetPriority = activeItem.priority;
+    let targetItems = [];
 
-    // Reorder items
-    const reorderedItems = arrayMove(itemsList, oldIndex, newIndex);
+    // Check if dropped on another item
+    const overItem = items.find(item => item.id === overId);
+    if (overItem) {
+      targetPriority = overItem.priority;
+      targetItems = items.filter(item => item.priority === targetPriority)
+        .sort((a, b) => (a.stackRank || 0) - (b.stackRank || 0));
+    } else {
+      // Dropped on a droppable zone (bucket)
+      targetPriority = overId; // overId is 'P1', 'P2', or 'P3'
+      targetItems = items.filter(item => item.priority === targetPriority)
+        .sort((a, b) => (a.stackRank || 0) - (b.stackRank || 0));
+    }
 
-    // Update stack ranks
-    reorderedItems.forEach((item, index) => {
-      updateItem(item.id, { stackRank: index });
-    });
+    // If priority changed, update it
+    if (activeItem.priority !== targetPriority) {
+      // Only update the moved item with new priority and position
+      await updateItem(active.id, { priority: targetPriority, stackRank: targetItems.length });
+    } else if (active.id !== overId && overItem) {
+      // Reordering within same priority
+      const oldIndex = targetItems.findIndex(item => item.id === active.id);
+      const newIndex = targetItems.findIndex(item => item.id === overId);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedItems = arrayMove(targetItems, oldIndex, newIndex);
+        // Only update items whose stackRank actually changed
+        const updates = reorderedItems
+          .filter((item, index) => item.stackRank !== index)
+          .map((item, index) => updateItem(item.id, { stackRank: reorderedItems.indexOf(item) }));
+        
+        if (updates.length > 0) {
+          await Promise.all(updates);
+        }
+      }
+    }
+
+    // Refresh forecasts after all updates complete
+    if (selectedTeam !== 'all') {
+      await fetchTeamData(selectedTeam);
+    }
+  };
+
+  const handleAddItem = async (formData) => {
+    try {
+      await addItem({
+        title: formData.title,
+        description: formData.description || '',
+        type: formData.type || 'Story',
+        priority: formData.priority || 'P3',
+        status: 'Backlog',
+        assignedOrgUnit: formData.teamId || selectedTeam !== 'all' ? selectedTeam : null,
+        estimatedEffort: formData.estimatedEffort || null,
+      });
+      setShowAddModal(false);
+
+      // Refresh forecasts after adding item
+      if (selectedTeam !== 'all') {
+        await fetchTeamData(selectedTeam);
+      }
+    } catch (error) {
+      console.error('Error adding item:', error);
+      alert('Failed to add item. Please try again.');
+    }
   };
 
   const PriorityBucket = ({ priority, title, description, items, color }) => {
@@ -221,35 +286,32 @@ export default function TeamPriorities() {
             {items.length} items
           </Badge>
         </div>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={(event) => handleDragEnd(event, priority)}
-        >
-          <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-            <div className={styles.bucketBody}>
-              {items.length === 0 ? (
-                <div className={styles.emptyBucket}>
-                  No items in this priority bucket
-                </div>
-              ) : (
-                items.map((item) => {
-                  const team = allTeams.find(t => t.id === item.assignedOrgUnit);
-                  const forecast = forecasts[item.id];
-                  return (
-                    <SortableWorkItem
-                      key={item.id}
-                      item={item}
-                      team={team}
-                      forecast={forecast}
-                      onPriorityChange={handlePriorityChange}
-                    />
-                  );
-                })
-              )}
-            </div>
-          </SortableContext>
-        </DndContext>
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          <div 
+            className={styles.bucketBody}
+            data-priority={priority}
+          >
+            {items.length === 0 ? (
+              <div className={styles.emptyBucket}>
+                Drop items here or no items in this priority
+              </div>
+            ) : (
+              items.map((item) => {
+                const team = allTeams.find(t => t.id === item.assignedOrgUnit);
+                const forecast = forecasts[item.id];
+                return (
+                  <SortableWorkItem
+                    key={item.id}
+                    item={item}
+                    team={team}
+                    forecast={forecast}
+                    onPriorityChange={handlePriorityChange}
+                  />
+                );
+              })
+            )}
+          </div>
+        </SortableContext>
       </div>
     );
   };
@@ -262,7 +324,7 @@ export default function TeamPriorities() {
       />
 
       <div className={styles.container}>
-        {/* Team Selector */}
+        {/* Team Selector and Add Button */}
         <div className={styles.teamSelector}>
           <label className={styles.teamLabel}>
             <Building2 size={18} />
@@ -282,6 +344,13 @@ export default function TeamPriorities() {
               ))}
             </optgroup>
           </select>
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className={styles.addButton}
+          >
+            <Plus size={18} />
+            Add Item
+          </button>
         </div>
 
         {/* Team Load Dashboard */}
@@ -335,29 +404,171 @@ export default function TeamPriorities() {
         )}
 
         {/* Priority Buckets */}
-        <div className={styles.bucketsGrid}>
-          <PriorityBucket
-            priority="P1"
-            title="P1 - Must Do"
-            description="Critical items that must be completed"
-            items={p1Items}
-            color="#dc2626"
-          />
-          <PriorityBucket
-            priority="P2"
-            title="P2 - Next Up"
-            description="Important items to tackle next"
-            items={p2Items}
-            color="#f59e0b"
-          />
-          <PriorityBucket
-            priority="P3"
-            title="P3 - When Capacity Allows"
-            description="Nice-to-have items for when time permits"
-            items={p3Items}
-            color="#6b7280"
-          />
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className={styles.bucketsGrid}>
+            <PriorityBucket
+              priority="P1"
+              title="P1 - Must Do"
+              description="Critical items that must be completed"
+              items={p1Items}
+              color="#dc2626"
+            />
+            <PriorityBucket
+              priority="P2"
+              title="P2 - Next Up"
+              description="Important items to tackle next"
+              items={p2Items}
+              color="#f59e0b"
+            />
+            <PriorityBucket
+              priority="P3"
+              title="P3 - When Capacity Allows"
+              description="Nice-to-have items for when time permits"
+              items={p3Items}
+              color="#6b7280"
+            />
+          </div>
+          <DragOverlay>
+            {activeId ? (
+              <div className={styles.dragOverlay}>
+                {items.find(item => item.id === activeId)?.title}
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
+
+      {/* Add Item Modal */}
+      {showAddModal && (
+        <AddItemModal
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddItem}
+          teams={allTeams}
+          defaultTeam={selectedTeam !== 'all' ? selectedTeam : null}
+        />
+      )}
+    </div>
+  );
+}
+
+// Add Item Modal Component
+function AddItemModal({ onClose, onSubmit, teams, defaultTeam }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    type: 'Story',
+    priority: 'P3',
+    teamId: defaultTeam || '',
+    estimatedEffort: '',
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.title.trim()) return;
+    onSubmit(formData);
+  };
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h2>Add Work Item</h2>
+          <button onClick={onClose} className={styles.modalClose}>×</button>
         </div>
+        <form onSubmit={handleSubmit} className={styles.modalForm}>
+          <div className={styles.formGroup}>
+            <label htmlFor="title">Title *</label>
+            <input
+              id="title"
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="Enter work item title"
+              required
+              autoFocus
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter description (optional)"
+              rows={3}
+            />
+          </div>
+          <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label htmlFor="type">Type</label>
+              <select
+                id="type"
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+              >
+                <option value="Story">Story</option>
+                <option value="Bug">Bug</option>
+                <option value="Task">Task</option>
+                <option value="Epic">Epic</option>
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="priority">Priority</label>
+              <select
+                id="priority"
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+              >
+                <option value="P1">P1 - Must Do</option>
+                <option value="P2">P2 - Next Up</option>
+                <option value="P3">P3 - When Capacity Allows</option>
+              </select>
+            </div>
+          </div>
+          <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label htmlFor="team">Assigned Team</label>
+              <select
+                id="team"
+                value={formData.teamId}
+                onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
+              >
+                <option value="">Unassigned</option>
+                {teams.filter(t => t.id).map(team => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="effort">Estimated Effort (days)</label>
+              <input
+                id="effort"
+                type="number"
+                value={formData.estimatedEffort}
+                onChange={(e) => setFormData({ ...formData, estimatedEffort: e.target.value })}
+                placeholder="Optional"
+                min="0"
+                step="0.5"
+              />
+            </div>
+          </div>
+          <div className={styles.modalActions}>
+            <button type="button" onClick={onClose} className={styles.cancelButton}>
+              Cancel
+            </button>
+            <button type="submit" className={styles.submitButton}>
+              <Plus size={16} />
+              Add Item
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

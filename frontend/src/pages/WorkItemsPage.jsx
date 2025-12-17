@@ -8,6 +8,7 @@ import { useHierarchyStore } from '../store/hierarchyStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { useNavigate } from 'react-router-dom';
 import { Button, Badge } from '../components/ui';
+import { API_BASE_URL } from '../config';
 import { PageHeader } from '../components/layout/Layout';
 import styles from './WorkItemsPage.module.css';
 import layoutStyles from '../components/layout/Layout.module.css';
@@ -15,16 +16,20 @@ import modalStyles from './EditWorkItemModal.module.css';
 
 // Types derived from hierarchy tiers + flat types
 
-function WorkItemRow({ item, depth = 0, onEdit }) {
+function WorkItemRow({ item, depth = 0, onEdit, highlightId }) {
   const { updateItem, deleteItem, toggleExpanded, getChildren, expandedItems, addItem } = useWorkItemsStore();
   const { getProject } = useProjectsStore();
   const { tiers, flatTypes } = useHierarchyStore();
   const { units, getTierLevel } = useOrganizationStore();
+  const [localExpanded, setLocalExpanded] = React.useState(false);
   const project = item.projectId ? getProject(item.projectId) : null;
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
-  // Actions are now always visible; remove hover state
-
+  const isHighlighted = item.id === highlightId;
+  
+  // Handle different item types (project, objective, workItem)
+  const itemType = item.itemType || 'workItem';
+  
   // Use tree units for dropdown with tier info
   const allOrgUnits = useMemo(() => [
     ...units.map(u => ({ id: u.id, name: u.name, isFlat: false, tierLevel: getTierLevel(u.id) })),
@@ -43,18 +48,31 @@ function WorkItemRow({ item, depth = 0, onEdit }) {
     return colors[Math.min(tierLevel - 1, colors.length - 1)];
   };
 
-  const children = getChildren(item.id);
+  // Children are either from store (for work items) or from item.children (for projects/objectives)
+  const children = itemType === 'workItem' ? getChildren(item.id) : (item.children || []);
   const hasChildren = children.length > 0;
-  const isExpanded = expandedItems.has(item.id);
+  const isExpanded = itemType === 'workItem' ? expandedItems.has(item.id) : localExpanded;
+  
+  // Debug logging
+  if (itemType !== 'workItem' && depth === 0) {
+    console.log('Row:', item.title, 'itemType:', itemType, 'hasChildren:', hasChildren, 'children:', children.length);
+  }
 
-  // Determine icon based on hierarchy tier or flat type name
-  const tierIndex = tiers.findIndex(t => t.name === item.type);
+  // Determine icon based on item type
   let icon = '🏷️';
-  if (tierIndex === 0) icon = '📦';
-  else if (tierIndex === 1) icon = '🔥';
-  else if (tierIndex >= 2) icon = '📋';
-  else if (flatTypes.some(t => t.name.toLowerCase() === String(item.type).toLowerCase())) {
-    icon = /bug/i.test(item.type) ? '🐛' : '🏷️';
+  if (itemType === 'project') {
+    icon = '📂';
+  } else if (itemType === 'objective') {
+    icon = '🎯';
+  } else {
+    // Work item - use tier-based icons
+    const tierIndex = tiers.findIndex(t => t.name === item.type);
+    if (tierIndex === 0) icon = '📦';
+    else if (tierIndex === 1) icon = '🔥';
+    else if (tierIndex >= 2) icon = '📋';
+    else if (flatTypes.some(t => t.name.toLowerCase() === String(item.type).toLowerCase())) {
+      icon = /bug/i.test(item.type) ? '🐛' : '🏷️';
+    }
   }
 
   const handleSave = () => {
@@ -86,12 +104,22 @@ function WorkItemRow({ item, depth = 0, onEdit }) {
   return (
     <>
       <div
-        className={`${styles.row} ${isEditing ? styles.editing : ''}`}
+        id={`work-item-${item.id}`}
+        className={`${styles.row} ${isEditing ? styles.editing : ''} ${isHighlighted ? styles.highlighted : ''}`}
         style={{ paddingLeft: `${depth * 20 + 24}px` }}
+        data-item-type={itemType}
       >
         {/* Expand/Collapse Button */}
         <button
-          onClick={() => hasChildren && toggleExpanded(item.id)}
+          onClick={() => {
+            if (hasChildren) {
+              if (itemType === 'workItem') {
+                toggleExpanded(item.id);
+              } else {
+                setLocalExpanded(!localExpanded);
+              }
+            }
+          }}
           className={`${styles.expandButton} ${!hasChildren ? styles.invisible : ''}`}
         >
           {isExpanded ? <ChevronDown size={14} className="text-gray-500" /> : <ChevronRight size={14} className="text-gray-500" />}
@@ -102,7 +130,9 @@ function WorkItemRow({ item, depth = 0, onEdit }) {
 
         {/* ID */}
         <div className={styles.idBadge}>
-          <span className={styles.idBadgeInner}>#{item.id}</span>
+          <span className={styles.idBadgeInner}>
+            {itemType === 'workItem' ? `#${item.id}` : '—'}
+          </span>
         </div>
 
         {/* Title */}
@@ -169,33 +199,43 @@ function WorkItemRow({ item, depth = 0, onEdit }) {
 
         {/* Start/Target Dates */}
         <div className={styles.scheduleCell}>
-          <DateInputs
-            startDate={item.startDate}
-            targetDate={item.targetDate}
-            onChange={(updates) => {
-              // updates contains either startDate or targetDate
-              const payload = {};
-              if (updates.startDate !== undefined) payload.startDate = updates.startDate;
-              if (updates.targetDate !== undefined) payload.targetDate = updates.targetDate;
-              // Normalize: empty string represents no date
-              const normalized = Object.fromEntries(Object.entries(payload).map(([k, v]) => [k, v || '']));
-              updateItem(item.id, normalized);
-            }}
-          />
+          {(itemType === 'project' || itemType === 'objective') ? (
+            <div style={{ fontSize: '12px', color: '#64748b' }}>
+              {item.targetDate && (
+                <div>Target: {new Date(item.targetDate).toLocaleDateString()}</div>
+              )}
+            </div>
+          ) : (
+            <DateInputs
+              startDate={item.startDate}
+              targetDate={item.targetDate}
+              onChange={(updates) => {
+                const payload = {};
+                if (updates.startDate !== undefined) payload.startDate = updates.startDate;
+                if (updates.targetDate !== undefined) payload.targetDate = updates.targetDate;
+                const normalized = Object.fromEntries(Object.entries(payload).map(([k, v]) => [k, v || '']));
+                updateItem(item.id, normalized);
+              }}
+            />
+          )}
         </div>
 
         {/* Assigned Organization Unit Dropdown */}
         <div className={styles.teamCell}>
-          <Building size={14} className={styles.teamIcon} />
-          <select
-            value={item.assignedOrgUnit || ''}
-            onChange={(e) => updateItem(item.id, { assignedOrgUnit: e.target.value || null })}
-            className={styles.teamSelect}
-          >
-            <option value="">No Team</option>
-            {allOrgUnits.map(org => (
-              <option 
-                key={org.id} 
+          {(itemType === 'project' || itemType === 'objective') ? (
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>-</span>
+          ) : (
+            <>
+              <Building size={14} className={styles.teamIcon} />
+              <select
+                value={item.assignedOrgUnit || ''}
+                onChange={(e) => updateItem(item.id, { assignedOrgUnit: e.target.value || null })}
+                className={styles.teamSelect}
+              >
+                <option value="">No Team</option>
+                {allOrgUnits.map(org => (
+                  <option 
+                    key={org.id} 
                 value={org.id}
                 style={{ 
                   color: getTierColor(org.tierLevel),
@@ -206,50 +246,219 @@ function WorkItemRow({ item, depth = 0, onEdit }) {
               </option>
             ))}
           </select>
+            </>
+          )}
         </div>
 
         {/* Actions */}
         <div className={styles.actionsCell}>
-          <button
-            onClick={handleAddChild}
-            className={`${styles.actionButton} ${styles.add}`}
-            title="Add child work item"
-          >
-            <Plus size={16} strokeWidth={2.5} />
-          </button>
-          <button
-            onClick={() => onEdit(item)}
-            className={`${styles.actionButton} ${styles.edit}`}
-            title="Edit work item details"
-          >
-            <Pencil size={16} strokeWidth={2.5} />
-          </button>
-          <button
-            onClick={() => deleteItem(item.id)}
-            className={`${styles.actionButton} ${styles.delete}`}
-            title="Delete work item"
-          >
-            <Trash2 size={16} strokeWidth={2.5} />
-          </button>
+          {itemType === 'workItem' ? (
+            <>
+              <button
+                onClick={handleAddChild}
+                className={`${styles.actionButton} ${styles.add}`}
+                title="Add child work item"
+              >
+                <Plus size={16} strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={() => onEdit(item)}
+                className={`${styles.actionButton} ${styles.edit}`}
+                title="Edit work item details"
+              >
+                <Pencil size={16} strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={() => deleteItem(item.id)}
+                className={`${styles.actionButton} ${styles.delete}`}
+                title="Delete work item"
+              >
+                <Trash2 size={16} strokeWidth={2.5} />
+              </button>
+            </>
+          ) : (
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>-</span>
+          )}
         </div>
       </div>
 
       {/* Render Children */}
       {isExpanded && children.map(child => (
-        <WorkItemRow key={child.id} item={child} depth={depth + 1} onEdit={onEdit} />
+        <WorkItemRow key={child.id} item={child} depth={depth + 1} onEdit={onEdit} highlightId={highlightId} />
       ))}
     </>
   );
 }
 
 export default function WorkItemsPage() {
-  const { getRootItems, addItem, updateItem } = useWorkItemsStore();
+  const { addItem, updateItem, items, expandedItems, toggleExpanded, fetchWorkItems } = useWorkItemsStore();
+  const { projects, fetchProjects } = useProjectsStore();
   const { tiers, flatTypes } = useHierarchyStore();
   const { units } = useOrganizationStore();
   const navigate = useNavigate();
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const rootItems = getRootItems();
+  const [objectives, setObjectives] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  
+  // Fetch projects and work items on mount
+  React.useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchProjects(),
+        fetchWorkItems(),
+      ]);
+      setLoading(false);
+    };
+    loadData();
+  }, [fetchProjects, fetchWorkItems]);
+  
+  // Fetch objectives when projects change
+  React.useEffect(() => {
+    const loadObjectives = async () => {
+      if (projects.length === 0) {
+        setObjectives([]);
+        return;
+      }
+      
+      const allObjectives = [];
+      for (const project of projects) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/projects/${project.id}`);
+          if (response.ok) {
+            const projectData = await response.json();
+            if (projectData.objectives) {
+              projectData.objectives.forEach(obj => {
+                allObjectives.push({ ...obj, projectId: project.id });
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch objectives for project ${project.id}:`, error);
+        }
+      }
+      setObjectives(allObjectives);
+    };
+    loadObjectives();
+  }, [projects]);
+  
+  // Build unified hierarchy: Projects > Objectives > Work Items
+  const hierarchyItems = React.useMemo(() => {
+    console.log('Building hierarchy:', { projectsCount: projects.length, objectivesCount: objectives.length, itemsCount: items.length });
+    const result = [];
+    
+    // Add all projects as root items with objectives and work items nested
+    projects.forEach(project => {
+      console.log('Processing project:', project.title, 'objectives:', objectives.filter(obj => obj.projectId === project.id).length);
+      const projectItem = {
+        id: project.id,
+        title: project.title,
+        type: 'Project',
+        itemType: 'project',
+        targetDate: project.targetDate,
+        description: project.description,
+        status: project.status,
+        children: []
+      };
+      
+      // Get objectives for this project
+      const projectObjectives = objectives.filter(obj => obj.projectId === project.id);
+      console.log('Project:', project.title, 'projectObjectives:', projectObjectives.length, 'sample parentId:', projectObjectives[0]?.parentId, 'all parentIds:', projectObjectives.map(o => ({id: o.id, parentId: o.parentId})));
+      
+      // Build objective tree (handle multi-tier objectives)
+      const buildObjectiveTree = (parentId = null) => {
+        const filtered = projectObjectives.filter(obj => {
+          // Handle both null and undefined as root objectives
+          if (parentId === null) {
+            return obj.parentId === null || obj.parentId === undefined;
+          }
+          return obj.parentId === parentId;
+        });
+        console.log('buildObjectiveTree parentId:', parentId, 'filtered:', filtered.length, 'filtered ids:', filtered.map(f => f.id));
+        return filtered.map(objective => {
+            const objectiveItem = {
+              id: objective.id,
+              title: objective.title,
+              type: `Objective (Tier ${objective.tier})`,
+              itemType: 'objective',
+              targetDate: objective.targetDate,
+              description: objective.description,
+              tier: objective.tier,
+              objectiveId: objective.id,
+              projectId: project.id,
+              children: []
+            };
+            
+            // Add child objectives
+            objectiveItem.children = buildObjectiveTree(objective.id);
+            
+            // Add work items for this objective
+            const objectiveWorkItems = items.filter(item => 
+              item.objectiveId === objective.id
+            );
+            
+            console.log('Objective:', objective.title, 'work items:', objectiveWorkItems.length, 
+                       'total items:', items.length, 
+                       'sample objectiveId:', items[0]?.objectiveId);
+            
+            objectiveWorkItems.forEach(workItem => {
+              objectiveItem.children.push({
+                ...workItem,
+                itemType: 'workItem'
+              });
+            });
+            
+            return objectiveItem;
+          });
+      };
+      
+      projectItem.children = buildObjectiveTree();
+      console.log('Project:', project.title, 'final children count:', projectItem.children.length);
+      result.push(projectItem);
+    });
+    
+    return result;
+  }, [projects, objectives, items]);
+  
+  // Handle highlight parameter from URL
+  const [highlightId, setHighlightId] = React.useState(null);
+  
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const highlight = params.get('highlight');
+    if (highlight) {
+      setHighlightId(highlight);
+      
+      // Expand all parent items to make the highlighted item visible
+      const expandParents = (itemId) => {
+        const item = items.find(i => i.id === itemId);
+        if (item?.parentId) {
+          if (!expandedItems.has(item.parentId)) {
+            toggleExpanded(item.parentId);
+          }
+          expandParents(item.parentId);
+        }
+      };
+      
+      expandParents(highlight);
+      
+      // Scroll to the item after a short delay
+      setTimeout(() => {
+        const element = document.getElementById(`work-item-${highlight}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+      
+      // Clear highlight after 5 seconds
+      setTimeout(() => {
+        setHighlightId(null);
+        // Clear URL parameter
+        window.history.replaceState({}, '', window.location.pathname);
+      }, 5000);
+    }
+  }, [items, expandedItems, toggleExpanded]);
 
   const allTypes = useMemo(() => [...tiers.map(t => t.name), ...flatTypes.map(t => t.name)], [tiers, flatTypes]);
   
@@ -297,7 +506,13 @@ export default function WorkItemsPage() {
 
           {/* Work Items List */}
           <div className={styles.tableBody}>
-            {rootItems.length === 0 ? (
+            {loading ? (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyStateContent}>
+                  <p className={styles.emptyStateTitle}>Loading...</p>
+                </div>
+              </div>
+            ) : hierarchyItems.length === 0 ? (
               <div className={styles.emptyState}>
                 <div className={styles.emptyStateContent}>
                   <div>
@@ -305,13 +520,13 @@ export default function WorkItemsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <p className={styles.emptyStateTitle}>No work items yet</p>
-                  <p className={styles.emptyStateText}>Click "New Work Item" to get started</p>
+                  <p className={styles.emptyStateTitle}>No projects yet</p>
+                  <p className={styles.emptyStateText}>Create a project to get started</p>
                 </div>
               </div>
             ) : (
-              rootItems.map(item => (
-                <WorkItemRow key={item.id} item={item} depth={0} onEdit={setEditingItem} />
+              hierarchyItems.map(item => (
+                <WorkItemRow key={item.id} item={item} depth={0} onEdit={setEditingItem} highlightId={highlightId} />
               ))
             )}
           </div>
@@ -319,7 +534,9 @@ export default function WorkItemsPage() {
           {/* Footer Stats */}
           <div className={styles.tableFooter}>
             <div className={styles.footerStats}>
-              <Badge variant="primary">{rootItems.length} total</Badge>
+              <Badge variant="primary">{hierarchyItems.length} projects</Badge>
+              <span className={styles.footerDivider}>•</span>
+              <Badge variant="secondary">{items.length} work items</Badge>
               <span className={styles.footerDivider}>•</span>
               <span className={styles.footerText}>Last updated just now</span>
             </div>

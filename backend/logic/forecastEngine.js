@@ -337,24 +337,84 @@ export async function forecastProject(projectId) {
     throw new Error('Project not found');
   }
   
+  // If no objectives, return basic project info
+  if (!project.objectives || project.objectives.length === 0) {
+    return {
+      projectId: project.id,
+      projectTitle: project.title,
+      targetDate: project.targetDate,
+      estimatedDate: null,
+      leadTimeWeeks: 0,
+      objectiveForecasts: [],
+    };
+  }
+  
   const objectiveForecasts = [];
   
   for (const objective of project.objectives) {
-    // Count work items for this objective
-    const workItemCount = await prisma.workItem.count({
+    // Skip objectives with no team assignments
+    if (!objective.assignedUnits || objective.assignedUnits.length === 0) {
+      continue;
+    }
+    
+    // Get work items for this objective with alerts
+    const workItems = await prisma.workItem.findMany({
       where: {
         refinementSession: {
           objectiveId: objective.id,
         },
         status: { not: 'Done' },
       },
+      include: {
+        creator: true,
+      },
+    });
+    
+    // Identify alerts
+    const alerts = [];
+    const now = new Date();
+    
+    // Check for blocked items (In Progress for > 7 days)
+    const blockedItems = workItems.filter(item => {
+      if (item.status === 'In Progress' && item.updatedAt) {
+        const daysSinceUpdate = Math.floor((now - new Date(item.updatedAt)) / (1000 * 60 * 60 * 24));
+        return daysSinceUpdate > 7;
+      }
+      return false;
+    });
+    
+    blockedItems.forEach(item => {
+      const daysSinceUpdate = Math.floor((now - new Date(item.updatedAt)) / (1000 * 60 * 60 * 24));
+      alerts.push({
+        type: 'blocked',
+        severity: daysSinceUpdate > 14 ? 'critical' : 'warning',
+        workItemId: item.id,
+        workItemTitle: item.title,
+        message: `${item.title} has been in progress for ${daysSinceUpdate} days`,
+        daysStale: daysSinceUpdate,
+      });
+    });
+    
+    // Check for high-priority items stuck in backlog (P1 items in Backlog status)
+    const stuckP1Items = workItems.filter(item => 
+      item.priority === 'P1' && item.status === 'Backlog'
+    );
+    
+    stuckP1Items.forEach(item => {
+      alerts.push({
+        type: 'stuck',
+        severity: 'warning',
+        workItemId: item.id,
+        workItemTitle: item.title,
+        message: `High priority item "${item.title}" is stuck in backlog`,
+      });
     });
     
     // Get forecasts for each assigned team
     const teamForecasts = [];
     for (const assignment of objective.assignedUnits) {
       const teamLoad = await calculateTeamLoad(assignment.unitId);
-      const itemsForTeam = Math.ceil(workItemCount / objective.assignedUnits.length); // Assume even split
+      const itemsForTeam = Math.ceil(workItems.length / objective.assignedUnits.length); // Assume even split
       const leadTimeWeeks = teamLoad.throughput > 0 
         ? (teamLoad.queue.total + itemsForTeam) / teamLoad.throughput 
         : null;
@@ -373,6 +433,20 @@ export async function forecastProject(projectId) {
     const estimatedDate = new Date();
     estimatedDate.setDate(estimatedDate.getDate() + (maxLeadTime * 7));
     
+    // Check if objective is behind schedule
+    if (objective.targetDate) {
+      const targetDate = new Date(objective.targetDate);
+      const variance = Math.floor((estimatedDate - targetDate) / (1000 * 60 * 60 * 24));
+      if (variance > 0) {
+        alerts.push({
+          type: 'behind_schedule',
+          severity: variance > 7 ? 'critical' : 'warning',
+          message: `Objective is ${variance} days behind target date`,
+          daysLate: variance,
+        });
+      }
+    }
+    
     objectiveForecasts.push({
       objectiveId: objective.id,
       objectiveTitle: objective.title,
@@ -380,20 +454,28 @@ export async function forecastProject(projectId) {
       estimatedDate: estimatedDate.toISOString().split('T')[0],
       leadTimeWeeks: Math.round(maxLeadTime * 10) / 10,
       teamForecasts,
+      alerts: alerts.sort((a, b) => {
+        // Sort by severity (critical first) then by type
+        const severityOrder = { critical: 0, warning: 1 };
+        return severityOrder[a.severity] - severityOrder[b.severity];
+      }),
+      workItemCount: workItems.length,
     });
   }
   
   // Project completes when last objective completes
-  const latestObjective = objectiveForecasts.reduce((latest, obj) => 
-    obj.leadTimeWeeks > (latest.leadTimeWeeks || 0) ? obj : latest
-  , { leadTimeWeeks: 0 });
+  const latestObjective = objectiveForecasts.length > 0
+    ? objectiveForecasts.reduce((latest, obj) => 
+        obj.leadTimeWeeks > (latest.leadTimeWeeks || 0) ? obj : latest
+      , objectiveForecasts[0])
+    : { leadTimeWeeks: 0, estimatedDate: null };
   
   return {
     projectId: project.id,
     projectTitle: project.title,
     targetDate: project.targetDate,
     estimatedDate: latestObjective.estimatedDate,
-    leadTimeWeeks: latestObjective.leadTimeWeeks,
+    leadTimeWeeks: latestObjective.leadTimeWeeks || 0,
     objectiveForecasts,
   };
 }

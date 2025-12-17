@@ -26,6 +26,7 @@ export const useWorkItemsStore = create((set, get) => ({
         createdBy: item.createdBy,
         refinementSessionId: item.refinementSessionId,
         projectId: item.refinementSession?.project?.id,
+        objectiveId: item.refinementSession?.objective?.id,
         objectiveTitle: item.refinementSession?.objective?.title,
         parentId: null, // Work items from refinements don't have parent hierarchy
         order: 0,
@@ -39,32 +40,87 @@ export const useWorkItemsStore = create((set, get) => ({
     }
   },
 
-  // Add new work item (local only - for demo purposes)
-  addItem: (item) => set((state) => {
-    const id = String(Date.now());
-    const parentId = item.parentId ?? null;
-    const order = state.items.filter(i => i.parentId === parentId).length;
-    return {
-      items: [...state.items, { 
-        ...item, 
-        id, 
-        parentId, 
-        order, 
-        description: item.description || '', 
-        acceptanceCriteria: item.acceptanceCriteria || [],
-        priority: item.priority || 'P3',
-        projectId: item.projectId || null,
-        assignedOrgUnit: item.teamId || item.assignedOrgUnit || null, // Map teamId to assignedOrgUnit
-      }],
-    };
-  }),
+  // Add new work item (persists to backend)
+  addItem: async (item) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/work-items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: item.title,
+          description: item.description || '',
+          type: item.type || 'Story',
+          priority: item.priority || 'P3',
+          status: item.status || 'Backlog',
+          assignedOrgUnit: item.teamId || item.assignedOrgUnit || null,
+          estimatedEffort: item.estimatedEffort || null,
+          // Don't send createdBy - let backend use default user
+        }),
+      });
 
-  // Update work item
-  updateItem: (id, updates) => set((state) => ({
-    items: state.items.map(item => 
-      item.id === id ? { ...item, ...updates } : item
-    ),
-  })),
+      if (!response.ok) {
+        throw new Error('Failed to create work item');
+      }
+
+      const createdItem = await response.json();
+
+      // Transform and add to local state
+      const transformedItem = {
+        id: createdItem.id,
+        title: createdItem.title,
+        description: createdItem.description || '',
+        type: createdItem.type || 'Story',
+        priority: createdItem.priority || 'P3',
+        stackRank: createdItem.stackRank || 0,
+        status: createdItem.status || 'Backlog',
+        assignedOrgUnit: createdItem.assignedOrgUnit,
+        estimatedEffort: createdItem.estimatedEffort,
+        createdBy: createdItem.createdBy,
+        refinementSessionId: createdItem.refinementSessionId,
+        projectId: createdItem.refinementSession?.project?.id,
+        objectiveTitle: createdItem.refinementSession?.objective?.title,
+        parentId: null,
+        order: 0,
+        acceptanceCriteria: [],
+        completedAt: createdItem.completedAt,
+      };
+
+      set((state) => ({
+        items: [...state.items, transformedItem],
+      }));
+
+      return transformedItem;
+    } catch (error) {
+      console.error('Error adding work item:', error);
+      throw error;
+    }
+  },
+
+  // Update work item (persists to backend)
+  updateItem: async (id, updates) => {
+    // Optimistically update local state first
+    set((state) => ({
+      items: state.items.map(item => 
+        item.id === id ? { ...item, ...updates } : item
+      ),
+    }));
+
+    // Persist to backend
+    try {
+      const response = await fetch(`${API_BASE_URL}/work-items/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to update work item on server');
+        // Could revert optimistic update here if needed
+      }
+    } catch (error) {
+      console.error('Error updating work item:', error);
+    }
+  },
 
   // Delete work item
   deleteItem: (id) => set((state) => ({

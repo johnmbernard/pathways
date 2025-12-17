@@ -16,7 +16,7 @@
  */
 function calculateThroughput(completedItems, daysToAnalyze = 30) {
   if (!completedItems || completedItems.length === 0) {
-    return 0.5; // Default assumption: 1 item every 2 days
+    return 0.25; // Default assumption: 1 item every 4 days
   }
   
   const cutoffDate = new Date();
@@ -28,7 +28,7 @@ function calculateThroughput(completedItems, daysToAnalyze = 30) {
   });
   
   if (recentItems.length === 0) {
-    return 0.5; // Default
+    return 0.25; // Default
   }
   
   // Items completed / days analyzed
