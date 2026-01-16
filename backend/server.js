@@ -17,7 +17,12 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: ['https://pathways.synapsesolves.com', 'http://localhost:5174', 'http://localhost:3000'],
+  origin: [
+    'https://pathways.synapsesolves.com',
+    /\.pages\.dev$/, // Allow any Cloudflare Pages preview URL
+    'http://localhost:5174',
+    'http://localhost:3000'
+  ],
   credentials: true
 }));
 app.use(express.json());
