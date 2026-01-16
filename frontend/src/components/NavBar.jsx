@@ -68,36 +68,36 @@ export default function NavBar({ onOpenHierarchy }) {
           {orgPlanningExpanded && (
             <div className={styles.sectionContent}>
               <Link
-                to="/organization"
-                className={`${styles.navItem} ${isActive('/organization') ? styles.active : ''}`}
+                to="/app/organization"
+                className={`${styles.navItem} ${isActive('/app/organization') ? styles.active : ''}`}
               >
                 <Building2 className={styles.navItemIcon} size={18} />
                 Organization
               </Link>
               <Link
-                to="/"
-                className={`${styles.navItem} ${isActive('/') ? styles.active : ''}`}
+                to="/app"
+                className={`${styles.navItem} ${isActive('/app') || isActive('/app/') ? styles.active : ''}`}
               >
                 <List className={styles.navItemIcon} size={18} />
                 Backlog
               </Link>
               <Link
-                to="/projects"
-                className={`${styles.navItem} ${isActive('/projects') ? styles.active : ''}`}
+                to="/app/projects"
+                className={`${styles.navItem} ${isActive('/app/projects') ? styles.active : ''}`}
               >
                 <FolderKanban className={styles.navItemIcon} size={18} />
                 Projects
               </Link>
               <Link
-                to="/my-refinements"
-                className={`${styles.navItem} ${isActive('/my-refinements') ? styles.active : ''}`}
+                to="/app/my-refinements"
+                className={`${styles.navItem} ${isActive('/app/my-refinements') ? styles.active : ''}`}
               >
                 <ClipboardList className={styles.navItemIcon} size={18} />
                 My Refinements
               </Link>
               <Link
-                to="/roadmap"
-                className={`${styles.navItem} ${isActive('/roadmap') ? styles.active : ''}`}
+                to="/app/roadmap"
+                className={`${styles.navItem} ${isActive('/app/roadmap') ? styles.active : ''}`}
               >
                 <Map className={styles.navItemIcon} size={18} />
                 Roadmap
@@ -121,22 +121,22 @@ export default function NavBar({ onOpenHierarchy }) {
           {teamPlanningExpanded && (
             <div className={styles.sectionContent}>
               <Link
-                to="/team/priorities"
-                className={`${styles.navItem} ${isActive('/team/priorities') ? styles.active : ''}`}
+                to="/app/team/priorities"
+                className={`${styles.navItem} ${isActive('/app/team/priorities') ? styles.active : ''}`}
               >
                 <ListChecks className={styles.navItemIcon} size={18} />
                 Priorities
               </Link>
               <Link
-                to="/team/boards"
-                className={`${styles.navItem} ${isActive('/team/boards') ? styles.active : ''}`}
+                to="/app/team/boards"
+                className={`${styles.navItem} ${isActive('/app/team/boards') ? styles.active : ''}`}
               >
                 <Kanban className={styles.navItemIcon} size={18} />
                 Boards
               </Link>
               <Link
-                to="/team/analysis"
-                className={`${styles.navItem} ${isActive('/team/analysis') ? styles.active : ''}`}
+                to="/app/team/analysis"
+                className={`${styles.navItem} ${isActive('/app/team/analysis') ? styles.active : ''}`}
               >
                 <BarChart3 className={styles.navItemIcon} size={18} />
                 Analysis
@@ -160,8 +160,8 @@ export default function NavBar({ onOpenHierarchy }) {
           {settingsExpanded && (
             <div className={styles.sectionContent}>
               <Link
-                to="/users"
-                className={`${styles.navItem} ${isActive('/users') ? styles.active : ''}`}
+                to="/app/users"
+                className={`${styles.navItem} ${isActive('/app/users') ? styles.active : ''}`}
               >
                 <Users className={styles.navItemIcon} size={18} />
                 Users

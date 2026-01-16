@@ -25,7 +25,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result.success) {
-      navigate('/');
+      navigate('/app');
     } else {
       setError(result.error || 'Login failed. Please check your credentials.');
     }

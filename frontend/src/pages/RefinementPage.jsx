@@ -147,7 +147,7 @@ export default function RefinementPage() {
         <div className={styles.error}>
           <AlertTriangle size={48} />
           <h2>Refinement Session Not Found</h2>
-          <button onClick={() => navigate('/projects')} className={styles.button}>
+          <button onClick={() => navigate('/app/projects')} className={styles.button}>
             Back to Projects
           </button>
         </div>
@@ -241,7 +241,7 @@ export default function RefinementPage() {
     }
     
     completeSession(sessionId);
-    navigate('/projects');
+    navigate('/app/projects');
   };
   
   return (
@@ -253,7 +253,7 @@ export default function RefinementPage() {
             Your {isLeafUnit ? 'Team' : `Tier ${actualTier}`}: {currentUserUnit?.name || 'Unit'}
           </p>
         </div>
-        <button onClick={() => navigate('/projects')} className={styles.backButton}>
+        <button onClick={() => navigate('/app/projects')} className={styles.backButton}>
           ← Back to Projects
         </button>
       </header>
@@ -472,7 +472,7 @@ export default function RefinementPage() {
         
         {/* Actions */}
         <div className={styles.actions}>
-          <button onClick={() => navigate('/projects')} className={styles.secondaryButton}>
+          <button onClick={() => navigate('/app/projects')} className={styles.secondaryButton}>
             Save Draft
           </button>
           
