@@ -10,6 +10,7 @@ export const config = {
   appName: import.meta.env.VITE_APP_NAME || 'Pathways',
   isDevelopment: import.meta.env.DEV,
   isProduction: import.meta.env.PROD,
+  version: '1.0.1', // Force cache bust
 };
 
 export default config;
