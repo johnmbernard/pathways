@@ -1,16 +1,15 @@
-// Temporarily hardcoded for production demo
-const isProduction = typeof window !== 'undefined' && window.location.hostname === 'pathways.synapsesolves.com';
-export const API_BASE_URL = isProduction 
-  ? 'https://pathways-demo-backend.onrender.com/api'
-  : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
+// Use environment variable in development, production URL in production build
+export const API_BASE_URL = import.meta.env.DEV 
+  ? 'http://localhost:3001/api'
+  : 'https://pathways-demo-backend.onrender.com/api';
 
 export const config = {
   apiUrl: API_BASE_URL,
-  appEnv: import.meta.env.VITE_APP_ENV || 'development',
+  appEnv: import.meta.env.VITE_APP_ENV || 'production',
   appName: import.meta.env.VITE_APP_NAME || 'Pathways',
   isDevelopment: import.meta.env.DEV,
   isProduction: import.meta.env.PROD,
-  version: '1.0.1', // Force cache bust
+  version: '1.0.2', // Force cache bust
 };
 
 export default config;
