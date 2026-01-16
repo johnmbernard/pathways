@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useOrganizationStore } from '../store/organizationStore';
 import { Button } from '../components/ui';
 import { UserPlus, Edit, Trash2, Users as UsersIcon } from 'lucide-react';
+import { apiFetch } from '../lib/apiClient';
 import styles from './UsersPage.module.css';
 
 export default function UsersPage() {
@@ -30,7 +31,7 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/users');
+      const response = await apiFetch('/users');
       if (!response.ok) throw new Error('Failed to fetch users');
       const data = await response.json();
       setUsers(data);
@@ -90,9 +91,8 @@ export default function UsersPage() {
     try {
       if (editingUser) {
         // Update existing user
-        const response = await fetch(`http://localhost:3001/api/users/${editingUser.id}`, {
+        const response = await apiFetch(`/users/${editingUser.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
         });
         
@@ -105,9 +105,8 @@ export default function UsersPage() {
         setUsers(users.map(u => u.id === editingUser.id ? updatedUser : u));
       } else {
         // Create new user
-        const response = await fetch('http://localhost:3001/api/users', {
+        const response = await apiFetch('/users', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
         });
         
@@ -131,7 +130,7 @@ export default function UsersPage() {
     if (!confirm('Are you sure you want to delete this user?')) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/users/${userId}`, {
+      const response = await apiFetch(`/users/${userId}`, {
         method: 'DELETE',
       });
       

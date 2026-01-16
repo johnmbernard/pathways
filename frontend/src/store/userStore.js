@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { apiFetch } from '../lib/apiClient';
 
 export const useUserStore = create(
   persist(
@@ -10,9 +11,8 @@ export const useUserStore = create(
       // Login
       login: async (email, password) => {
         try {
-          const response = await fetch('http://localhost:3001/api/auth/login', {
+          const response = await apiFetch('/auth/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
           });
 
