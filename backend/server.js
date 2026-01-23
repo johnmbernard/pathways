@@ -15,14 +15,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// CORS Configuration - Environment-aware
+const allowedOrigins = [
+  'https://pathways.synapsesolves.com',
+  /\.pages\.dev$/, // Allow any Cloudflare Pages preview URL
+];
+
+// Add localhost origins only in development
+if (process.env.NODE_ENV === 'development') {
+  allowedOrigins.push('http://localhost:5174', 'http://localhost:3000');
+}
+
 // Middleware
 app.use(cors({
-  origin: [
-    'https://pathways.synapsesolves.com',
-    /\.pages\.dev$/, // Allow any Cloudflare Pages preview URL
-    'http://localhost:5174',
-    'http://localhost:3000'
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
@@ -54,6 +60,9 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📝 Health check: http://localhost:${PORT}/api/health`);
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? 'https://pathways-demo-backend.onrender.com'
+    : `http://localhost:${PORT}`;
+  console.log(`🚀 Server running on ${baseUrl}`);
+  console.log(`📝 Health check: ${baseUrl}/api/health`);
 });

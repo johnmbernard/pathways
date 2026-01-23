@@ -541,7 +541,7 @@ async function main() {
 
   const completedItems = [
     'Design offline storage schema',
-    'Implement local SQLite database',
+    'Implement local database',
     'Build sync conflict resolution',
     'Add background sync service',
     'Implement delta sync algorithm',

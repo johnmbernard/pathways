@@ -4,4 +4,9 @@ node_modules/
 .DS_Store
 *.log
 
+# Prisma
 /generated/prisma
+*.db
+*.db-journal
+prisma/*.db
+prisma/*.db-journal

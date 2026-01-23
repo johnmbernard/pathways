@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { API_BASE_URL } from '../config';
 
+// NOTE: This localStorage usage is intentional for UI state only
+// It stores which organizational units are expanded/collapsed in the tree view
 const STORAGE_KEY = 'pathways_organization_expanded';
 
 function loadExpandedState() {

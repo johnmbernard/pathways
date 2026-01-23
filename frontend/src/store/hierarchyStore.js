@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 
+// NOTE: This localStorage usage is intentional for UI preferences
+// It stores user-defined names for hierarchy tiers (Epic, Feature, etc.)
+// and custom work item types. This is client-side configuration only.
 const STORAGE_KEY = 'pathways_hierarchy_config_v1';
 
 function loadInitial() {
