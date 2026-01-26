@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './ui.module.css';
+export { HelpTooltip } from './HelpTooltip';
 
 // Button component with variant support
 export function Button({ 

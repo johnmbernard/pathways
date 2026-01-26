@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useOrganizationStore } from '../store/organizationStore';
-import { Button } from '../components/ui';
+import { Button, HelpTooltip } from '../components/ui';
 import { UserPlus, Edit, Trash2, Users as UsersIcon } from 'lucide-react';
 import { apiFetch } from '../lib/apiClient';
 import styles from './UsersPage.module.css';
@@ -153,7 +153,25 @@ export default function UsersPage() {
     <div className={styles.container}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>User Management</h1>
+          <h1 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            User Management
+            <HelpTooltip
+              title="User Management"
+              content={
+                <div>
+                  <p><strong>Manage users</strong> and assign them to organizational units.</p>
+                  <p><strong>Key Points:</strong></p>
+                  <ul>
+                    <li><strong>Organizational Unit:</strong> Users see work relevant to their assigned unit</li>
+                    <li><strong>Permissions:</strong> Users can participate in refinements for their unit</li>
+                    <li><strong>Demo Access:</strong> In this demo, you can switch between users to see different perspectives</li>
+                  </ul>
+                  <p>Assign users to units at the appropriate tier level for their role.</p>
+                </div>
+              }
+              size="medium"
+            />
+          </h1>
           <p className={styles.subtitle}>Manage user accounts and organizational assignments</p>
         </div>
         <Button onClick={() => handleOpenModal()}>

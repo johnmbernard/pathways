@@ -7,7 +7,7 @@ import { useUserStore } from '../store/userStore';
 import useRefinementStore from '../store/refinementStore';
 import { API_BASE_URL } from '../config';
 import { PageHeader } from '../components/layout/Layout';
-import { Button, Badge } from '../components/ui';
+import { Button, Badge, HelpTooltip } from '../components/ui';
 import { Plus, Calendar, DollarSign, Users, FolderOpen, AlertTriangle, Pencil, Trash2, X, PlayCircle } from 'lucide-react';
 import styles from './ProjectsPage.module.css';
 
@@ -144,13 +144,32 @@ export default function ProjectsPage() {
           );
           
           return (isProjectOwner || hasAssignedObjectives) && (
-            <button
-              onClick={() => setRefinementProject(project)}
-              className={styles.refinementButton}
-            >
-              <PlayCircle size={16} />
-              {isProjectOwner ? 'Start Refinement' : 'Continue Refinement'}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => setRefinementProject(project)}
+                className={styles.refinementButton}
+              >
+                <PlayCircle size={16} />
+                {isProjectOwner ? 'Start Refinement' : 'Continue Refinement'}
+              </button>
+              <HelpTooltip
+                title="Refinement Process"
+                content={
+                  <div>
+                    <p>Begin a refinement session to break down objectives into actionable work.</p>
+                    <p><strong>Process:</strong></p>
+                    <ul>
+                      <li>Select an objective to refine</li>
+                      <li>Assigned teams collaborate asynchronously</li>
+                      <li>Break objectives into sub-objectives or work items</li>
+                      <li>Provide estimates and discuss approaches</li>
+                    </ul>
+                    <p>Refinements support both hierarchical (objectives → sub-objectives) and team-level (objectives → work items) breakdowns.</p>
+                  </div>
+                }
+                size="small"
+              />
+            </div>
           );
         })()}
       </div>
@@ -589,7 +608,27 @@ export default function ProjectsPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        title="Projects"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            Projects
+            <HelpTooltip
+              title="Projects Overview"
+              content={
+                <div>
+                  <p><strong>Projects</strong> are the top-level containers for organizing work in Pathways.</p>
+                  <p>Each project contains:</p>
+                  <ul>
+                    <li><strong>Objectives:</strong> Strategic goals broken down across organizational tiers</li>
+                    <li><strong>Refinement Sessions:</strong> Collaborative spaces for teams to break down objectives</li>
+                    <li><strong>Work Items:</strong> Granular tasks that deliver the objectives</li>
+                  </ul>
+                  <p>Projects are owned by specific organizational units at a particular tier level.</p>
+                </div>
+              }
+              size="medium"
+            />
+          </div>
+        }
         subtitle="Manage organizational projects and initiatives"
         actions={
           <Button onClick={() => setIsCreating(true)} variant="primary">

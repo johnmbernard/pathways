@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useOrganizationStore } from '../store/organizationStore';
 import { useNavigate } from 'react-router-dom';
 import { Plus, ChevronRight, ChevronDown, Trash2, Building2, Tag } from 'lucide-react';
-import { Button, Badge } from '../components/ui';
+import { Button, Badge, HelpTooltip } from '../components/ui';
 import { PageHeader } from '../components/layout/Layout';
 import styles from './OrganizationBuilder.module.css';
 
@@ -170,7 +170,28 @@ export default function OrganizationBuilder() {
   return (
     <div className={styles.page}>
       <PageHeader
-        title="Organization Builder"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            Organization Builder
+            <HelpTooltip
+              title="Organization Structure"
+              content={
+                <div>
+                  <p><strong>Build your organizational hierarchy</strong> to enable tiered planning and refinement.</p>
+                  <p><strong>Key Concepts:</strong></p>
+                  <ul>
+                    <li><strong>Tiers:</strong> Hierarchical levels (Tier 1 = highest, e.g., Company)</li>
+                    <li><strong>Parent-Child Relationships:</strong> Higher tiers supervise lower tiers</li>
+                    <li><strong>Refinement Flow:</strong> Objectives cascade down and get refined at each tier</li>
+                    <li><strong>Leaf Units:</strong> Bottom-tier teams that create actual work items</li>
+                  </ul>
+                  <p>Click the <strong>+</strong> button on any unit to add a child unit beneath it.</p>
+                </div>
+              }
+              size="medium"
+            />
+          </div>
+        }
         subtitle="Build your organization structure"
         actions={
           <Button onClick={handleNewRootUnit} variant="primary">

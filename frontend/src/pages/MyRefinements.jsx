@@ -6,7 +6,7 @@ import { useProjectsStore } from '../store/projectsStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { useUserStore } from '../store/userStore';
 import { PageHeader } from '../components/layout/Layout';
-import { Badge } from '../components/ui';
+import { Badge, HelpTooltip } from '../components/ui';
 import styles from './MyRefinements.module.css';
 
 export default function MyRefinements() {
@@ -185,7 +185,28 @@ export default function MyRefinements() {
   return (
     <div className={styles.page}>
       <PageHeader
-        title="My Refinements"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            My Refinements
+            <HelpTooltip
+              title="Refinement Sessions"
+              content={
+                <div>
+                  <p><strong>Refinements</strong> are collaborative sessions where teams break down objectives into actionable work.</p>
+                  <p><strong>How it works:</strong></p>
+                  <ul>
+                    <li><strong>Async Collaboration:</strong> Team members contribute on their own time</li>
+                    <li><strong>Hierarchical Breakdown:</strong> Higher tiers create sub-objectives; leaf teams create work items</li>
+                    <li><strong>Consensus Building:</strong> Discuss, estimate, and align on approaches</li>
+                    <li><strong>Status Tracking:</strong> Mark your unit's work as complete when ready</li>
+                  </ul>
+                  <p>Click any card to continue a refinement session.</p>
+                </div>
+              }
+              size="medium"
+            />
+          </div>
+        }
         subtitle="Refinement sessions assigned to your organizational unit"
       />
       

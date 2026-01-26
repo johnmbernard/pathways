@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProjectsStore } from '../store/projectsStore';
 import { AlertCircle, Calendar, TrendingUp, Clock } from 'lucide-react';
-import { Button } from '../components/ui';
+import { Button, HelpTooltip } from '../components/ui';
 import { PageHeader } from '../components/layout/Layout';
 import { formatDate } from '../utils/dateUtils';
 import { API_BASE_URL } from '../config';
@@ -136,7 +136,27 @@ export default function RoadmapPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        title="Roadmap"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            Roadmap
+            <HelpTooltip
+              title="Project Roadmap"
+              content={
+                <div>
+                  <p><strong>Visual timeline</strong> of all projects showing target dates and forecasted completion.</p>
+                  <p><strong>Features:</strong></p>
+                  <ul>
+                    <li><strong>Target Dates (Blue):</strong> Leadership-defined project deadlines</li>
+                    <li><strong>Forecasted Dates (Purple):</strong> Data-driven predictions based on historical lead times</li>
+                    <li><strong>Status Indicators:</strong> Green (on track), Yellow (at risk), Red (delayed)</li>
+                  </ul>
+                  <p>Forecasts use your organization's actual historical data to predict realistic completion times.</p>
+                </div>
+              }
+              size="medium"
+            />
+          </div>
+        }
         subtitle="Project timelines with lead time forecasting"
         actions={
           <Button onClick={() => navigate('/app/projects')} variant="secondary">

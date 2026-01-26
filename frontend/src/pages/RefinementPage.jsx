@@ -6,6 +6,7 @@ import { useProjectsStore } from '../store/projectsStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { useWorkItemsStore } from '../store/workItemsStore';
 import { useUserStore } from '../store/userStore';
+import { HelpTooltip } from '../components/ui';
 import styles from './RefinementPage.module.css';
 
 export default function RefinementPage() {
@@ -248,7 +249,27 @@ export default function RefinementPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
-          <h1>{project?.title || 'Unknown Project'}</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {project?.title || 'Unknown Project'}
+            <HelpTooltip
+              title="Refinement Session"
+              content={
+                <div>
+                  <p>This is your team's workspace for refining objectives into actionable work.</p>
+                  <p><strong>Your role:</strong></p>
+                  <ul>
+                    <li><strong>Review:</strong> Understand the objective from higher tiers</li>
+                    <li><strong>Break Down:</strong> Create {isLeafUnit ? 'work items' : 'sub-objectives'} to achieve it</li>
+                    <li><strong>Estimate:</strong> Provide effort estimates and timelines</li>
+                    <li><strong>Discuss:</strong> Use the discussion panel to collaborate with your team</li>
+                    <li><strong>Complete:</strong> Mark your unit as complete when ready</li>
+                  </ul>
+                  <p>Changes are saved automatically. Multiple team members can work simultaneously.</p>
+                </div>
+              }
+              size="medium"
+            />
+          </h1>
           <p className={styles.subtitle}>
             Your {isLeafUnit ? 'Team' : `Tier ${actualTier}`}: {currentUserUnit?.name || 'Unit'}
           </p>

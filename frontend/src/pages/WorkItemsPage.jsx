@@ -7,7 +7,7 @@ import HierarchyBuilder from '../components/HierarchyBuilder';
 import { useHierarchyStore } from '../store/hierarchyStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { useNavigate } from 'react-router-dom';
-import { Button, Badge } from '../components/ui';
+import { Button, Badge, HelpTooltip } from '../components/ui';
 import { API_BASE_URL } from '../config';
 import { PageHeader } from '../components/layout/Layout';
 import styles from './WorkItemsPage.module.css';
@@ -475,7 +475,28 @@ export default function WorkItemsPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        title="Backlog"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            Backlog
+            <HelpTooltip
+              title="Work Items & Backlog"
+              content={
+                <div>
+                  <p><strong>Your backlog</strong> contains all work items created through refinement sessions.</p>
+                  <p><strong>Features:</strong></p>
+                  <ul>
+                    <li><strong>Hierarchical View:</strong> Work items can be nested (epics, stories, tasks)</li>
+                    <li><strong>Project Association:</strong> All items link back to projects and objectives</li>
+                    <li><strong>Acceptance Criteria:</strong> Define and track completion criteria</li>
+                    <li><strong>Estimates:</strong> T-shirt sizing (S/M/L) for planning</li>
+                  </ul>
+                  <p>Use <strong>Hierarchy Builder</strong> to customize work item types and relationships.</p>
+                </div>
+              }
+              size="medium"
+            />
+          </div>
+        }
         subtitle={`Manage ${orgName}'s backlog`}
         actions={
           <>
