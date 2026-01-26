@@ -16,18 +16,20 @@ function ObjectiveRow({ objective, projectId }) {
         <Target size={16} />
       </div>
       
+      <div className={styles.objectiveTierColumn}>
+        {objective.tier ? (
+          <Badge variant="secondary">Tier {objective.tier}</Badge>
+        ) : (
+          <span style={{ color: '#9ca3af', fontSize: '0.875rem' }}>—</span>
+        )}
+      </div>
+      
       <div className={styles.objectiveTitle}>
         {objective.title}
       </div>
       
       <div className={styles.objectiveDescription}>
         {objective.description || 'No description'}
-      </div>
-      
-      <div className={styles.objectiveTier}>
-        {objective.tier ? (
-          <Badge variant="secondary">Tier {objective.tier}</Badge>
-        ) : null}
       </div>
       
       <div className={styles.objectiveDate}>

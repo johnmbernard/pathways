@@ -230,6 +230,11 @@
   flex-shrink: 0;
 }
 
+.objectiveTierColumn {
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
 .objectiveTitle {
   min-width: 200px;
   flex-shrink: 0;
@@ -248,10 +253,6 @@
   white-space: nowrap;
 }
 
-.objectiveTier {
-  flex-shrink: 0;
-}
-
 .objectiveDate {
   display: flex;
   align-items: center;
@@ -259,7 +260,7 @@
   font-size: 0.8125rem;
   color: #64748b;
   flex-shrink: 0;
-  min-width: 120px;
+  min-width: 140px;
 }
 
 .tableFooter {
