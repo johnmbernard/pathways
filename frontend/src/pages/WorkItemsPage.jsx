@@ -17,8 +17,8 @@ function ObjectiveRow({ objective, projectId }) {
       </div>
       
       <div className={styles.objectiveTierColumn}>
-        {objective.tier ? (
-          <Badge variant="secondary">Tier {objective.tier}</Badge>
+        {objective.fromTier ? (
+          <Badge variant="secondary">Tier {objective.fromTier}</Badge>
         ) : (
           <span style={{ color: '#9ca3af', fontSize: '0.875rem' }}>—</span>
         )}
