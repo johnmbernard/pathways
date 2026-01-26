@@ -76,7 +76,7 @@ function WorkItemRow({ item, depth = 0, highlightId }) {
     <>
       <div
         id={`work-item-${item.id}`}
-        className={`${styles.row} ${isEditing ? styles.editing : ''} ${isHighlighted ? styles.highlighted : ''}`}
+        className={`${styles.row} ${isHighlighted ? styles.highlighted : ''}`}
         style={{ paddingLeft: `${depth * 20 + 24}px` }}
         data-item-type={itemType}
       >
