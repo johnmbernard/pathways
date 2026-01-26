@@ -107,6 +107,82 @@
   color: #9ca3af;
 }
 
+/* Project Row Styles */
+.projectRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 150ms;
+}
+
+.projectRow:hover {
+  background-color: #f9fafb;
+}
+
+.projectIcon {
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.projectTitle {
+  min-width: 200px;
+  flex-shrink: 0;
+}
+
+.projectTitle h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.projectDescription {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectStatus {
+  flex-shrink: 0;
+}
+
+.projectDates {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #64748b;
+  flex-shrink: 0;
+  min-width: 180px;
+}
+
+.projectOwner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #475569;
+  flex-shrink: 0;
+  min-width: 150px;
+}
+
+.projectStats {
+  font-size: 0.875rem;
+  color: #6b7280;
+  flex-shrink: 0;
+  min-width: 100px;
+  text-align: right;
+}
+
 .tableFooter {
   border-top: 1px solid #e5e7eb;
   background: linear-gradient(to right, #f9fafb, #ffffff);
