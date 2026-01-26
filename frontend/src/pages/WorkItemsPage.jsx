@@ -4,12 +4,53 @@ import { useWorkItemsStore } from '../store/workItemsStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { useNavigate } from 'react-router-dom';
 import { Button, Badge, HelpTooltip } from '../components/ui';
-import { Calendar, Users, FolderOpen } from 'lucide-react';
+import { Calendar, Users, FolderOpen, ChevronRight, ChevronDown, Target } from 'lucide-react';
 import { PageHeader } from '../components/layout/Layout';
+import { API_BASE_URL } from '../config';
 import styles from './WorkItemsPage.module.css';
 
-function ProjectRow({ project, workItemCount, owningUnit }) {
+function ObjectiveRow({ objective, projectId }) {
+  return (
+    <div className={styles.objectiveRow}>
+      <div className={styles.objectiveIcon}>
+        <Target size={16} />
+      </div>
+      
+      <div className={styles.objectiveTitle}>
+        {objective.title}
+      </div>
+      
+      <div className={styles.objectiveDescription}>
+        {objective.description || 'No description'}
+      </div>
+      
+      <div className={styles.objectiveTier}>
+        {objective.tier ? (
+          <Badge variant="secondary">Tier {objective.tier}</Badge>
+        ) : null}
+      </div>
+      
+      <div className={styles.objectiveDate}>
+        {objective.targetDate ? (
+          <>
+            <Calendar size={12} />
+            <span>{new Date(objective.targetDate).toLocaleDateString()}</span>
+          </>
+        ) : (
+          <span style={{ color: '#9ca3af' }}>No date</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProjectRow({ project, workItemCount, owningUnit, objectives }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const navigate = useNavigate();
+  
+  // Get only top-level objectives (those without a parent)
+  const topLevelObjectives = objectives.filter(obj => !obj.parentObjectiveId);
+  const hasObjectives = topLevelObjectives.length > 0;
   
   const getStatusColor = (status) => {
     switch (status) {
@@ -22,42 +63,59 @@ function ProjectRow({ project, workItemCount, owningUnit }) {
   };
 
   return (
-    <div className={styles.projectRow}>
-      <div className={styles.projectIcon}>
-        <FolderOpen size={20} />
+    <>
+      <div className={styles.projectRow}>
+        <button
+          onClick={() => hasObjectives && setIsExpanded(!isExpanded)}
+          className={`${styles.expandButton} ${!hasObjectives ? styles.invisible : ''}`}
+        >
+          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </button>
+        
+        <div className={styles.projectIcon}>
+          <FolderOpen size={20} />
+        </div>
+        
+        <div className={styles.projectTitle}>
+          <h3>{project.title}</h3>
+          {project.ownerTier && (
+            <Badge variant="secondary">Tier {project.ownerTier}</Badge>
+          )}
+        </div>
+        
+        <div className={styles.projectDescription}>
+          {project.description || 'No description'}
+        </div>
+        
+        <div className={styles.projectStatus}>
+          <Badge variant={getStatusColor(project.status)}>
+            {project.status}
+          </Badge>
+        </div>
+        
+        <div className={styles.projectDates}>
+          <Calendar size={14} />
+          <span>{project.startDate} → {project.targetDate}</span>
+        </div>
+        
+        <div className={styles.projectOwner}>
+          <Users size={14} />
+          <span>{owningUnit?.name || 'No unit'}</span>
+        </div>
+        
+        <div className={styles.projectStats}>
+          {topLevelObjectives.length} objectives • {workItemCount} work items
+        </div>
       </div>
       
-      <div className={styles.projectTitle}>
-        <h3>{project.title}</h3>
-        {project.ownerTier && (
-          <Badge variant="secondary">Tier {project.ownerTier}</Badge>
-        )}
-      </div>
-      
-      <div className={styles.projectDescription}>
-        {project.description || 'No description'}
-      </div>
-      
-      <div className={styles.projectStatus}>
-        <Badge variant={getStatusColor(project.status)}>
-          {project.status}
-        </Badge>
-      </div>
-      
-      <div className={styles.projectDates}>
-        <Calendar size={14} />
-        <span>{project.startDate} → {project.targetDate}</span>
-      </div>
-      
-      <div className={styles.projectOwner}>
-        <Users size={14} />
-        <span>{owningUnit?.name || 'No unit'}</span>
-      </div>
-      
-      <div className={styles.projectStats}>
-        {workItemCount} work items
-      </div>
-    </div>
+      {isExpanded && topLevelObjectives.map(objective => (
+        <ObjectiveRow 
+          key={objective.id} 
+          objective={objective} 
+          projectId={project.id}
+        />
+      ))}
+    </>
   );
 }
 
@@ -67,6 +125,7 @@ export default function WorkItemsPage() {
   const { units } = useOrganizationStore();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [projectObjectives, setProjectObjectives] = useState({});
   
   // Fetch projects and work items on mount
   React.useEffect(() => {
@@ -80,6 +139,29 @@ export default function WorkItemsPage() {
     };
     loadData();
   }, [fetchProjects, fetchWorkItems]);
+  
+  // Fetch objectives for all projects
+  React.useEffect(() => {
+    const loadObjectives = async () => {
+      if (projects.length === 0) return;
+      
+      const objectivesMap = {};
+      for (const project of projects) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/projects/${project.id}`);
+          if (response.ok) {
+            const projectData = await response.json();
+            objectivesMap[project.id] = projectData.objectives || [];
+          }
+        } catch (error) {
+          console.error(`Failed to fetch objectives for project ${project.id}:`, error);
+          objectivesMap[project.id] = [];
+        }
+      }
+      setProjectObjectives(objectivesMap);
+    };
+    loadObjectives();
+  }, [projects]);
   
   // Get work item counts per project
   const projectWorkItemCounts = React.useMemo(() => {
@@ -176,12 +258,14 @@ export default function WorkItemsPage() {
               projects.map(project => {
                 const owningUnit = units.find(u => u.id === project.ownerUnit);
                 const workItemCount = projectWorkItemCounts[project.id] || 0;
+                const objectives = projectObjectives[project.id] || [];
                 return (
                   <ProjectRow 
                     key={project.id} 
                     project={project} 
                     workItemCount={workItemCount}
                     owningUnit={owningUnit}
+                    objectives={objectives}
                   />
                 );
               })

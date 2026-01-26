@@ -121,6 +121,33 @@
   background-color: #f9fafb;
 }
 
+.expandButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin-left: 8px;
+}
+
+.expandButton:hover {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.expandButton.invisible {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .projectIcon {
   color: #3b82f6;
   flex-shrink: 0;
@@ -181,6 +208,58 @@
   flex-shrink: 0;
   min-width: 100px;
   text-align: right;
+}
+
+/* Objective Row Styles */
+.objectiveRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem 1rem 4rem;
+  border-bottom: 1px solid #f3f4f6;
+  background-color: #fafafa;
+  transition: background-color 150ms;
+}
+
+.objectiveRow:hover {
+  background-color: #f5f5f5;
+}
+
+.objectiveIcon {
+  color: #8b5cf6;
+  flex-shrink: 0;
+}
+
+.objectiveTitle {
+  min-width: 200px;
+  flex-shrink: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.objectiveDescription {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.objectiveTier {
+  flex-shrink: 0;
+}
+
+.objectiveDate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: #64748b;
+  flex-shrink: 0;
+  min-width: 120px;
 }
 
 .tableFooter {
