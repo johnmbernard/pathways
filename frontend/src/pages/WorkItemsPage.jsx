@@ -20,56 +20,27 @@ function WorkItemRow({ item, depth = 0, highlightId }) {
   const { getProject } = useProjectsStore();
   const { tiers, flatTypes } = useHierarchyStore();
   const { units, getTierLevel } = useOrganizationStore();
-  const [localExpanded, setLocalExpanded] = React.useState(false);
   const project = item.projectId ? getProject(item.projectId) : null;
   const isHighlighted = item.id === highlightId;
-  
-  // Handle different item types (project, objective, workItem)
-  const itemType = item.itemType || 'workItem';
   
   // Use tree units for dropdown with tier info
   const allOrgUnits = useMemo(() => [
     ...units.map(u => ({ id: u.id, name: u.name, isFlat: false, tierLevel: getTierLevel(u.id) })),
   ], [units, getTierLevel]);
 
-  // Color palette for org tiers
-  const getTierColor = (tierLevel) => {
-    const colors = [
-      '#3b82f6', // blue-500 (Tier 1)
-      '#8b5cf6', // violet-500 (Tier 2)
-      '#ec4899', // pink-500 (Tier 3)
-      '#f59e0b', // amber-500 (Tier 4)
-      '#10b981', // emerald-500 (Tier 5+)
-    ];
-    if (tierLevel === null) return '#6b7280'; // gray-500 for flat units
-    return colors[Math.min(tierLevel - 1, colors.length - 1)];
-  };
-
-  // Children are either from store (for work items) or from item.children (for projects/objectives)
-  const children = itemType === 'workItem' ? getChildren(item.id) : (item.children || []);
+  // Get children work items
+  const children = getChildren(item.id);
   const hasChildren = children.length > 0;
-  const isExpanded = itemType === 'workItem' ? expandedItems.has(item.id) : localExpanded;
-  
-  // Debug logging
-  if (itemType !== 'workItem' && depth === 0) {
-    console.log('Row:', item.title, 'itemType:', itemType, 'hasChildren:', hasChildren, 'children:', children.length);
-  }
+  const isExpanded = expandedItems.has(item.id);
 
   // Determine icon based on item type
   let icon = '🏷️';
-  if (itemType === 'project') {
-    icon = '📂';
-  } else if (itemType === 'objective') {
-    icon = '🎯';
-  } else {
-    // Work item - use tier-based icons
-    const tierIndex = tiers.findIndex(t => t.name === item.type);
-    if (tierIndex === 0) icon = '📦';
-    else if (tierIndex === 1) icon = '🔥';
-    else if (tierIndex >= 2) icon = '📋';
-    else if (flatTypes.some(t => t.name.toLowerCase() === String(item.type).toLowerCase())) {
-      icon = /bug/i.test(item.type) ? '🐛' : '🏷️';
-    }
+  const tierIndex = tiers.findIndex(t => t.name === item.type);
+  if (tierIndex === 0) icon = '📦';
+  else if (tierIndex === 1) icon = '🔥';
+  else if (tierIndex >= 2) icon = '📋';
+  else if (flatTypes.some(t => t.name.toLowerCase() === String(item.type).toLowerCase())) {
+    icon = /bug/i.test(item.type) ? '🐛' : '🏷️';
   }
 
   return (
@@ -78,17 +49,12 @@ function WorkItemRow({ item, depth = 0, highlightId }) {
         id={`work-item-${item.id}`}
         className={`${styles.row} ${isHighlighted ? styles.highlighted : ''}`}
         style={{ paddingLeft: `${depth * 20 + 24}px` }}
-        data-item-type={itemType}
       >
         {/* Expand/Collapse Button */}
         <button
           onClick={() => {
             if (hasChildren) {
-              if (itemType === 'workItem') {
-                toggleExpanded(item.id);
-              } else {
-                setLocalExpanded(!localExpanded);
-              }
+              toggleExpanded(item.id);
             }
           }}
           className={`${styles.expandButton} ${!hasChildren ? styles.invisible : ''}`}
@@ -102,7 +68,7 @@ function WorkItemRow({ item, depth = 0, highlightId }) {
         {/* ID */}
         <div className={styles.idBadge}>
           <span className={styles.idBadgeInner}>
-            {itemType === 'workItem' ? `#${item.id}` : '—'}
+            #{item.id}
           </span>
         </div>
 
@@ -170,12 +136,11 @@ function WorkItemRow({ item, depth = 0, highlightId }) {
 
 export default function WorkItemsPage() {
   const { items, expandedItems, toggleExpanded, fetchWorkItems } = useWorkItemsStore();
-  const { projects, fetchProjects } = useProjectsStore();
+  const { projects, fetchProjects, getProject } = useProjectsStore();
   const { tiers, flatTypes } = useHierarchyStore();
   const { units } = useOrganizationStore();
   const navigate = useNavigate();
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(false);
-  const [objectives, setObjectives] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   
   // Fetch projects and work items on mount
@@ -191,112 +156,10 @@ export default function WorkItemsPage() {
     loadData();
   }, [fetchProjects, fetchWorkItems]);
   
-  // Fetch objectives when projects change
-  React.useEffect(() => {
-    const loadObjectives = async () => {
-      if (projects.length === 0) {
-        setObjectives([]);
-        return;
-      }
-      
-      const allObjectives = [];
-      for (const project of projects) {
-        try {
-          const response = await fetch(`${API_BASE_URL}/projects/${project.id}`);
-          if (response.ok) {
-            const projectData = await response.json();
-            if (projectData.objectives) {
-              projectData.objectives.forEach(obj => {
-                allObjectives.push({ ...obj, projectId: project.id });
-              });
-            }
-          }
-        } catch (error) {
-          console.error(`Failed to fetch objectives for project ${project.id}:`, error);
-        }
-      }
-      setObjectives(allObjectives);
-    };
-    loadObjectives();
-  }, [projects]);
-  
-  // Build unified hierarchy: Projects > Objectives > Work Items
-  const hierarchyItems = React.useMemo(() => {
-    console.log('Building hierarchy:', { projectsCount: projects.length, objectivesCount: objectives.length, itemsCount: items.length });
-    const result = [];
-    
-    // Add all projects as root items with objectives and work items nested
-    projects.forEach(project => {
-      console.log('Processing project:', project.title, 'objectives:', objectives.filter(obj => obj.projectId === project.id).length);
-      const projectItem = {
-        id: project.id,
-        title: project.title,
-        type: 'Project',
-        itemType: 'project',
-        targetDate: project.targetDate,
-        description: project.description,
-        status: project.status,
-        children: []
-      };
-      
-      // Get objectives for this project
-      const projectObjectives = objectives.filter(obj => obj.projectId === project.id);
-      console.log('Project:', project.title, 'projectObjectives:', projectObjectives.length, 'sample parentId:', projectObjectives[0]?.parentId, 'all parentIds:', projectObjectives.map(o => ({id: o.id, parentId: o.parentId})));
-      
-      // Build objective tree (handle multi-tier objectives)
-      const buildObjectiveTree = (parentId = null) => {
-        const filtered = projectObjectives.filter(obj => {
-          // Handle both null and undefined as root objectives
-          if (parentId === null) {
-            return obj.parentId === null || obj.parentId === undefined;
-          }
-          return obj.parentId === parentId;
-        });
-        console.log('buildObjectiveTree parentId:', parentId, 'filtered:', filtered.length, 'filtered ids:', filtered.map(f => f.id));
-        return filtered.map(objective => {
-            const objectiveItem = {
-              id: objective.id,
-              title: objective.title,
-              type: `Objective (Tier ${objective.tier})`,
-              itemType: 'objective',
-              targetDate: objective.targetDate,
-              description: objective.description,
-              tier: objective.tier,
-              objectiveId: objective.id,
-              projectId: project.id,
-              children: []
-            };
-            
-            // Add child objectives
-            objectiveItem.children = buildObjectiveTree(objective.id);
-            
-            // Add work items for this objective
-            const objectiveWorkItems = items.filter(item => 
-              item.objectiveId === objective.id
-            );
-            
-            console.log('Objective:', objective.title, 'work items:', objectiveWorkItems.length, 
-                       'total items:', items.length, 
-                       'sample objectiveId:', items[0]?.objectiveId);
-            
-            objectiveWorkItems.forEach(workItem => {
-              objectiveItem.children.push({
-                ...workItem,
-                itemType: 'workItem'
-              });
-            });
-            
-            return objectiveItem;
-          });
-      };
-      
-      projectItem.children = buildObjectiveTree();
-      console.log('Project:', project.title, 'final children count:', projectItem.children.length);
-      result.push(projectItem);
-    });
-    
-    return result;
-  }, [projects, objectives, items]);
+  // Get root level work items (those without a parent)
+  const rootWorkItems = React.useMemo(() => {
+    return items.filter(item => !item.parentId);
+  }, [items]);
   
   // Handle highlight parameter from URL
   const [highlightId, setHighlightId] = React.useState(null);
@@ -416,7 +279,7 @@ export default function WorkItemsPage() {
                   <p className={styles.emptyStateTitle}>Loading...</p>
                 </div>
               </div>
-            ) : hierarchyItems.length === 0 ? (
+            ) : items.length === 0 ? (
               <div className={styles.emptyState}>
                 <div className={styles.emptyStateContent}>
                   <div>
@@ -424,12 +287,12 @@ export default function WorkItemsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <p className={styles.emptyStateTitle}>No projects yet</p>
-                  <p className={styles.emptyStateText}>Create a project to get started</p>
+                  <p className={styles.emptyStateTitle}>No work items yet</p>
+                  <p className={styles.emptyStateText}>Work items will appear here once created through refinement sessions</p>
                 </div>
               </div>
             ) : (
-              hierarchyItems.map(item => (
+              rootWorkItems.map(item => (
                 <WorkItemRow key={item.id} item={item} depth={0} highlightId={highlightId} />
               ))
             )}
@@ -438,8 +301,6 @@ export default function WorkItemsPage() {
           {/* Footer Stats */}
           <div className={styles.tableFooter}>
             <div className={styles.footerStats}>
-              <Badge variant="primary">{hierarchyItems.length} projects</Badge>
-              <span className={styles.footerDivider}>•</span>
               <Badge variant="secondary">{items.length} work items</Badge>
               <span className={styles.footerDivider}>•</span>
               <span className={styles.footerText}>Last updated just now</span>
