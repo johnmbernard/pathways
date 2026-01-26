@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useWorkItemsStore } from '../store/workItemsStore';
 import { useProjectsStore } from '../store/projectsStore';
-import { ChevronRight, ChevronDown, Plus, Trash2, Pencil, Building, X, Check, FolderKanban } from 'lucide-react';
-import DateInputs from '../components/DateInputs';
+import { ChevronRight, ChevronDown, Building, X, Check, FolderKanban } from 'lucide-react';
 import HierarchyBuilder from '../components/HierarchyBuilder';
 import { useHierarchyStore } from '../store/hierarchyStore';
 import { useOrganizationStore } from '../store/organizationStore';
@@ -16,15 +15,13 @@ import modalStyles from './EditWorkItemModal.module.css';
 
 // Types derived from hierarchy tiers + flat types
 
-function WorkItemRow({ item, depth = 0, onEdit, highlightId }) {
-  const { updateItem, deleteItem, toggleExpanded, getChildren, expandedItems, addItem } = useWorkItemsStore();
+function WorkItemRow({ item, depth = 0, highlightId }) {
+  const { toggleExpanded, getChildren, expandedItems } = useWorkItemsStore();
   const { getProject } = useProjectsStore();
   const { tiers, flatTypes } = useHierarchyStore();
   const { units, getTierLevel } = useOrganizationStore();
   const [localExpanded, setLocalExpanded] = React.useState(false);
   const project = item.projectId ? getProject(item.projectId) : null;
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(item.title);
   const isHighlighted = item.id === highlightId;
   
   // Handle different item types (project, objective, workItem)
@@ -75,32 +72,6 @@ function WorkItemRow({ item, depth = 0, onEdit, highlightId }) {
     }
   }
 
-  const handleSave = () => {
-    if (editTitle.trim()) {
-      updateItem(item.id, { title: editTitle.trim() });
-    }
-    setIsEditing(false);
-  };
-
-  const handleAddChild = () => {
-    // Default child type to next tier after parent's type
-    const parentTierIndex = tiers.findIndex(t => t.name === item.type);
-    const nextTierType = parentTierIndex >= 0 && tiers[parentTierIndex + 1]
-      ? tiers[parentTierIndex + 1].name
-      : (tiers[parentTierIndex] ? tiers[parentTierIndex].name : (tiers[0]?.name || 'Feature'));
-
-    addItem({
-      title: 'New Work Item',
-      state: 'New',
-      type: nextTierType,
-      parentId: item.id,
-      assignedOrgUnit: item.assignedOrgUnit ?? null,
-    });
-    if (!isExpanded) {
-      toggleExpanded(item.id);
-    }
-  };
-
   return (
     <>
       <div
@@ -137,167 +108,73 @@ function WorkItemRow({ item, depth = 0, onEdit, highlightId }) {
 
         {/* Title */}
         <div className={styles.titleCell}>
-          {isEditing ? (
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              onBlur={handleSave}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSave();
-                if (e.key === 'Escape') {
-                  setEditTitle(item.title);
-                  setIsEditing(false);
-                }
-              }}
-              className={styles.titleInput}
-              autoFocus
-            />
-          ) : (
-            <div className={styles.titleContent}>
-              <span 
-                onDoubleClick={() => setIsEditing(true)}
-                className={styles.titleText}
-                title={item.title}
-              >
-                {item.title}
+          <div className={styles.titleContent}>
+            <span 
+              className={styles.titleText}
+              title={item.title}
+            >
+              {item.title}
+            </span>
+            {project && (
+              <span className={styles.projectBadge} title={`Project: ${project.title}`}>
+                <FolderKanban size={12} />
+                {project.title}
               </span>
-              {project && (
-                <span className={styles.projectBadge} title={`Project: ${project.title}`}>
-                  <FolderKanban size={12} />
-                  {project.title}
-                </span>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Type Dropdown (derived from hierarchy + flat types) */}
+        {/* Type (read-only) */}
         <div className={styles.typeCell}>
-          <select
-            value={item.type}
-            onChange={(e) => {
-              const newType = e.target.value;
-              // If promoted to top tier, remove indentation by clearing parentId
-              const topTier = tiers[0]?.name;
-              if (topTier && newType === topTier) {
-                updateItem(item.id, { type: newType, parentId: null });
-              } else {
-                updateItem(item.id, { type: newType });
-              }
-            }}
-            className={styles.typeSelect}
-          >
-            {tiers.map(t => (
-              <option key={t.id} value={t.name}>{t.name}</option>
-            ))}
-            {flatTypes.map(t => (
-              <option key={t.id} value={t.name}>{t.name}</option>
-            ))}
-          </select>
+          <span className={styles.typeBadge}>{item.type || 'N/A'}</span>
         </div>
 
-        {/* Start/Target Dates */}
+        {/* Start/Target Dates (read-only) */}
         <div className={styles.scheduleCell}>
-          {(itemType === 'project' || itemType === 'objective') ? (
-            <div style={{ fontSize: '12px', color: '#64748b' }}>
-              {item.targetDate && (
-                <div>Target: {new Date(item.targetDate).toLocaleDateString()}</div>
-              )}
-            </div>
-          ) : (
-            <DateInputs
-              startDate={item.startDate}
-              targetDate={item.targetDate}
-              onChange={(updates) => {
-                const payload = {};
-                if (updates.startDate !== undefined) payload.startDate = updates.startDate;
-                if (updates.targetDate !== undefined) payload.targetDate = updates.targetDate;
-                const normalized = Object.fromEntries(Object.entries(payload).map(([k, v]) => [k, v || '']));
-                updateItem(item.id, normalized);
-              }}
-            />
-          )}
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
+            {item.targetDate ? (
+              <div>Target: {new Date(item.targetDate).toLocaleDateString()}</div>
+            ) : (
+              <div style={{ color: '#94a3b8' }}>-</div>
+            )}
+          </div>
         </div>
 
-        {/* Assigned Organization Unit Dropdown */}
+        {/* Assigned Organization Unit (read-only) */}
         <div className={styles.teamCell}>
-          {(itemType === 'project' || itemType === 'objective') ? (
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>-</span>
-          ) : (
+          {item.assignedOrgUnit ? (
             <>
               <Building size={14} className={styles.teamIcon} />
-              <select
-                value={item.assignedOrgUnit || ''}
-                onChange={(e) => updateItem(item.id, { assignedOrgUnit: e.target.value || null })}
-                className={styles.teamSelect}
-              >
-                <option value="">No Team</option>
-                {allOrgUnits.map(org => (
-                  <option 
-                    key={org.id} 
-                value={org.id}
-                style={{ 
-                  color: getTierColor(org.tierLevel),
-                  fontWeight: org.isFlat ? 'normal' : '500'
-                }}
-              >
-                {org.isFlat ? '🏷️ ' : `Tier ${org.tierLevel} • `}{org.name}
-              </option>
-            ))}
-          </select>
-            </>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className={styles.actionsCell}>
-          {itemType === 'workItem' ? (
-            <>
-              <button
-                onClick={handleAddChild}
-                className={`${styles.actionButton} ${styles.add}`}
-                title="Add child work item"
-              >
-                <Plus size={16} strokeWidth={2.5} />
-              </button>
-              <button
-                onClick={() => onEdit(item)}
-                className={`${styles.actionButton} ${styles.edit}`}
-                title="Edit work item details"
-              >
-                <Pencil size={16} strokeWidth={2.5} />
-              </button>
-              <button
-                onClick={() => deleteItem(item.id)}
-                className={`${styles.actionButton} ${styles.delete}`}
-                title="Delete work item"
-              >
-                <Trash2 size={16} strokeWidth={2.5} />
-              </button>
+              <span style={{ fontSize: '13px', color: '#475569' }}>
+                {allOrgUnits.find(org => org.id === item.assignedOrgUnit)?.name || 'Unknown'}
+              </span>
             </>
           ) : (
             <span style={{ fontSize: '12px', color: '#94a3b8' }}>-</span>
           )}
+        </div>
+
+        {/* Actions (read-only - no actions available) */}
+        <div className={styles.actionsCell}>
+          <span style={{ fontSize: '12px', color: '#94a3b8' }}>-</span>
         </div>
       </div>
 
       {/* Render Children */}
       {isExpanded && children.map(child => (
-        <WorkItemRow key={child.id} item={child} depth={depth + 1} onEdit={onEdit} highlightId={highlightId} />
+        <WorkItemRow key={child.id} item={child} depth={depth + 1} highlightId={highlightId} />
       ))}
     </>
   );
 }
 
 export default function WorkItemsPage() {
-  const { addItem, updateItem, items, expandedItems, toggleExpanded, fetchWorkItems } = useWorkItemsStore();
+  const { items, expandedItems, toggleExpanded, fetchWorkItems } = useWorkItemsStore();
   const { projects, fetchProjects } = useProjectsStore();
   const { tiers, flatTypes } = useHierarchyStore();
   const { units } = useOrganizationStore();
   const navigate = useNavigate();
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
   const [objectives, setObjectives] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   
@@ -465,12 +342,6 @@ export default function WorkItemsPage() {
   // Get root organization name (first unit with no parent)
   const rootOrg = units.find(u => u.parentId === null);
   const orgName = rootOrg?.name || 'your organization';
-  
-  const handleNewWorkItem = () => {
-    const defaultType = tiers[1]?.name || tiers[0]?.name || allTypes[0] || 'Feature';
-    // Always create as top-level (root) item
-    addItem({ title: 'New Work Item', state: 'New', type: defaultType, parentId: null });
-  };
 
   return (
     <div className={styles.page}>
@@ -482,34 +353,46 @@ export default function WorkItemsPage() {
               title="Work Items & Backlog"
               content={
                 <div>
-                  <p><strong>Your backlog</strong> contains all work items created through refinement sessions.</p>
-                  <p><strong>Features:</strong></p>
+                  <p><strong>Read-only view</strong> of all work items created through refinement sessions.</p>
+                  <p><strong>About this view:</strong></p>
                   <ul>
+                    <li><strong>Refinement-Created:</strong> All work items originate from refinement sessions</li>
                     <li><strong>Hierarchical View:</strong> Work items can be nested (epics, stories, tasks)</li>
                     <li><strong>Project Association:</strong> All items link back to projects and objectives</li>
-                    <li><strong>Acceptance Criteria:</strong> Define and track completion criteria</li>
-                    <li><strong>Estimates:</strong> T-shirt sizing (S/M/L) for planning</li>
+                    <li><strong>Data Integrity:</strong> To modify items, return to their refinement session</li>
                   </ul>
-                  <p>Use <strong>Hierarchy Builder</strong> to customize work item types and relationships.</p>
+                  <p>Use <strong>Hierarchy Builder</strong> to view work item type relationships.</p>
                 </div>
               }
               size="medium"
             />
           </div>
         }
-        subtitle={`Manage ${orgName}'s backlog`}
+        subtitle={`View ${orgName}'s work items from refinement sessions`}
         actions={
-          <>
-            <Button onClick={handleNewWorkItem} variant="primary">
-              <Plus size={18} />
-              New Work Item
-            </Button>
-            <Button onClick={() => setIsHierarchyOpen(true)} variant="secondary">
-              Hierarchy Builder
-            </Button>
-          </>
+          <Button onClick={() => setIsHierarchyOpen(true)} variant="secondary">
+            View Hierarchy
+          </Button>
         }
       />
+
+      {/* Informational Banner */}
+      <div style={{
+        backgroundColor: '#eff6ff',
+        border: '1px solid #bfdbfe',
+        borderRadius: '8px',
+        padding: '12px 16px',
+        margin: '0 24px 16px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px'
+      }}>
+        <span style={{ fontSize: '20px' }}>ℹ️</span>
+        <div style={{ fontSize: '14px', color: '#1e40af' }}>
+          <strong>Read-Only View:</strong> Work items are created through refinement sessions. 
+          To modify a work item, return to the refinement session that created it.
+        </div>
+      </div>
 
       <div className={styles.container}>
         <div className={styles.tableWrapper}>
@@ -547,7 +430,7 @@ export default function WorkItemsPage() {
               </div>
             ) : (
               hierarchyItems.map(item => (
-                <WorkItemRow key={item.id} item={item} depth={0} onEdit={setEditingItem} highlightId={highlightId} />
+                <WorkItemRow key={item.id} item={item} depth={0} highlightId={highlightId} />
               ))
             )}
           </div>
@@ -567,161 +450,6 @@ export default function WorkItemsPage() {
 
       {/* Hierarchy Builder Modal */}
       <HierarchyBuilder open={isHierarchyOpen} onClose={() => setIsHierarchyOpen(false)} />
-
-      {/* Edit Work Item Modal */}
-      {editingItem && (
-        <EditWorkItemModal
-          item={editingItem}
-          onClose={() => setEditingItem(null)}
-          onSave={(updates) => {
-            updateItem(editingItem.id, updates);
-            setEditingItem(null);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-// Edit Work Item Modal Component
-function EditWorkItemModal({ item, onClose, onSave }) {
-  const [description, setDescription] = useState(item.description || '');
-  const [acceptanceCriteria, setAcceptanceCriteria] = useState(
-    item.acceptanceCriteria || []
-  );
-  const [newCriterion, setNewCriterion] = useState('');
-
-  const handleAddCriterion = () => {
-    if (newCriterion.trim()) {
-      setAcceptanceCriteria([...acceptanceCriteria, { text: newCriterion.trim(), completed: false }]);
-      setNewCriterion('');
-    }
-  };
-
-  const handleToggleCriterion = (index) => {
-    setAcceptanceCriteria(
-      acceptanceCriteria.map((criterion, i) =>
-        i === index ? { ...criterion, completed: !criterion.completed } : criterion
-      )
-    );
-  };
-
-  const handleRemoveCriterion = (index) => {
-    setAcceptanceCriteria(acceptanceCriteria.filter((_, i) => i !== index));
-  };
-
-  const handleSave = () => {
-    onSave({ description, acceptanceCriteria });
-  };
-
-  return (
-    <div className={layoutStyles.modalOverlay}>
-      <div className={layoutStyles.modal}>
-        {/* Header */}
-        <div className={layoutStyles.modalHeader}>
-          <div>
-            <h2 className={layoutStyles.modalTitle}>Edit Work Item</h2>
-            <p className={layoutStyles.modalSubtitle}>{item.title}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className={layoutStyles.modalClose}
-            title="Close"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className={layoutStyles.modalBody}>
-          {/* Description */}
-          <div className={modalStyles.formGroup}>
-            <label className={modalStyles.label}>
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add a detailed description of this work item..."
-              className={modalStyles.textarea}
-            />
-          </div>
-
-          {/* Acceptance Criteria */}
-          <div className={modalStyles.formGroup}>
-            <label className={modalStyles.label}>
-              Acceptance Criteria
-            </label>
-
-            {/* Criteria List */}
-            <div className={modalStyles.criteriaList}>
-              {acceptanceCriteria.map((criterion, index) => (
-                <div
-                  key={index}
-                  className={`${modalStyles.criterionItem} ${criterion.completed ? modalStyles.completed : modalStyles.incomplete}`}
-                >
-                  <button
-                    onClick={() => handleToggleCriterion(index)}
-                    className={`${modalStyles.checkbox} ${criterion.completed ? modalStyles.checked : modalStyles.unchecked}`}
-                  >
-                    {criterion.completed && (
-                      <Check size={14} className="text-white" strokeWidth={3} />
-                    )}
-                  </button>
-                  <span
-                    className={`${modalStyles.criterionText} ${criterion.completed ? modalStyles.completed : modalStyles.incomplete}`}
-                  >
-                    {criterion.text}
-                  </span>
-                  <button
-                    onClick={() => handleRemoveCriterion(index)}
-                    className={modalStyles.removeButton}
-                    title="Remove"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Add New Criterion */}
-            <div className={modalStyles.addCriterionRow}>
-              <input
-                type="text"
-                value={newCriterion}
-                onChange={(e) => setNewCriterion(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddCriterion();
-                  }
-                }}
-                placeholder="Add acceptance criterion..."
-                className={modalStyles.criterionInput}
-              />
-              <Button
-                onClick={handleAddCriterion}
-                variant="secondary"
-                disabled={!newCriterion.trim()}
-              >
-                <Plus size={16} />
-                Add
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className={layoutStyles.modalFooter}>
-          <Button onClick={onClose} variant="secondary">
-            Cancel
-          </Button>
-          <Button onClick={handleSave} variant="primary">
-            <Check size={16} />
-            Save Changes
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }

@@ -232,15 +232,6 @@ export default function OrganizationBuilder() {
           <h4 className={styles.infoTitle}>
             💡 How to use
           </h4>
-          <ul className={styles.infoList}>
-            <li>• Create your top-level organization (e.g., "Synapse Solutions LLC") - this is <strong>Tier 1</strong></li>
-            <li>• Hover over any unit and click <Plus size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> to add child units underneath</li>
-            <li>• Each nesting level increases the tier: Tier 1 → Tier 2 → Tier 3, etc.</li>
-            <li>• Double-click any name to edit it inline</li>
-            <li>• Click the arrow to expand/collapse child units</li>
-            <li>• Delete units (and all their children) with the trash icon</li>
-            <li>• Example: Tier 1: Company → Tier 2: Departments → Tier 3: Teams → Tier 4: Squads</li>
-          </ul>
         </div>
       </div>
     </div>
