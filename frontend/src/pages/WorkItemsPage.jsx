@@ -154,6 +154,11 @@ export default function WorkItemsPage() {
           if (response.ok) {
             const projectData = await response.json();
             objectivesMap[project.id] = projectData.objectives || [];
+            // Debug: Log what fields we're getting
+            if (projectData.objectives && projectData.objectives.length > 0) {
+              console.log('Frontend received objective fields:', Object.keys(projectData.objectives[0]));
+              console.log('Frontend received objective sample:', projectData.objectives[0]);
+            }
           }
         } catch (error) {
           console.error(`Failed to fetch objectives for project ${project.id}:`, error);
