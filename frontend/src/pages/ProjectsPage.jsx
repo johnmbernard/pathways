@@ -675,7 +675,7 @@ export default function ProjectsPage() {
                 
                 // Navigate to the refinement session
                 if (sessionId) {
-                  navigate(`/refinement/${sessionId}`);
+                  navigate(`/app/refinement/${sessionId}`);
                 }
               } catch (error) {
                 console.error('Error creating refinement session:', error);
@@ -850,7 +850,7 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
                                   s.organizationalUnit === currentUser?.organizationalUnit
                                 );
                                 if (mySession) {
-                                  navigate(`/refinement/${mySession.id}`);
+                                  navigate(`/app/refinement/${mySession.id}`);
                                 }
                               }}
                               className={styles.openRefinementButton}

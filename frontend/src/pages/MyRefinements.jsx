@@ -121,7 +121,7 @@ export default function MyRefinements() {
     return (
       <div 
         className={styles.sessionCard}
-        onClick={() => navigate(`/refinement/${session.id}`)}
+        onClick={() => navigate(`/app/refinement/${session.id}`)}
       >
         <div className={styles.cardHeader}>
           <div>
