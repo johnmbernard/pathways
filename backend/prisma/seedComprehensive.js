@@ -413,6 +413,7 @@ async function main() {
             for (const unitId of assignedUnits) {
               await prisma.objectiveAssignment.create({
                 data: {
+                  objectiveId: tier2Objective.id,
                   unitId: unitId,
                 },
               });
@@ -558,6 +559,7 @@ async function main() {
             for (const unitId of assignedUnits) {
               await prisma.objectiveAssignment.create({
                 data: {
+                  objectiveId: tier2Objective.id,
                   unitId: unitId,
                 },
               });
@@ -569,6 +571,7 @@ async function main() {
             for (const tier3UnitId of tier3Assignments) {
               await prisma.objectiveAssignment.create({
                 data: {
+                  objectiveId: tier2Objective.id,
                   unitId: tier3UnitId,
                 },
               });
