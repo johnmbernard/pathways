@@ -394,6 +394,17 @@ async function main() {
 
       // Create Tier 2 child objectives if refined
       if (refined && childObjectives) {
+        // Create refinement session for this Tier 1 objective
+        const refinementSession = await prisma.refinementSession.create({
+          data: {
+            projectId: project.id,
+            objectiveId: tier1Objective.id,
+            status: 'completed',
+            createdBy: user1.id,
+            completedAt: new Date(),
+          },
+        });
+
         for (const childData of childObjectives) {
           const { assignedUnits, ...childFields } = childData;
           
@@ -540,8 +551,19 @@ async function main() {
 
       // All objectives are refined
       if (childObjectives) {
+        // Create refinement session for Tier 1 → Tier 2 refinement
+        const tier1RefinementSession = await prisma.refinementSession.create({
+          data: {
+            projectId: project.id,
+            objectiveId: tier1Objective.id,
+            status: 'completed',
+            createdBy: user1.id,
+            completedAt: new Date(),
+          },
+        });
+
         for (const childData of childObjectives) {
-          const { assignedUnits, tier3Assignments, ...childFields } = childData;
+          const { assignedUnits, tier3Assignments, ...childFields} = childData;
           
           const tier2Objective = await prisma.objective.create({
             data: {
@@ -577,6 +599,18 @@ async function main() {
               });
             }
           }
+
+          // Create refinement session for Tier 2 → Work Items (Tier 3 creates work items)
+          await prisma.refinementSession.create({
+            data: {
+              projectId: project.id,
+              objectiveId: tier2Objective.id,
+              status: 'completed',
+              createdBy: user1.id,
+              completedAt: new Date(),
+            },
+          });
+        }
         }
       }
     }
@@ -729,6 +763,17 @@ async function main() {
       tier1Count++;
 
       if (childObjectives) {
+        // Create refinement session for Tier 1 → Tier 2 refinement
+        const tier1RefinementSession = await prisma.refinementSession.create({
+          data: {
+            projectId: project.id,
+            objectiveId: tier1Objective.id,
+            status: 'completed',
+            createdBy: user1.id,
+            completedAt: new Date(),
+          },
+        });
+
         for (const childData of childObjectives) {
           const { assignedUnits, tier3Assignments, workItems, ...childFields } = childData;
           
@@ -759,12 +804,23 @@ async function main() {
             }
           }
 
-          // Create work items (created by Tier 3 units)
+          // Create refinement session for Tier 2 → Work Items (where Tier 3 creates work items)
+          const tier2RefinementSession = await prisma.refinementSession.create({
+            data: {
+              projectId: project.id,
+              objectiveId: tier2Objective.id,
+              status: 'in-progress', // Some are still in progress
+              createdBy: user1.id,
+            },
+          });
+
+          // Create work items linked to the refinement session
           if (workItems) {
             for (const workItemData of workItems) {
               await prisma.workItem.create({
                 data: {
                   ...workItemData,
+                  refinementSessionId: tier2RefinementSession.id,
                   priority: 'Medium',
                   createdBy: user1.id,
                 },
@@ -949,6 +1005,17 @@ async function main() {
       tier1Count++;
 
       if (childObjectives) {
+        // Create refinement session for Tier 1 → Tier 2 refinement
+        const tier1RefinementSession = await prisma.refinementSession.create({
+          data: {
+            projectId: project.id,
+            objectiveId: tier1Objective.id,
+            status: 'completed',
+            createdBy: user1.id,
+            completedAt: new Date(),
+          },
+        });
+
         for (const childData of childObjectives) {
           const { assignedUnits, tier3Assignments, workItems, ...childFields } = childData;
           
@@ -978,11 +1045,23 @@ async function main() {
             }
           }
 
+          // Create refinement session for Tier 2 → Work Items
+          const tier2RefinementSession = await prisma.refinementSession.create({
+            data: {
+              projectId: project.id,
+              objectiveId: tier2Objective.id,
+              status: 'in-progress',
+              createdBy: user1.id,
+            },
+          });
+
+          // Create work items linked to refinement session
           if (workItems) {
             for (const workItemData of workItems) {
               await prisma.workItem.create({
                 data: {
                   ...workItemData,
+                  refinementSessionId: tier2RefinementSession.id,
                   priority: 'Medium',
                   createdBy: user1.id,
                 },
