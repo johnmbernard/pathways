@@ -977,8 +977,6 @@ async function main() {
               });
             }
           }
-            }
-          }
 
           if (workItems) {
             for (const workItemData of workItems) {
