@@ -747,12 +747,14 @@ async function main() {
           if (assignedUnits) {
             for (const unitId of assignedUnits) {
               await prisma.objectiveAssignment.create({
+                data: { objectiveId: tier2Objective.id, unitId: unitId },
               });
             }
           }
           if (tier3Assignments) {
             for (const tier3UnitId of tier3Assignments) {
               await prisma.objectiveAssignment.create({
+                data: { objectiveId: tier2Objective.id, unitId: tier3UnitId },
               });
             }
           }
@@ -964,13 +966,17 @@ async function main() {
           if (assignedUnits) {
             for (const unitId of assignedUnits) {
               await prisma.objectiveAssignment.create({
+                data: { objectiveId: tier2Objective.id, unitId: unitId },
               });
             }
           }
           if (tier3Assignments) {
             for (const tier3UnitId of tier3Assignments) {
               await prisma.objectiveAssignment.create({
+                data: { objectiveId: tier2Objective.id, unitId: tier3UnitId },
               });
+            }
+          }
             }
           }
 
