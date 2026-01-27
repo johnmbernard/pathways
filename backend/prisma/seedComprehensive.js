@@ -1,17 +1,18 @@
 /**
- * Comprehensive Seed Script
+ * Comprehensive Seed Script - Complete Database Setup
  * 
- * Creates realistic project data across refinement lifecycle:
- * - 12 projects created by Tier 1 (ownerTier: 1)
- * - Each project has 3-5 Tier 1 objectives (fromTier: 1)
- * - Projects in different phases: planning, partial refinement, fully refined, in execution, active progress
- * - Tier 2 objectives are children of Tier 1 objectives (fromTier: 2, parentObjectiveId set)
- * - Tier 3 units create work items for assigned Tier 2 objectives
+ * Creates complete system with:
+ * - Organizational structure (Tier 1, Tier 2, Tier 3)
+ * - Demo users with credentials
+ * - 12 projects created by Tier 1 across refinement lifecycle
+ * - Tier 1 objectives with Tier 2 refined child objectives
+ * - Work items created by Tier 3 leaf units
  * 
  * Run with: npm run seed
  */
 
 import prisma from '../lib/prisma.js';
+import bcrypt from 'bcrypt';
 
 function addDays(date, days) {
   const result = new Date(date);
@@ -25,28 +26,142 @@ function formatDate(date) {
 
 async function main() {
   console.log('🚀 Starting comprehensive seed...');
+  console.log('');
 
-  // Get users and org units
-  const users = await prisma.user.findMany();
-  if (users.length === 0) {
-    console.error('❌ No users found. Please run organization seed first.');
-    process.exit(1);
+  // ===== STEP 1: Clear existing data =====
+  console.log('🗑️  Clearing existing data...');
+  await prisma.discussionMessage.deleteMany();
+  await prisma.workItem.deleteMany();
+  await prisma.refinementUnitCompletion.deleteMany();
+  await prisma.refinementSession.deleteMany();
+  await prisma.risk.deleteMany();
+  await prisma.objectiveCompletion.deleteMany();
+  await prisma.objectiveAssignment.deleteMany();
+  await prisma.objective.deleteMany();
+  await prisma.project.deleteMany();
+  await prisma.teamThroughput.deleteMany();
+  await prisma.organizationalUnit.deleteMany();
+  await prisma.user.deleteMany();
+  console.log('✅ Database cleared');
+  console.log('');
+
+  // ===== STEP 2: Create organizational structure =====
+  console.log('🏢 Creating organizational structure...');
+  
+  // Tier 1 - Root
+  const kesselRun = await prisma.organizationalUnit.create({
+    data: {
+      id: 'org-1',
+      name: 'Kessel Run',
+      parentId: null,
+      tier: 1,
+      order: 0,
+    },
+  });
+
+  // Tier 2 - Departments
+  const tier2Names = [
+    'Operations C2',
+    'Wing C2',
+    'Security',
+    'Application Dev',
+    'Infrastructure',
+    'Data & Analytics',
+    'Platform Engineering',
+    'DevSecOps',
+  ];
+
+  const tier2Units = [];
+  for (let i = 0; i < tier2Names.length; i++) {
+    const unit = await prisma.organizationalUnit.create({
+      data: {
+        id: `org-2-${i + 1}`,
+        name: tier2Names[i],
+        parentId: kesselRun.id,
+        tier: 2,
+        order: i,
+      },
+    });
+    tier2Units.push(unit);
   }
 
-  const tier1Units = await prisma.organizationalUnit.findMany({ where: { tier: 1 } });
-  const tier2Units = await prisma.organizationalUnit.findMany({ where: { tier: 2 } });
-  const tier3Units = await prisma.organizationalUnit.findMany({ where: { tier: 3 } });
-
-  if (tier1Units.length === 0 || tier2Units.length === 0 || tier3Units.length === 0) {
-    console.error('❌ Missing organizational units. Please run organization seed first.');
-    process.exit(1);
+  // Tier 3 - Teams (4-5 teams per department)
+  const tier3TeamNames = ['Alpha Team', 'Bravo Team', 'Charlie Team', 'Delta Team', 'Echo Team'];
+  const tier3Units = [];
+  
+  for (const tier2Unit of tier2Units) {
+    const teamCount = 4 + Math.floor(Math.random() * 2); // 4-5 teams
+    for (let i = 0; i < teamCount; i++) {
+      const unit = await prisma.organizationalUnit.create({
+        data: {
+          id: `org-3-${tier2Unit.id}-${i + 1}`,
+          name: `${tier2Unit.name} - ${tier3TeamNames[i]}`,
+          parentId: tier2Unit.id,
+          tier: 3,
+          order: i,
+        },
+      });
+      tier3Units.push(unit);
+    }
   }
 
-  const rootUnit = tier1Units[0]; // Tier 1 root
-  const user1 = users[0];
+  console.log(`✅ Created: 1 Tier 1 org, ${tier2Units.length} Tier 2 departments, ${tier3Units.length} Tier 3 teams`);
+  console.log('');
+
+  // ===== STEP 3: Create users =====
+  console.log('👥 Creating demo users...');
+  
+  const hashedPassword = await bcrypt.hash('demo123', 10);
+
+  // Tier 1 leader
+  const user1 = await prisma.user.create({
+    data: {
+      id: 'user-1',
+      email: 'kessel.lead@pathways.dev',
+      password: hashedPassword,
+      name: 'Admiral Kessel',
+      organizationalUnit: kesselRun.id,
+      role: 'Organization Leader',
+    },
+  });
+
+  // Tier 2 department leads
+  for (let i = 0; i < tier2Units.length; i++) {
+    await prisma.user.create({
+      data: {
+        id: `user-2-${i + 1}`,
+        email: `dept${i + 1}.lead@pathways.dev`,
+        password: hashedPassword,
+        name: `${tier2Units[i].name} Director`,
+        organizationalUnit: tier2Units[i].id,
+        role: 'Department Lead',
+      },
+    });
+  }
+
+  // Tier 3 team leads
+  for (let i = 0; i < Math.min(tier3Units.length, 20); i++) {
+    await prisma.user.create({
+      data: {
+        id: `user-3-${i + 1}`,
+        email: `team${i + 1}.lead@pathways.dev`,
+        password: hashedPassword,
+        name: `Team ${i + 1} Lead`,
+        organizationalUnit: tier3Units[i].id,
+        role: 'Team Lead',
+      },
+    });
+  }
+
+  console.log(`✅ Created ${await prisma.user.count()} users (all password: demo123)`);
+  console.log('');
+
+  // ===== STEP 4: Create projects with tiered objectives =====
+  const rootUnit = kesselRun;
   const today = new Date();
 
   console.log(`Found ${tier2Units.length} Tier 2 units and ${tier3Units.length} Tier 3 units`);
+  console.log('');
 
   // ===== PHASE 1: EARLY PLANNING (3 projects) =====
   // Only Tier 1 objectives, no refinement started

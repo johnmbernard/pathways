@@ -7,8 +7,9 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "seed": "node prisma/seed.js",
-    "seed:reset": "npx prisma migrate reset --force && node prisma/seed.js"
+    "seed": "node prisma/seedComprehensive.js",
+    "seed:reset": "npx prisma migrate reset --force && node prisma/seedComprehensive.js",
+    "seed:old": "node prisma/seed.js"
   },
   "keywords": [],
   "author": "",
