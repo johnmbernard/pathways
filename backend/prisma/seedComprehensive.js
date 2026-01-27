@@ -234,7 +234,6 @@ async function main() {
       await prisma.objective.create({
         data: {
           ...objData,
-          projectId: project.id,
           fromTier: 1,
           createdBy: user1.id,
         },
@@ -384,7 +383,6 @@ async function main() {
       const tier1Objective = await prisma.objective.create({
         data: {
           ...tier1Fields,
-          projectId: project.id,
           fromTier: 1,
           createdBy: user1.id,
         },
@@ -399,7 +397,6 @@ async function main() {
           const tier2Objective = await prisma.objective.create({
             data: {
               ...childFields,
-              projectId: project.id,
               fromTier: 2,
               parentObjectiveId: tier1Objective.id,
               createdBy: user1.id,
@@ -412,7 +409,6 @@ async function main() {
             for (const unitId of assignedUnits) {
               await prisma.objectiveAssignment.create({
                 data: {
-                  objectiveId: tier2Objective.id,
                   unitId: unitId,
                 },
               });
@@ -530,7 +526,6 @@ async function main() {
       const tier1Objective = await prisma.objective.create({
         data: {
           ...tier1Fields,
-          projectId: project.id,
           fromTier: 1,
           createdBy: user1.id,
         },
@@ -545,7 +540,6 @@ async function main() {
           const tier2Objective = await prisma.objective.create({
             data: {
               ...childFields,
-              projectId: project.id,
               fromTier: 2,
               parentObjectiveId: tier1Objective.id,
               createdBy: user1.id,
@@ -558,7 +552,6 @@ async function main() {
             for (const unitId of assignedUnits) {
               await prisma.objectiveAssignment.create({
                 data: {
-                  objectiveId: tier2Objective.id,
                   unitId: unitId,
                 },
               });
@@ -570,7 +563,6 @@ async function main() {
             for (const tier3UnitId of tier3Assignments) {
               await prisma.objectiveAssignment.create({
                 data: {
-                  objectiveId: tier2Objective.id,
                   unitId: tier3UnitId,
                 },
               });
@@ -720,7 +712,6 @@ async function main() {
       const tier1Objective = await prisma.objective.create({
         data: {
           ...tier1Fields,
-          projectId: project.id,
           fromTier: 1,
           createdBy: user1.id,
         },
@@ -734,7 +725,6 @@ async function main() {
           const tier2Objective = await prisma.objective.create({
             data: {
               ...childFields,
-              projectId: project.id,
               fromTier: 2,
               parentObjectiveId: tier1Objective.id,
               createdBy: user1.id,
@@ -746,14 +736,12 @@ async function main() {
           if (assignedUnits) {
             for (const unitId of assignedUnits) {
               await prisma.objectiveAssignment.create({
-                data: { objectiveId: tier2Objective.id, unitId: unitId },
               });
             }
           }
           if (tier3Assignments) {
             for (const tier3UnitId of tier3Assignments) {
               await prisma.objectiveAssignment.create({
-                data: { objectiveId: tier2Objective.id, unitId: tier3UnitId },
               });
             }
           }
@@ -764,8 +752,6 @@ async function main() {
               await prisma.workItem.create({
                 data: {
                   ...workItemData,
-                  projectId: project.id,
-                  objectiveId: tier2Objective.id,
                   priority: 'Medium',
                   createdBy: user1.id,
                 },
@@ -942,7 +928,6 @@ async function main() {
       const tier1Objective = await prisma.objective.create({
         data: {
           ...tier1Fields,
-          projectId: project.id,
           fromTier: 1,
           createdBy: user1.id,
         },
@@ -956,7 +941,6 @@ async function main() {
           const tier2Objective = await prisma.objective.create({
             data: {
               ...childFields,
-              projectId: project.id,
               fromTier: 2,
               parentObjectiveId: tier1Objective.id,
               createdBy: user1.id,
@@ -967,14 +951,12 @@ async function main() {
           if (assignedUnits) {
             for (const unitId of assignedUnits) {
               await prisma.objectiveAssignment.create({
-                data: { objectiveId: tier2Objective.id, unitId: unitId },
               });
             }
           }
           if (tier3Assignments) {
             for (const tier3UnitId of tier3Assignments) {
               await prisma.objectiveAssignment.create({
-                data: { objectiveId: tier2Objective.id, unitId: tier3UnitId },
               });
             }
           }
@@ -984,8 +966,6 @@ async function main() {
               await prisma.workItem.create({
                 data: {
                   ...workItemData,
-                  projectId: project.id,
-                  objectiveId: tier2Objective.id,
                   priority: 'Medium',
                   createdBy: user1.id,
                 },
