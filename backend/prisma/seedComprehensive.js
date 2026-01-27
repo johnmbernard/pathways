@@ -1072,6 +1072,7 @@ async function main() {
         }
       }
     }
+    }
     console.log(`  ✓ ${project.title} (${tier1Count} Tier 1, ${tier2Count} Tier 2, ${workItemCount} work items)`);
   }
 
