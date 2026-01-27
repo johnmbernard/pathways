@@ -50,9 +50,13 @@ function ProjectRow({ project, workItemCount, owningUnit, objectives }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const navigate = useNavigate();
   
-  // Get only top-level objectives (those without a parent)
-  const topLevelObjectives = objectives.filter(obj => !obj.parentObjectiveId);
-  const hasObjectives = topLevelObjectives.length > 0;
+  // Get refined objectives (those WITH a parent, created by lower tiers)
+  // If no refined objectives exist, fall back to top-level objectives
+  const refinedObjectives = objectives.filter(obj => obj.parentObjectiveId);
+  const displayObjectives = refinedObjectives.length > 0 
+    ? refinedObjectives 
+    : objectives.filter(obj => !obj.parentObjectiveId);
+  const hasObjectives = displayObjectives.length > 0;
   
   const getStatusColor = (status) => {
     switch (status) {
@@ -106,11 +110,11 @@ function ProjectRow({ project, workItemCount, owningUnit, objectives }) {
         </div>
         
         <div className={styles.projectStats}>
-          {topLevelObjectives.length} objectives • {workItemCount} work items
+          {displayObjectives.length} objectives • {workItemCount} work items
         </div>
       </div>
       
-      {isExpanded && topLevelObjectives.map(objective => (
+      {isExpanded && displayObjectives.map(objective => (
         <ObjectiveRow 
           key={objective.id} 
           objective={objective} 
@@ -154,11 +158,6 @@ export default function WorkItemsPage() {
           if (response.ok) {
             const projectData = await response.json();
             objectivesMap[project.id] = projectData.objectives || [];
-            // Debug: Log what fields we're getting
-            if (projectData.objectives && projectData.objectives.length > 0) {
-              console.log('Frontend received objective fields:', Object.keys(projectData.objectives[0]));
-              console.log('Frontend received objective sample:', projectData.objectives[0]);
-            }
           }
         } catch (error) {
           console.error(`Failed to fetch objectives for project ${project.id}:`, error);

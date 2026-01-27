@@ -1,18 +1,25 @@
 /**
- * Database Seed Script - Large Scale Organization
+ * Database Seed Script - Main Entry Point
  * 
  * This script populates the database with comprehensive test data:
  * - Large organizational structure (3 tiers, 50+ units)
- * - Multiple active projects at various stages
- * - 500+ work items distributed across teams
+ * - 12 projects across refinement lifecycle phases
+ * - Tier 1 objectives with Tier 2 refined objectives
+ * - Work items created by Tier 3 leaf units
  * - Realistic capacity data for forecasting
  * - Demo users with hashed passwords
  * 
- * Run with: node prisma/seed.js
+ * Run with: npm run seed
  */
 
 import prisma from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Utility functions for generating realistic data
 const workItemTitles = {
@@ -418,6 +425,29 @@ async function main() {
   }
 
   console.log(`✅ Created ${objectiveCount} objectives with refinement sessions`);
+  
+  // ===== STEP 5: Run comprehensive project seed =====
+  console.log('');
+  console.log('📦 Running comprehensive project seed...');
+  
+  // Run the comprehensive seed file
+  const comprehensiveSeedPath = join(__dirname, 'seedComprehensive.js');
+  
+  await new Promise((resolve, reject) => {
+    const child = spawn('node', [comprehensiveSeedPath], {
+      stdio: 'inherit',
+      cwd: dirname(__dirname),
+    });
+    
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`Comprehensive seed failed with code ${code}`));
+      } else {
+        resolve();
+      }
+    });
+  });
+  
   console.log('');
   console.log('📊 Final Summary:');
   console.log(`   - ${await prisma.organizationalUnit.count()} organizational units (1 root + ${tier2Units.length} depts + ${tier3Units.length} teams)`);
@@ -436,9 +466,10 @@ async function main() {
   console.log('   - team2.lead@pathways.dev (Tier 3 - Team Lead)');
   console.log('   ... and many more team leads');
   console.log('');
-  console.log('💡 Tips:');
-  console.log('   - Teams have 10-15 work items each for prioritization');
-  console.log('   - Work items span multiple projects and priorities');
+  console.log('💡 Data Overview:');
+  console.log('   - 12 projects across 5 refinement phases');
+  console.log('   - Tier 1 objectives with Tier 2 refined objectives');
+  console.log('   - Work items created by Tier 3 leaf units');
   console.log('   - Active refinement sessions ready for testing');
 }
 

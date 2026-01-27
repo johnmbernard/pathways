@@ -72,12 +72,6 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    // Debug: Log objectives to see what fields are being returned
-    if (project.objectives && project.objectives.length > 0) {
-      console.log('Sample objective fields:', Object.keys(project.objectives[0]));
-      console.log('Sample objective data:', project.objectives[0]);
-    }
-
     res.json(project);
   } catch (error) {
     console.error('Error fetching project:', error);
