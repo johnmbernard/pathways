@@ -140,7 +140,7 @@ export default function ProjectsPage() {
         {project.objectives && project.objectives.length > 0 && (() => {
           const isProjectOwner = project.ownerUnit === currentUser?.organizationalUnit;
           const hasAssignedObjectives = project.objectives.some(obj => 
-            obj.assignedUnits?.includes(currentUser?.organizationalUnit)
+            obj.assignedUnits?.some(assignment => assignment.unitId === currentUser?.organizationalUnit)
           );
           
           return (isProjectOwner || hasAssignedObjectives) && (
@@ -758,7 +758,7 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
             const relevantObjectives = isProjectOwner 
               ? project.objectives
               : project.objectives.filter(objective => 
-                  objective.assignedUnits?.includes(currentUser?.organizationalUnit)
+                  objective.assignedUnits?.some(assignment => assignment.unitId === currentUser?.organizationalUnit)
                 );
             
             if (project.objectives.length === 0) {
