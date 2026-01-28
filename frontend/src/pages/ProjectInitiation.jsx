@@ -81,9 +81,6 @@ export default function ProjectInitiation() {
             )}
           </div>
           <div className={styles.cardActions}>
-            <Badge variant={getStatusColor(project.status)}>
-              {project.status}
-            </Badge>
             <button
               onClick={() => setEditingProject(project)}
               className={styles.iconButton}
