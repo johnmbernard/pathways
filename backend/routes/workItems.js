@@ -80,15 +80,24 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Invalid user ID' });
     }
 
-    // Validate org unit exists and is a leaf unit (Tier 3)
+    // Validate org unit exists and is a leaf unit (has no children)
     const orgUnit = await prisma.organizationalUnit.findUnique({
       where: { id: assignedOrgUnit }
     });
     if (!orgUnit) {
       return res.status(400).json({ error: 'Invalid organizational unit ID' });
     }
-    if (orgUnit.tier !== 3) {
-      return res.status(400).json({ error: 'Work items can only be assigned to leaf units (Tier 3)' });
+    
+    // Check if this is a leaf unit by seeing if it has any children
+    const childUnits = await prisma.organizationalUnit.findMany({
+      where: { parentId: assignedOrgUnit },
+      take: 1 // Just need to know if any exist
+    });
+    
+    if (childUnits.length > 0) {
+      return res.status(400).json({ 
+        error: 'Work items can only be assigned to leaf units (units with no subordinates)' 
+      });
     }
 
     const workItem = await prisma.workItem.create({
