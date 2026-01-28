@@ -14,6 +14,12 @@
 import prisma from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
 
+const priorities = ['P1', 'P2', 'P3'];
+
+function randomChoice(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
 function addDays(date, days) {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
@@ -154,6 +160,71 @@ async function main() {
   }
 
   console.log(`✅ Created ${await prisma.user.count()} users (all password: demo123)`);
+  console.log('');
+
+  // ===== STEP 3.5: Create historical throughput data =====
+  console.log('📊 Creating historical throughput data (8 weeks)...');
+  
+  const weeksOfHistory = 8;
+  const avgItemsPerWeek = 8; // Average throughput per team per week
+  let historicalItemCount = 0;
+  let throughputRecordCount = 0;
+  
+  for (const team of tier3Units) {
+    const teamLead = await prisma.user.findFirst({
+      where: { organizationalUnit: team.id }
+    });
+    
+    for (let weekAgo = weeksOfHistory; weekAgo > 0; weekAgo--) {
+      // Vary throughput: 6-10 items per week
+      const itemsThisWeek = avgItemsPerWeek + Math.floor(Math.random() * 5) - 2;
+      
+      // Calculate week start date (Monday)
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - (weekAgo * 7));
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+      weekStart.setHours(0, 0, 0, 0);
+      
+      // Create completed work items for this week
+      for (let i = 0; i < itemsThisWeek; i++) {
+        const daysIntoWeek = Math.floor(Math.random() * 7);
+        const completedDate = new Date(weekStart);
+        completedDate.setDate(completedDate.getDate() + daysIntoWeek);
+        
+        // Created 1-2 weeks before completion
+        const createdDate = new Date(completedDate);
+        createdDate.setDate(createdDate.getDate() - (7 + Math.floor(Math.random() * 7)));
+        
+        await prisma.workItem.create({
+          data: {
+            title: `Historical work item ${weekAgo}-${i + 1}`,
+            description: 'Completed work for throughput calculation',
+            type: 'Work Item',
+            priority: randomChoice(priorities),
+            status: 'Done',
+            assignedOrgUnit: team.id,
+            createdBy: teamLead?.id || user1.id,
+            createdAt: createdDate,
+            completedAt: completedDate,
+          },
+        });
+        historicalItemCount++;
+      }
+      
+      // Create throughput record
+      await prisma.teamThroughput.create({
+        data: {
+          teamId: team.id,
+          weekStartDate: weekStart,
+          itemsCompleted: itemsThisWeek,
+        },
+      });
+      throughputRecordCount++;
+    }
+  }
+  
+  console.log(`✅ Created ${historicalItemCount} historical work items`);
+  console.log(`✅ Created ${throughputRecordCount} throughput records`);
   console.log('');
 
   // ===== STEP 4: Create projects with tiered objectives =====
@@ -644,9 +715,9 @@ async function main() {
               assignedUnits: [tier2Units[0].id],
               tier3Assignments: [tier3Units[0].id],
               workItems: [
-                { title: 'Design dimensional model', description: 'Create star schema design', status: 'Completed', estimatedEffort: 8 },
-                { title: 'Set up cloud data warehouse', description: 'Provision Snowflake/BigQuery instance', status: 'Completed', estimatedEffort: 5 },
-                { title: 'Implement ETL pipelines', description: 'Build data ingestion workflows', status: 'In Progress', estimatedEffort: 13 },
+                { title: 'Design dimensional model', description: 'Create star schema design', status: 'Completed', estimatedEffort: 8, priority: 'P1' },
+                { title: 'Set up cloud data warehouse', description: 'Provision Snowflake/BigQuery instance', status: 'Completed', estimatedEffort: 5, priority: 'P1' },
+                { title: 'Implement ETL pipelines', description: 'Build data ingestion workflows', status: 'In Progress', estimatedEffort: 13, priority: 'P2' },
               ],
             },
             {
@@ -656,8 +727,8 @@ async function main() {
               assignedUnits: [tier2Units[0].id],
               tier3Assignments: [tier3Units[1].id],
               workItems: [
-                { title: 'Define data quality metrics', description: 'Establish quality KPIs', status: 'Completed', estimatedEffort: 5 },
-                { title: 'Build validation rules', description: 'Implement automated data checks', status: 'In Progress', estimatedEffort: 8 },
+                { title: 'Define data quality metrics', description: 'Establish quality KPIs', status: 'Completed', estimatedEffort: 5, priority: 'P2' },
+                { title: 'Build validation rules', description: 'Implement automated data checks', status: 'In Progress', estimatedEffort: 8, priority: 'P2' },
               ],
             },
           ],
@@ -674,8 +745,8 @@ async function main() {
               assignedUnits: [tier2Units[1].id],
               tier3Assignments: [tier3Units[2].id],
               workItems: [
-                { title: 'Evaluate BI tools', description: 'Compare Tableau, PowerBI, Looker', status: 'Completed', estimatedEffort: 8 },
-                { title: 'Deploy BI platform', description: 'Set up selected tool', status: 'In Progress', estimatedEffort: 13 },
+                { title: 'Evaluate BI tools', description: 'Compare Tableau, PowerBI, Looker', status: 'Completed', estimatedEffort: 8, priority: 'P1' },
+                { title: 'Deploy BI platform', description: 'Set up selected tool', status: 'In Progress', estimatedEffort: 13, priority: 'P1' },
               ],
             },
           ],
@@ -705,9 +776,9 @@ async function main() {
               assignedUnits: [tier2Units[2].id],
               tier3Assignments: [tier3Units[3]?.id || tier3Units[0].id],
               workItems: [
-                { title: 'Select API gateway solution', description: 'Evaluate Kong, Apigee, AWS Gateway', status: 'Completed', estimatedEffort: 5 },
-                { title: 'Deploy gateway infrastructure', description: 'Set up gateway in production', status: 'In Progress', estimatedEffort: 13 },
-                { title: 'Configure rate limiting', description: 'Implement throttling policies', status: 'Not Started', estimatedEffort: 5 },
+                { title: 'Select API gateway solution', description: 'Evaluate Kong, Apigee, AWS Gateway', status: 'Completed', estimatedEffort: 5, priority: 'P1' },
+                { title: 'Deploy gateway infrastructure', description: 'Set up gateway in production', status: 'In Progress', estimatedEffort: 13, priority: 'P1' },
+                { title: 'Configure rate limiting', description: 'Implement throttling policies', status: 'Not Started', estimatedEffort: 5, priority: 'P2' },
               ],
             },
           ],
@@ -724,8 +795,8 @@ async function main() {
               assignedUnits: [tier2Units[1].id],
               tier3Assignments: [tier3Units[1].id],
               workItems: [
-                { title: 'Set up docs framework', description: 'Configure Swagger/OpenAPI', status: 'Completed', estimatedEffort: 8 },
-                { title: 'Write API documentation', description: 'Document all endpoints', status: 'In Progress', estimatedEffort: 21 },
+                { title: 'Set up docs framework', description: 'Configure Swagger/OpenAPI', status: 'Completed', estimatedEffort: 8, priority: 'P2' },
+                { title: 'Write API documentation', description: 'Document all endpoints', status: 'In Progress', estimatedEffort: 21, priority: 'P2' },
               ],
             },
           ],
