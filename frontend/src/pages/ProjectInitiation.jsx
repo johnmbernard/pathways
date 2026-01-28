@@ -140,24 +140,25 @@ export default function ProjectInitiation() {
           )}
         </div>
         
-        {/* Show Start Refinement if: (1) user owns the project OR (2) user's unit is assigned to any objective */}
+        {/* Show refinement button if: (1) user owns the project OR (2) user's unit is assigned to any objective */}
         {project.objectives && project.objectives.length > 0 && (() => {
           const isProjectOwner = project.ownerUnit === currentUser?.organizationalUnit;
           const hasAssignedObjectives = project.objectives.some(obj => 
             obj.assignedUnits?.some(assignment => assignment.unitId === currentUser?.organizationalUnit)
           );
           
-          // Check if any objectives have been released (have refinement sessions)
-          const hasReleasedObjectives = project.objectives.some(obj => 
+          // Count released vs total objectives
+          const totalObjectives = project.objectives.length;
+          const releasedObjectives = project.objectives.filter(obj => 
             sessions.some(s => s.projectId === project.id && s.objectiveId === obj.id)
-          );
+          ).length;
           
-          // Determine button text
+          // Determine button text based on release status
           let buttonText = 'Start Refinement';
-          if (hasReleasedObjectives) {
+          if (releasedObjectives === totalObjectives && totalObjectives > 0) {
+            buttonText = 'Released';
+          } else if (releasedObjectives > 0) {
             buttonText = 'In Progress';
-          } else if (!isProjectOwner) {
-            buttonText = 'Continue Refinement';
           }
           
           return (isProjectOwner || hasAssignedObjectives) && (
@@ -170,18 +171,17 @@ export default function ProjectInitiation() {
                 {buttonText}
               </button>
               <HelpTooltip
-                title="Refinement Process"
+                title="Release for Refinement"
                 content={
                   <div>
-                    <p>Begin a refinement session to break down objectives into actionable work.</p>
-                    <p><strong>Process:</strong></p>
+                    <p>Release objectives to assigned units for collaborative refinement.</p>
+                    <p><strong>Release Status:</strong></p>
                     <ul>
-                      <li>Select an objective to refine</li>
-                      <li>Assigned teams collaborate asynchronously</li>
-                      <li>Break objectives into sub-objectives or work items</li>
-                      <li>Provide estimates and discuss approaches</li>
+                      <li><strong>Start Refinement:</strong> No objectives released yet</li>
+                      <li><strong>In Progress:</strong> Some objectives released, more to go</li>
+                      <li><strong>Released:</strong> All objectives released to teams</li>
                     </ul>
-                    <p>Refinements support both hierarchical (objectives → sub-objectives) and team-level (objectives → work items) breakdowns.</p>
+                    <p>Release objectives one at a time or in batches based on priority. Once released, assigned units can begin breaking them down.</p>
                   </div>
                 }
                 size="small"
@@ -819,14 +819,6 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
                     s.projectId === project.id && s.objectiveId === objective.id
                   );
                   const isReleased = objectiveSessions.length > 0;
-                  
-                  // Calculate completion status
-                  const completedUnits = assignedUnits.filter(unit => 
-                    objective.completedByUnits?.some(completion => completion.unitId === unit.id)
-                  );
-                  const completionPercentage = assignedUnits.length > 0 
-                    ? Math.round((completedUnits.length / assignedUnits.length) * 100)
-                    : 0;
 
                 return (
                   <div key={objective.id} className={styles.objectiveRefinementCard}>
@@ -864,29 +856,16 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
                       ) : (
                         <>
                           <div className={styles.unitsChips}>
-                            {assignedUnits.map(unit => {
-                              const isCompleted = objective.completedByUnits?.some(completion => completion.unitId === unit.id);
-                              return (
-                                <span 
-                                  key={unit.id} 
-                                  className={`${styles.unitChip} ${isCompleted ? styles.unitChipCompleted : ''}`}
-                                >
-                                  <Users size={12} />
-                                  {unit.name}
-                                  {isCompleted && <span className={styles.checkmark}>✓</span>}
-                                </span>
-                              );
-                            })}
-                          </div>
-                          
-                          {isReleased && (
-                            <div className={styles.progressBar}>
-                              <div className={styles.progressBarFill} style={{ width: `${completionPercentage}%` }} />
-                              <span className={styles.progressText}>
-                                {completedUnits.length} of {assignedUnits.length} completed
+                            {assignedUnits.map(unit => (
+                              <span 
+                                key={unit.id} 
+                                className={styles.unitChip}
+                              >
+                                <Users size={12} />
+                                {unit.name}
                               </span>
-                            </div>
-                          )}
+                            ))}
+                          </div>
                           
                           {isProjectOwner && !isReleased && (
                             <button
