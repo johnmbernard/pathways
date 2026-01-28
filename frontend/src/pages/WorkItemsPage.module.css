@@ -584,34 +584,20 @@
 .actionButton.delete:hover {
   background-color: #fee2e2;
 }
-/* Tier 1 Objective Row Styles */
-.tier1ObjectiveRow {
+
+/* Objective Row Styles (dynamic for any tier) */
+.objectiveRow {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1rem 1.5rem;
+  padding: 0.875rem 1.5rem;
   border-bottom: 1px solid #e5e7eb;
   background-color: #f8fafc;
   transition: background-color 150ms;
 }
 
-.tier1ObjectiveRow:hover {
+.objectiveRow:hover {
   background-color: #f1f5f9;
-}
-
-/* Tier 2 Objective Row Styles */
-.tier2ObjectiveRow {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.875rem 1.5rem;
-  border-bottom: 1px solid #f3f4f6;
-  background-color: #fafafa;
-  transition: background-color 150ms;
-}
-
-.tier2ObjectiveRow:hover {
-  background-color: #f5f5f5;
 }
 
 .objectiveMeta {

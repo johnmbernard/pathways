@@ -9,88 +9,37 @@ import { PageHeader } from '../components/layout/Layout';
 import { API_BASE_URL } from '../config';
 import styles from './WorkItemsPage.module.css';
 
-// Tier 2 Objective Row - shows work items when expanded
-function Tier2ObjectiveRow({ objective, workItems }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const tier2WorkItems = workItems.filter(wi => 
-    wi.objectiveId === objective.id
-  );
-  const hasWorkItems = tier2WorkItems.length > 0;
-
-  return (
-    <>
-      <div className={styles.tier2ObjectiveRow}>
-        <button
-          onClick={() => hasWorkItems && setIsExpanded(!isExpanded)}
-          className={`${styles.expandButton} ${!hasWorkItems ? styles.invisible : ''}`}
-          style={{ marginLeft: '48px' }}
-        >
-          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </button>
-        
-        <div className={styles.objectiveIcon}>
-          <Target size={14} />
-        </div>
-        
-        <div className={styles.objectiveTierColumn}>
-          <Badge variant="info">Tier {objective.fromTier}</Badge>
-        </div>
-        
-        <div className={styles.objectiveTitle}>
-          {objective.title}
-        </div>
-        
-        <div className={styles.objectiveDescription}>
-          {objective.description || 'No description'}
-        </div>
-        
-        <div className={styles.objectiveDate}>
-          {objective.targetDate ? (
-            <>
-              <Calendar size={12} />
-              <span>{new Date(objective.targetDate).toLocaleDateString()}</span>
-            </>
-          ) : (
-            <span style={{ color: '#9ca3af' }}>No date</span>
-          )}
-        </div>
-
-        <div className={styles.objectiveMeta}>
-          <span>{tier2WorkItems.length} work items</span>
-        </div>
-      </div>
-
-      {isExpanded && tier2WorkItems.map(workItem => (
-        <div key={workItem.id} className={styles.workItemRow} style={{ marginLeft: '72px' }}>
-          <CheckSquare size={14} />
-          <span className={styles.workItemTitle}>{workItem.title}</span>
-          <Badge variant="secondary">{workItem.status}</Badge>
-          {workItem.estimatedEffort && (
-            <span className={styles.workItemEffort}>{workItem.estimatedEffort} pts</span>
-          )}
-        </div>
-      ))}
-    </>
-  );
-}
-
-// Tier 1 Objective Row - shows Tier 2 objectives when expanded
-function Tier1ObjectiveRow({ objective, allObjectives, workItems }) {
+// Recursive Objective Row - dynamically handles any tier depth
+function ObjectiveRow({ objective, allObjectives, workItems, depth = 0 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   
-  // Get Tier 2 children of this Tier 1 objective
-  const tier2Children = allObjectives.filter(obj => 
+  // Get child objectives
+  const childObjectives = allObjectives.filter(obj => 
     obj.parentObjectiveId === objective.id
   );
-  const hasChildren = tier2Children.length > 0;
+  
+  // Get work items for this objective (only shown if no child objectives - i.e., leaf objective)
+  const objectiveWorkItems = workItems.filter(wi => 
+    wi.objectiveId === objective.id
+  );
+  
+  const hasChildren = childObjectives.length > 0;
+  const hasWorkItems = objectiveWorkItems.length > 0;
+  const hasContent = hasChildren || hasWorkItems;
+  
+  // Indentation based on depth
+  const indentPixels = 24 + (depth * 24);
+  
+  // Badge variant based on tier (cycle through variants for visual distinction)
+  const badgeVariants = ['primary', 'info', 'warning', 'secondary'];
+  const badgeVariant = badgeVariants[objective.fromTier % badgeVariants.length];
 
   return (
     <>
-      <div className={styles.tier1ObjectiveRow}>
+      <div className={styles.objectiveRow} style={{ paddingLeft: `${indentPixels}px` }}>
         <button
-          onClick={() => hasChildren && setIsExpanded(!isExpanded)}
-          className={`${styles.expandButton} ${!hasChildren ? styles.invisible : ''}`}
-          style={{ marginLeft: '24px' }}
+          onClick={() => hasContent && setIsExpanded(!isExpanded)}
+          className={`${styles.expandButton} ${!hasContent ? styles.invisible : ''}`}
         >
           {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </button>
@@ -100,7 +49,7 @@ function Tier1ObjectiveRow({ objective, allObjectives, workItems }) {
         </div>
         
         <div className={styles.objectiveTierColumn}>
-          <Badge variant="primary">Tier {objective.fromTier}</Badge>
+          <Badge variant={badgeVariant}>Tier {objective.fromTier}</Badge>
         </div>
         
         <div className={styles.objectiveTitle}>
@@ -123,17 +72,40 @@ function Tier1ObjectiveRow({ objective, allObjectives, workItems }) {
         </div>
 
         <div className={styles.objectiveMeta}>
-          <span>{tier2Children.length} refined objectives</span>
+          {hasChildren && <span>{childObjectives.length} refined objective{childObjectives.length !== 1 ? 's' : ''}</span>}
+          {hasWorkItems && <span>{objectiveWorkItems.length} work item{objectiveWorkItems.length !== 1 ? 's' : ''}</span>}
         </div>
       </div>
 
-      {isExpanded && tier2Children.map(tier2Obj => (
-        <Tier2ObjectiveRow 
-          key={tier2Obj.id}
-          objective={tier2Obj}
-          workItems={workItems}
-        />
-      ))}
+      {isExpanded && (
+        <>
+          {/* Render child objectives recursively */}
+          {childObjectives.map(childObj => (
+            <ObjectiveRow 
+              key={childObj.id}
+              objective={childObj}
+              allObjectives={allObjectives}
+              workItems={workItems}
+              depth={depth + 1}
+            />
+          ))}
+          
+          {/* Render work items if this is a leaf objective (no children) */}
+          {!hasChildren && objectiveWorkItems.map(workItem => (
+            <div key={workItem.id} className={styles.workItemRow} style={{ paddingLeft: `${indentPixels + 48}px` }}>
+              <CheckSquare size={14} />
+              <span className={styles.workItemTitle}>{workItem.title}</span>
+              <Badge variant="secondary">{workItem.status}</Badge>
+              <Badge variant={workItem.priority === 'P1' ? 'danger' : workItem.priority === 'P2' ? 'warning' : 'secondary'}>
+                {workItem.priority}
+              </Badge>
+              {workItem.estimatedEffort && (
+                <span className={styles.workItemEffort}>{workItem.estimatedEffort} pts</span>
+              )}
+            </div>
+          ))}
+        </>
+      )}
     </>
   );
 }
@@ -142,12 +114,12 @@ function ProjectRow({ project, workItemCount, owningUnit, objectives, workItems 
   const [isExpanded, setIsExpanded] = useState(false);
   const navigate = useNavigate();
   
-  // Get only Tier 1 objectives (top-level, no parent)
-  const tier1Objectives = objectives.filter(obj => !obj.parentObjectiveId);
-  const hasObjectives = tier1Objectives.length > 0;
+  // Get only top-level objectives (no parent)
+  const rootObjectives = objectives.filter(obj => !obj.parentObjectiveId);
+  const hasObjectives = rootObjectives.length > 0;
   
-  // Count total tier 2 objectives and work items for display
-  const tier2Count = objectives.filter(obj => obj.parentObjectiveId).length;
+  // Count all objectives and work items recursively
+  const totalObjectives = objectives.length;
   const totalWorkItems = workItems.filter(wi => 
     objectives.some(obj => obj.id === wi.objectiveId)
   ).length;
@@ -180,25 +152,26 @@ function ProjectRow({ project, workItemCount, owningUnit, objectives, workItems 
         </div>
         
         <div className={styles.projectMeta}>
-          <span>{tier1Objectives.length} tier 1</span>
-          {tier2Count > 0 && <> • <span>{tier2Count} tier 2</span></>}
+          <span>{rootObjectives.length} root objective{rootObjectives.length !== 1 ? 's' : ''}</span>
+          {totalObjectives > rootObjectives.length && <> • <span>{totalObjectives - rootObjectives.length} refined</span></>}
           {totalWorkItems > 0 && <> • <span>{totalWorkItems} work items</span></>}
         </div>
         
         <button
-          onClick={() => navigate(`/projects/${project.id}`)}
+          onClick={() => navigate(`/app/projects`)}
           className={styles.viewButton}
         >
-          View Details
+          Manage
         </button>
       </div>
       
-      {isExpanded && tier1Objectives.map(tier1Obj => (
-        <Tier1ObjectiveRow
-          key={tier1Obj.id}
-          objective={tier1Obj}
+      {isExpanded && rootObjectives.map(rootObj => (
+        <ObjectiveRow
+          key={rootObj.id}
+          objective={rootObj}
           allObjectives={objectives}
           workItems={workItems}
+          depth={0}
         />
       ))}
     </>
