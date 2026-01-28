@@ -17,11 +17,9 @@ export default function ProjectsPage() {
   const { projects, addProject, updateProject, deleteProject, fetchProjects, loading } = useProjectsStore();
   const { units, fetchUnits } = useOrganizationStore();
   const { items } = useWorkItemsStore();
-  const { sessions, createSession, fetchSessions } = useRefinementStore((state) => ({
-    sessions: state.sessions,
-    createSession: state.createSession,
-    fetchSessions: state.fetchSessions,
-  }));
+  const sessions = useRefinementStore((state) => state.sessions);
+  const createSession = useRefinementStore((state) => state.createSession);
+  const fetchSessions = useRefinementStore((state) => state.fetchSessions);
   const [isCreating, setIsCreating] = useState(false);
 
   // Fetch projects and units on mount
