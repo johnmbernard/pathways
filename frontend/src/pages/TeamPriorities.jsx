@@ -258,7 +258,6 @@ export default function TeamPriorities() {
         priority: formData.priority || 'P3',
         status: 'Backlog',
         assignedOrgUnit: formData.teamId || selectedTeam !== 'all' ? selectedTeam : null,
-        estimatedEffort: formData.estimatedEffort || null,
       });
       setShowAddModal(false);
 
@@ -464,7 +463,6 @@ function AddItemModal({ onClose, onSubmit, teams, defaultTeam }) {
     type: 'Story',
     priority: 'P3',
     teamId: defaultTeam || '',
-    estimatedEffort: '',
   });
 
   const handleSubmit = (e) => {
@@ -545,18 +543,6 @@ function AddItemModal({ onClose, onSubmit, teams, defaultTeam }) {
                   </option>
                 ))}
               </select>
-            </div>
-            <div className={styles.formGroup}>
-              <label htmlFor="effort">Estimated Effort (days)</label>
-              <input
-                id="effort"
-                type="number"
-                value={formData.estimatedEffort}
-                onChange={(e) => setFormData({ ...formData, estimatedEffort: e.target.value })}
-                placeholder="Optional"
-                min="0"
-                step="0.5"
-              />
             </div>
           </div>
           <div className={styles.modalActions}>

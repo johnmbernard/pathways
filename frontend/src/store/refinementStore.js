@@ -182,7 +182,6 @@ const useRefinementStore = create((set, get) => ({
           description: workItem.description || '',
           type: workItem.type || 'Story',
           priority: workItem.priority || 'Medium',
-          estimatedEffort: workItem.estimatedEffort,
           assignedOrgUnit: workItem.assignedOrgUnit || null,
           createdBy: currentUser?.id,
         }),

@@ -22,7 +22,6 @@ export const useWorkItemsStore = create((set, get) => ({
         stackRank: item.stackRank || 0,
         status: item.status || 'Backlog',
         assignedOrgUnit: item.assignedOrgUnit,
-        estimatedEffort: item.estimatedEffort,
         createdBy: item.createdBy,
         refinementSessionId: item.refinementSessionId,
         projectId: item.refinementSession?.project?.id,
@@ -53,7 +52,6 @@ export const useWorkItemsStore = create((set, get) => ({
           priority: item.priority || 'P3',
           status: item.status || 'Backlog',
           assignedOrgUnit: item.teamId || item.assignedOrgUnit || null,
-          estimatedEffort: item.estimatedEffort || null,
           // Don't send createdBy - let backend use default user
         }),
       });
@@ -74,7 +72,6 @@ export const useWorkItemsStore = create((set, get) => ({
         stackRank: createdItem.stackRank || 0,
         status: createdItem.status || 'Backlog',
         assignedOrgUnit: createdItem.assignedOrgUnit,
-        estimatedEffort: createdItem.estimatedEffort,
         createdBy: createdItem.createdBy,
         refinementSessionId: createdItem.refinementSessionId,
         projectId: createdItem.refinementSession?.project?.id,

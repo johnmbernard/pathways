@@ -440,7 +440,6 @@ router.post('/:id/work-items', async (req, res) => {
       description,
       type,
       priority,
-      estimatedEffort,
       assignedOrgUnit,
       createdBy,
     } = req.body;
@@ -463,7 +462,6 @@ router.post('/:id/work-items', async (req, res) => {
         description,
         type: 'Work Item',
         priority: priority || 'P3',
-        estimatedEffort,
         assignedOrgUnit,
         status: 'Backlog',
         refinementSessionId: id,

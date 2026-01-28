@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
 // POST create a new work item
 router.post('/', async (req, res) => {
   try {
-    const { title, description, type, priority, status, assignedOrgUnit, estimatedEffort, createdBy } = req.body;
+    const { title, description, type, priority, status, assignedOrgUnit, createdBy } = req.body;
 
     console.log('Creating work item with data:', { title, assignedOrgUnit, createdBy });
 
@@ -109,7 +109,6 @@ router.post('/', async (req, res) => {
         stackRank: 0,
         status: status || 'Backlog',
         assignedOrgUnit: assignedOrgUnit,
-        estimatedEffort: estimatedEffort ? parseFloat(estimatedEffort) : null,
         createdBy: userIdToUse,
       },
       include: {
@@ -162,7 +161,6 @@ router.patch('/:id', async (req, res) => {
       stackRank: updates.stackRank,
       status: updates.status,
       assignedOrgUnit: updates.assignedOrgUnit,
-      estimatedEffort: updates.estimatedEffort,
       completedAt: updates.completedAt,
     };
 
