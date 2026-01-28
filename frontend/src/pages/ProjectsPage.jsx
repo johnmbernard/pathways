@@ -17,14 +17,19 @@ export default function ProjectsPage() {
   const { projects, addProject, updateProject, deleteProject, fetchProjects, loading } = useProjectsStore();
   const { units, fetchUnits } = useOrganizationStore();
   const { items } = useWorkItemsStore();
-  const createSession = useRefinementStore((state) => state.createSession);
+  const { sessions, createSession, fetchSessions } = useRefinementStore((state) => ({
+    sessions: state.sessions,
+    createSession: state.createSession,
+    fetchSessions: state.fetchSessions,
+  }));
   const [isCreating, setIsCreating] = useState(false);
 
   // Fetch projects and units on mount
   useEffect(() => {
     fetchProjects();
     fetchUnits();
-  }, [fetchProjects, fetchUnits]);
+    fetchSessions();
+  }, [fetchProjects, fetchUnits, fetchSessions]);
   const [editingProject, setEditingProject] = useState(null);
   const [refinementProject, setRefinementProject] = useState(null);
   const [tierFilter, setTierFilter] = useState('all');
@@ -143,6 +148,19 @@ export default function ProjectsPage() {
             obj.assignedUnits?.some(assignment => assignment.unitId === currentUser?.organizationalUnit)
           );
           
+          // Check if any objectives have been released (have refinement sessions)
+          const hasReleasedObjectives = project.objectives.some(obj => 
+            sessions.some(s => s.projectId === project.id && s.objectiveId === obj.id)
+          );
+          
+          // Determine button text
+          let buttonText = 'Start Refinement';
+          if (hasReleasedObjectives) {
+            buttonText = 'In Progress';
+          } else if (!isProjectOwner) {
+            buttonText = 'Continue Refinement';
+          }
+          
           return (isProjectOwner || hasAssignedObjectives) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
@@ -150,7 +168,7 @@ export default function ProjectsPage() {
                 className={styles.refinementButton}
               >
                 <PlayCircle size={16} />
-                {isProjectOwner ? 'Start Refinement' : 'Continue Refinement'}
+                {buttonText}
               </button>
               <HelpTooltip
                 title="Refinement Process"
