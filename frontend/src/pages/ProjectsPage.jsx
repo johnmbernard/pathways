@@ -16,7 +16,7 @@ export default function ProjectsPage() {
   const currentUser = useUserStore(state => state.currentUser);
   const { projects, addProject, updateProject, deleteProject, fetchProjects, loading } = useProjectsStore();
   const { units, fetchUnits } = useOrganizationStore();
-  const { items } = useWorkItemsStore();
+  const { items, fetchWorkItems } = useWorkItemsStore();
   const sessions = useRefinementStore((state) => state.sessions);
   const createSession = useRefinementStore((state) => state.createSession);
   const fetchSessions = useRefinementStore((state) => state.fetchSessions);
@@ -27,7 +27,8 @@ export default function ProjectsPage() {
     fetchProjects();
     fetchUnits();
     fetchSessions();
-  }, [fetchProjects, fetchUnits, fetchSessions]);
+    fetchWorkItems();
+  }, [fetchProjects, fetchUnits, fetchSessions, fetchWorkItems]);
   const [editingProject, setEditingProject] = useState(null);
   const [refinementProject, setRefinementProject] = useState(null);
   const [tierFilter, setTierFilter] = useState('all');
