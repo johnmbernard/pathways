@@ -13,7 +13,7 @@ import styles from './WorkItemsPage.module.css';
 function Tier2ObjectiveRow({ objective, workItems }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const tier2WorkItems = workItems.filter(wi => 
-    wi.refinementSession?.objectiveId === objective.id
+    wi.objectiveId === objective.id
   );
   const hasWorkItems = tier2WorkItems.length > 0;
 
@@ -149,7 +149,7 @@ function ProjectRow({ project, workItemCount, owningUnit, objectives, workItems 
   // Count total tier 2 objectives and work items for display
   const tier2Count = objectives.filter(obj => obj.parentObjectiveId).length;
   const totalWorkItems = workItems.filter(wi => 
-    objectives.some(obj => obj.id === wi.refinementSession?.objectiveId)
+    objectives.some(obj => obj.id === wi.objectiveId)
   ).length;
 
   return (
@@ -345,7 +345,7 @@ export default function WorkItemsPage() {
                 const owningUnit = units.find(u => u.id === project.id);
                 const objectives = projectObjectives[project.id] || [];
                 const projectWorkItems = items.filter(wi => 
-                  objectives.some(obj => obj.id === wi.refinementSession?.objectiveId)
+                  objectives.some(obj => obj.id === wi.objectiveId)
                 );
                 return (
                   <ProjectRow 
