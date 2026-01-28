@@ -814,13 +814,17 @@ async function main() {
           });
 
           // Create work items linked to the refinement session
-          if (workItems) {
+          if (workItems && tier3Assignments && tier3Assignments.length > 0) {
+            // Assign work items to the first Tier 3 unit
+            const assignedOrgUnit = tier3Assignments[0];
             for (const workItemData of workItems) {
               await prisma.workItem.create({
                 data: {
                   ...workItemData,
+                  type: 'Work Item',
                   refinementSessionId: tier2RefinementSession.id,
-                  priority: 'Medium',
+                  priority: workItemData.priority || 'P3',
+                  assignedOrgUnit: assignedOrgUnit,
                   createdBy: user1.id,
                 },
               });
@@ -1055,13 +1059,17 @@ async function main() {
           });
 
           // Create work items linked to refinement session
-          if (workItems) {
+          if (workItems && tier3Assignments && tier3Assignments.length > 0) {
+            // Assign work items to the first Tier 3 unit
+            const assignedOrgUnit = tier3Assignments[0];
             for (const workItemData of workItems) {
               await prisma.workItem.create({
                 data: {
                   ...workItemData,
+                  type: 'Work Item',
                   refinementSessionId: tier2RefinementSession.id,
-                  priority: 'Medium',
+                  priority: workItemData.priority || 'P3',
+                  assignedOrgUnit: assignedOrgUnit,
                   createdBy: user1.id,
                 },
               });
