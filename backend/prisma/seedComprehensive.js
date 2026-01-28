@@ -336,6 +336,7 @@ async function main() {
           description: 'Audit current infrastructure and plan migration',
           targetDate: formatDate(addDays(today, 30)),
           refined: true, // This one has been refined
+          assignedUnits: [tier2Units[0].id, tier2Units[1].id],
           childObjectives: [
             { title: 'Audit legacy systems', description: 'Catalog all existing infrastructure', targetDate: formatDate(addDays(today, 20)), assignedUnits: [tier2Units[0].id, tier2Units[1].id] },
             { title: 'Cloud provider selection', description: 'Evaluate and select cloud vendor', targetDate: formatDate(addDays(today, 25)), assignedUnits: [tier2Units[0].id] },
@@ -346,6 +347,7 @@ async function main() {
           description: 'Move development and staging environments',
           targetDate: formatDate(addDays(today, 60)),
           refined: true,
+          assignedUnits: [tier2Units[1].id],
           childObjectives: [
             { title: 'Migrate dev environments', description: 'Move all development infrastructure', targetDate: formatDate(addDays(today, 40)), assignedUnits: [tier2Units[1].id] },
             { title: 'Migrate staging systems', description: 'Move staging infrastructure', targetDate: formatDate(addDays(today, 55)), assignedUnits: [tier2Units[1].id] },
@@ -381,6 +383,7 @@ async function main() {
           description: 'Consolidate customer data from all sources',
           targetDate: formatDate(addDays(today, 60)),
           refined: true,
+          assignedUnits: [tier2Units[2].id],
           childObjectives: [
             { title: 'Data source integration', description: 'Connect all customer data systems', targetDate: formatDate(addDays(today, 40)), assignedUnits: [tier2Units[2].id] },
             { title: 'Customer 360 view implementation', description: 'Build unified customer profile', targetDate: formatDate(addDays(today, 55)), assignedUnits: [tier2Units[2].id] },
@@ -416,6 +419,7 @@ async function main() {
           description: 'Establish physical and virtual lab infrastructure',
           targetDate: formatDate(addDays(today, 30)),
           refined: true,
+          assignedUnits: [tier2Units[3]?.id || tier2Units[0].id],
           childObjectives: [
             { title: 'Lab space and equipment', description: 'Set up physical innovation space', targetDate: formatDate(addDays(today, 20)), assignedUnits: [tier2Units[3]?.id || tier2Units[0].id] },
             { title: 'Development tools and platforms', description: 'Procure rapid prototyping tools', targetDate: formatDate(addDays(today, 25)), assignedUnits: [tier2Units[3]?.id || tier2Units[0].id] },
@@ -450,7 +454,7 @@ async function main() {
     let tier2Count = 0;
 
     for (const objData of objectives) {
-      const { childObjectives, refined, ...tier1Fields } = objData;
+      const { childObjectives, refined, assignedUnits: tier1AssignedUnits, ...tier1Fields } = objData;
       
       // Create Tier 1 objective
       const tier1Objective = await prisma.objective.create({
@@ -462,6 +466,15 @@ async function main() {
         },
       });
       tier1Count++;
+
+      // Assign Tier 1 objective to Tier 2 units if specified
+      if (tier1AssignedUnits) {
+        for (const unitId of tier1AssignedUnits) {
+          await prisma.objectiveAssignment.create({
+            data: { objectiveId: tier1Objective.id, unitId: unitId },
+          });
+        }
+      }
 
       // Create Tier 2 child objectives if refined
       if (refined && childObjectives) {
@@ -928,6 +941,17 @@ async function main() {
                 },
               });
               workItemCount++;
+            }
+            
+            // Mark objective as completed by each Tier 3 unit (since they created work items)
+            for (const tier3UnitId of tier3Assignments) {
+              await prisma.objectiveCompletion.create({
+                data: {
+                  objectiveId: tier2Objective.id,
+                  unitId: tier3UnitId,
+                  completedAt: new Date(),
+                },
+              });
             }
           }
         }
