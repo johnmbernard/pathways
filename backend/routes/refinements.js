@@ -451,12 +451,18 @@ router.post('/:id/work-items', async (req, res) => {
       });
     }
 
+    if (!assignedOrgUnit) {
+      return res.status(400).json({ 
+        error: 'assignedOrgUnit is required - all work items must be assigned to a leaf unit' 
+      });
+    }
+
     const workItem = await prisma.workItem.create({
       data: {
         title,
         description,
-        type: type || 'Story',
-        priority: priority || 'Medium',
+        type: 'Work Item',
+        priority: priority || 'P3',
         estimatedEffort,
         assignedOrgUnit,
         status: 'Backlog',

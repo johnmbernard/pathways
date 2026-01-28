@@ -56,6 +56,10 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Title is required' });
     }
 
+    if (!assignedOrgUnit) {
+      return res.status(400).json({ error: 'assignedOrgUnit is required - all work items must be assigned to a leaf unit' });
+    }
+
     // Get a default user if createdBy not provided
     let userIdToUse = createdBy;
     if (!userIdToUse) {
@@ -76,29 +80,26 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Invalid user ID' });
     }
 
-    // Validate org unit exists if provided
-    let validatedOrgUnit = null;
-    if (assignedOrgUnit) {
-      const orgUnit = await prisma.organizationalUnit.findUnique({
-        where: { id: assignedOrgUnit }
-      });
-      if (orgUnit) {
-        validatedOrgUnit = assignedOrgUnit;
-        console.log('Validated org unit:', validatedOrgUnit);
-      } else {
-        console.log('Org unit not found, setting to null:', assignedOrgUnit);
-      }
+    // Validate org unit exists and is a leaf unit (Tier 3)
+    const orgUnit = await prisma.organizationalUnit.findUnique({
+      where: { id: assignedOrgUnit }
+    });
+    if (!orgUnit) {
+      return res.status(400).json({ error: 'Invalid organizational unit ID' });
+    }
+    if (orgUnit.tier !== 3) {
+      return res.status(400).json({ error: 'Work items can only be assigned to leaf units (Tier 3)' });
     }
 
     const workItem = await prisma.workItem.create({
       data: {
         title,
         description: description || '',
-        type: type || 'Story',
+        type: type || 'Work Item',
         priority: priority || 'P3',
         stackRank: 0,
         status: status || 'Backlog',
-        assignedOrgUnit: validatedOrgUnit,
+        assignedOrgUnit: assignedOrgUnit,
         estimatedEffort: estimatedEffort ? parseFloat(estimatedEffort) : null,
         createdBy: userIdToUse,
       },

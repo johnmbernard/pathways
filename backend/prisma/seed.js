@@ -22,44 +22,38 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Utility functions for generating realistic data
-const workItemTitles = {
-  Story: [
-    'Implement user authentication flow',
-    'Add real-time notifications',
-    'Create dashboard analytics view',
-    'Build mobile responsive layout',
-    'Integrate third-party API',
-    'Add data export functionality',
-    'Implement search with filters',
-    'Create admin panel interface',
-    'Add multi-language support',
-    'Build reporting module',
-  ],
-  Task: [
-    'Update database schema',
-    'Refactor legacy code module',
-    'Write API documentation',
-    'Set up CI/CD pipeline',
-    'Configure monitoring alerts',
-    'Optimize database queries',
-    'Update dependencies',
-    'Create unit tests',
-    'Deploy to staging environment',
-    'Perform security audit',
-  ],
-  Bug: [
-    'Fix login redirect issue',
-    'Resolve memory leak in background process',
-    'Correct timezone calculation bug',
-    'Fix broken pagination on mobile',
-    'Resolve API timeout errors',
-    'Fix data validation issues',
-    'Correct calculation errors in reports',
-    'Fix race condition in async code',
-    'Resolve CORS issues',
-    'Fix broken links in navigation',
-  ],
-};
+const workItemTitles = [
+  'Implement user authentication flow',
+  'Add real-time notifications',
+  'Create dashboard analytics view',
+  'Build mobile responsive layout',
+  'Integrate third-party API',
+  'Add data export functionality',
+  'Implement search with filters',
+  'Create admin panel interface',
+  'Add multi-language support',
+  'Build reporting module',
+  'Update database schema',
+  'Refactor legacy code module',
+  'Write API documentation',
+  'Set up CI/CD pipeline',
+  'Configure monitoring alerts',
+  'Optimize database queries',
+  'Update dependencies',
+  'Create unit tests',
+  'Deploy to staging environment',
+  'Perform security audit',
+  'Fix login redirect issue',
+  'Resolve memory leak in background process',
+  'Correct timezone calculation bug',
+  'Fix broken pagination on mobile',
+  'Resolve API timeout errors',
+  'Fix data validation issues',
+  'Correct calculation errors in reports',
+  'Fix race condition in async code',
+  'Resolve CORS issues',
+  'Fix broken links in navigation',
+];
 
 const priorities = ['P1', 'P2', 'P3'];
 const statuses = ['Backlog', 'Ready', 'In Progress', 'Done'];
@@ -68,9 +62,8 @@ function randomChoice(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
 
-function generateWorkItemTitle(type) {
-  const titles = workItemTitles[type];
-  return randomChoice(titles);
+function generateWorkItemTitle() {
+  return randomChoice(workItemTitles);
 }
 
 async function main() {
@@ -273,7 +266,6 @@ async function main() {
       const itemsThisWeek = completedItemsPerWeek + Math.floor(Math.random() * 5) - 2; // 6-10 items
       
       for (let i = 0; i < itemsThisWeek; i++) {
-        const type = randomChoice(['Story', 'Task', 'Bug']);
         const project = randomChoice(projects);
         
         // Completion date spread across the week
@@ -290,9 +282,9 @@ async function main() {
         await prisma.workItem.create({
           data: {
             id: `work-${team.id}-completed-${weekAgo}-${i + 1}`,
-            title: `${generateWorkItemTitle(type)} - ${team.name}`,
+            title: `${generateWorkItemTitle()} - ${team.name}`,
             description: `Completed work item for ${project.title}`,
-            type: type,
+            type: 'Work Item',
             priority: randomChoice(priorities),
             stackRank: i,
             status: 'Done',
@@ -318,15 +310,14 @@ async function main() {
       const itemsInPriority = Math.floor(currentWorkItemsPerTeam / 3) + Math.floor(Math.random() * 3);
       
       for (let i = 0; i < itemsInPriority; i++) {
-        const type = randomChoice(['Story', 'Task', 'Bug']);
         const project = randomChoice(projects);
         
         await prisma.workItem.create({
           data: {
             id: `work-${team.id}-backlog-${priority}-${i + 1}`,
-            title: `${generateWorkItemTitle(type)} - ${team.name}`,
+            title: `${generateWorkItemTitle()} - ${team.name}`,
             description: `Current backlog item for ${project.title}`,
-            type: type,
+            type: 'Work Item',
             priority: priority,
             stackRank: stackRankCounter++,
             status: randomChoice(['Backlog', 'Ready', 'In Progress']),

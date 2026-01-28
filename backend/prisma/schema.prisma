@@ -206,12 +206,12 @@ model WorkItem {
   refinementSessionId String?   // Optional - work items can exist independently
   title               String
   description         String?
-  type                String    @default("Story") // Story, Bug, Task, etc.
-  priority            String    @default("Medium") // P1, P2, P3
+  type                String    @default("Work Item") // Always "Work Item" - simplified from Story/Bug/Task
+  priority            String    @default("P3") // P1, P2, P3
   stackRank           Int       @default(0) // Order within priority bucket (lower = higher priority)
   status              String    @default("Backlog") // Backlog, Ready, In Progress, Review, Done
   estimatedEffort     Float?    // Optional story points (not required for forecasting)
-  assignedOrgUnit     String?   // Team assignment
+  assignedOrgUnit     String    // REQUIRED - All work items must be assigned to a leaf unit
   assignedTo          String?   // Individual assignment
   createdBy           String
   createdAt           DateTime  @default(now())
