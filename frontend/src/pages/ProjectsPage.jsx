@@ -753,7 +753,7 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
-          <h2>Start Refinement: {project.title}</h2>
+          <h2>{project.title}</h2>
           <button onClick={onClose} className={styles.closeButton}>
             <X size={20} />
           </button>

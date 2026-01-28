@@ -1012,6 +1012,7 @@ async function main() {
           title: 'CI/CD pipeline modernization',
           description: 'Implement automated deployment pipelines',
           targetDate: formatDate(addDays(today, 30)),
+          assignedUnits: [tier2Units[1].id],
           childObjectives: [
             {
               title: 'Build automation infrastructure',
@@ -1032,6 +1033,7 @@ async function main() {
           title: 'Infrastructure as Code',
           description: 'Manage infrastructure through code',
           targetDate: formatDate(addDays(today, 50)),
+          assignedUnits: [tier2Units[2].id],
           childObjectives: [
             {
               title: 'IaC implementation',
@@ -1066,7 +1068,7 @@ async function main() {
     let workItemCount = 0;
 
     for (const objData of objectives) {
-      const { childObjectives, ...tier1Fields } = objData;
+      const { childObjectives, assignedUnits: tier1AssignedUnits, ...tier1Fields } = objData;
       
       const tier1Objective = await prisma.objective.create({
         data: {
@@ -1077,6 +1079,15 @@ async function main() {
         },
       });
       tier1Count++;
+
+      // Assign Tier 1 objective to Tier 2 units if specified
+      if (tier1AssignedUnits) {
+        for (const unitId of tier1AssignedUnits) {
+          await prisma.objectiveAssignment.create({
+            data: { objectiveId: tier1Objective.id, unitId: unitId },
+          });
+        }
+      }
 
       if (childObjectives) {
         // Create refinement session for Tier 1 → Tier 2 refinement
