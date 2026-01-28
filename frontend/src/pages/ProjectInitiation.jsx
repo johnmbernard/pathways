@@ -9,9 +9,9 @@ import { API_BASE_URL } from '../config';
 import { PageHeader } from '../components/layout/Layout';
 import { Button, Badge, HelpTooltip } from '../components/ui';
 import { Plus, Calendar, DollarSign, Users, FolderOpen, AlertTriangle, Pencil, Trash2, X, PlayCircle } from 'lucide-react';
-import styles from './ProjectsPage.module.css';
+import styles from './ProjectInitiation.module.css';
 
-export default function ProjectsPage() {
+export default function ProjectInitiation() {
   const navigate = useNavigate();
   const currentUser = useUserStore(state => state.currentUser);
   const { projects, addProject, updateProject, deleteProject, fetchProjects, loading } = useProjectsStore();
@@ -627,7 +627,7 @@ export default function ProjectsPage() {
       <PageHeader
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Projects
+            Project Initiation
             <HelpTooltip
               title="Projects Overview"
               content={
@@ -646,7 +646,7 @@ export default function ProjectsPage() {
             />
           </div>
         }
-        subtitle="Manage organizational projects and initiatives"
+        subtitle="Create and initiate new organizational projects"
         actions={
           <Button onClick={() => setIsCreating(true)} variant="primary">
             <Plus size={18} />

@@ -2,7 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import WorkItemsPage from './pages/WorkItemsPage'
 import OrganizationBuilder from './pages/OrganizationBuilder'
-import ProjectsPage from './pages/ProjectsPage'
+import ProjectInitiation from './pages/ProjectInitiation'
 import RefinementPage from './pages/RefinementPage'
 import MyRefinements from './pages/MyRefinements'
 import RoadmapPage from './pages/RoadmapPage'
@@ -40,7 +40,7 @@ function App() {
                       <Route path="/" element={<ProtectedRoute><WorkItemsPage hierarchyOpen={hierarchyOpen} setHierarchyOpen={setHierarchyOpen} /></ProtectedRoute>} />
                       <Route path="/organization" element={<ProtectedRoute><OrganizationBuilder /></ProtectedRoute>} />
                       <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
-                      <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+                      <Route path="/projects" element={<ProtectedRoute><ProjectInitiation /></ProtectedRoute>} />
                       <Route path="/refinement/:sessionId" element={<ProtectedRoute><RefinementPage /></ProtectedRoute>} />
                       <Route path="/my-refinements" element={<ProtectedRoute><MyRefinements /></ProtectedRoute>} />
                       <Route path="/roadmap" element={<ProtectedRoute><RoadmapPage /></ProtectedRoute>} />

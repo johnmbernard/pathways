@@ -265,7 +265,7 @@ export default function WorkItemsPage() {
         subtitle={`${orgName}'s project portfolio`}
         actions={
           <Button onClick={() => navigate('/app/projects')} variant="primary">
-            Manage Projects
+            Initiate Projects
           </Button>
         }
       />

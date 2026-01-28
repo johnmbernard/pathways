@@ -149,7 +149,7 @@ export default function RefinementPage() {
           <AlertTriangle size={48} />
           <h2>Refinement Session Not Found</h2>
           <button onClick={() => navigate('/app/projects')} className={styles.button}>
-            Back to Projects
+            Back to Project Initiation
           </button>
         </div>
       </div>
@@ -275,7 +275,7 @@ export default function RefinementPage() {
           </p>
         </div>
         <button onClick={() => navigate('/app/projects')} className={styles.backButton}>
-          ← Back to Projects
+          ← Back to Project Initiation
         </button>
       </header>
       

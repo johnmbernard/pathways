@@ -160,7 +160,7 @@ export default function RoadmapPage() {
         subtitle="Project timelines with lead time forecasting"
         actions={
           <Button onClick={() => navigate('/app/projects')} variant="secondary">
-            Manage Projects
+            Initiate Projects
           </Button>
         }
       />
@@ -198,7 +198,7 @@ export default function RoadmapPage() {
           <div className={styles.emptyState}>
             <p className={styles.emptyText}>No projects found</p>
             <Button onClick={() => navigate('/app/projects')}>
-              Create a Project
+              Initiate a Project
             </Button>
           </div>
         ) : (

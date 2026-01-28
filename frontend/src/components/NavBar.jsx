@@ -86,7 +86,7 @@ export default function NavBar({ onOpenHierarchy }) {
                 className={`${styles.navItem} ${isActive('/app/projects') ? styles.active : ''}`}
               >
                 <FolderKanban className={styles.navItemIcon} size={18} />
-                Projects
+                Project Initiation
               </Link>
               <Link
                 to="/app/my-refinements"
