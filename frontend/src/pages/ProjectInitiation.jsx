@@ -822,7 +822,7 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
                   
                   // Calculate completion status
                   const completedUnits = assignedUnits.filter(unit => 
-                    objective.completedByUnits?.includes(unit.id)
+                    objective.completedByUnits?.some(completion => completion.unitId === unit.id)
                   );
                   const completionPercentage = assignedUnits.length > 0 
                     ? Math.round((completedUnits.length / assignedUnits.length) * 100)
@@ -865,7 +865,7 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
                         <>
                           <div className={styles.unitsChips}>
                             {assignedUnits.map(unit => {
-                              const isCompleted = objective.completedByUnits?.includes(unit.id);
+                              const isCompleted = objective.completedByUnits?.some(completion => completion.unitId === unit.id);
                               return (
                                 <span 
                                   key={unit.id} 

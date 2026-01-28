@@ -1157,6 +1157,17 @@ async function main() {
               });
               workItemCount++;
             }
+            
+            // Mark objective as completed by each Tier 3 unit (since they created work items)
+            for (const tier3UnitId of tier3Assignments) {
+              await prisma.objectiveCompletion.create({
+                data: {
+                  objectiveId: tier2Objective.id,
+                  unitId: tier3UnitId,
+                  completedAt: new Date(),
+                },
+              });
+            }
           }
         }
       }
