@@ -527,6 +527,7 @@ async function main() {
           title: 'Identity and access management',
           description: 'Implement zero-trust IAM',
           targetDate: formatDate(addDays(today, 40)),
+          assignedUnits: [tier2Units[0].id],
           childObjectives: [
             { title: 'SSO implementation', description: 'Deploy single sign-on across all systems', targetDate: formatDate(addDays(today, 25)), assignedUnits: [tier2Units[0].id], tier3Assignments: [tier3Units[0].id, tier3Units[1].id] },
             { title: 'MFA rollout', description: 'Enable multi-factor authentication company-wide', targetDate: formatDate(addDays(today, 30)), assignedUnits: [tier2Units[0].id], tier3Assignments: [tier3Units[2].id] },
@@ -536,6 +537,7 @@ async function main() {
           title: 'Network security enhancement',
           description: 'Upgrade network security controls',
           targetDate: formatDate(addDays(today, 60)),
+          assignedUnits: [tier2Units[1].id],
           childObjectives: [
             { title: 'Firewall modernization', description: 'Replace legacy firewalls with next-gen', targetDate: formatDate(addDays(today, 45)), assignedUnits: [tier2Units[1].id], tier3Assignments: [tier3Units[3]?.id || tier3Units[0].id] },
             { title: 'Intrusion detection system', description: 'Deploy advanced threat detection', targetDate: formatDate(addDays(today, 55)), assignedUnits: [tier2Units[1].id], tier3Assignments: [tier3Units[4]?.id || tier3Units[1].id] },
@@ -545,6 +547,7 @@ async function main() {
           title: 'Security monitoring and response',
           description: 'Build SOC capability',
           targetDate: formatDate(addDays(today, 90)),
+          assignedUnits: [tier2Units[2].id],
           childObjectives: [
             { title: 'SIEM implementation', description: 'Deploy security information and event management', targetDate: formatDate(addDays(today, 70)), assignedUnits: [tier2Units[2].id], tier3Assignments: [tier3Units[5]?.id || tier3Units[2].id] },
             { title: 'Incident response playbooks', description: 'Document response procedures', targetDate: formatDate(addDays(today, 80)), assignedUnits: [tier2Units[2].id], tier3Assignments: [tier3Units[6]?.id || tier3Units[0].id] },
@@ -567,6 +570,7 @@ async function main() {
           title: 'User research and design',
           description: 'Research user needs and create new design',
           targetDate: formatDate(addDays(today, 30)),
+          assignedUnits: [tier2Units[3]?.id || tier2Units[0].id],
           childObjectives: [
             { title: 'User interviews and surveys', description: 'Gather user feedback and requirements', targetDate: formatDate(addDays(today, 15)), assignedUnits: [tier2Units[3]?.id || tier2Units[0].id], tier3Assignments: [tier3Units[7]?.id || tier3Units[0].id] },
             { title: 'Design system creation', description: 'Build comprehensive design system', targetDate: formatDate(addDays(today, 25)), assignedUnits: [tier2Units[3]?.id || tier2Units[0].id], tier3Assignments: [tier3Units[8]?.id || tier3Units[1].id] },
@@ -576,6 +580,7 @@ async function main() {
           title: 'Core functionality rebuild',
           description: 'Rebuild key app features',
           targetDate: formatDate(addDays(today, 60)),
+          assignedUnits: [tier2Units[1].id],
           childObjectives: [
             { title: 'Navigation and information architecture', description: 'Implement new navigation', targetDate: formatDate(addDays(today, 45)), assignedUnits: [tier2Units[1].id], tier3Assignments: [tier3Units[2].id] },
             { title: 'Dashboard and analytics', description: 'Build new dashboard views', targetDate: formatDate(addDays(today, 55)), assignedUnits: [tier2Units[1].id], tier3Assignments: [tier3Units[3]?.id || tier3Units[0].id] },
@@ -585,6 +590,7 @@ async function main() {
           title: 'Performance optimization',
           description: 'Improve app speed and responsiveness',
           targetDate: formatDate(addDays(today, 75)),
+          assignedUnits: [tier2Units[2].id],
           childObjectives: [
             { title: 'Load time optimization', description: 'Reduce initial load time by 50%', targetDate: formatDate(addDays(today, 65)), assignedUnits: [tier2Units[2].id], tier3Assignments: [tier3Units[1].id] },
             { title: 'Memory management', description: 'Optimize memory usage and prevent leaks', targetDate: formatDate(addDays(today, 70)), assignedUnits: [tier2Units[2].id], tier3Assignments: [tier3Units[2].id] },
@@ -607,7 +613,7 @@ async function main() {
     let tier2Count = 0;
 
     for (const objData of objectives) {
-      const { childObjectives, ...tier1Fields } = objData;
+      const { childObjectives, assignedUnits: tier1AssignedUnits, ...tier1Fields } = objData;
       
       // Create Tier 1 objective
       const tier1Objective = await prisma.objective.create({
@@ -619,6 +625,15 @@ async function main() {
         },
       });
       tier1Count++;
+
+      // Assign Tier 1 objective to Tier 2 units if specified
+      if (tier1AssignedUnits) {
+        for (const unitId of tier1AssignedUnits) {
+          await prisma.objectiveAssignment.create({
+            data: { objectiveId: tier1Objective.id, unitId: unitId },
+          });
+        }
+      }
 
       // All objectives are refined
       if (childObjectives) {
@@ -707,6 +722,7 @@ async function main() {
           title: 'Data warehouse implementation',
           description: 'Build centralized data warehouse',
           targetDate: formatDate(addDays(today, 40)),
+          assignedUnits: [tier2Units[0].id],
           childObjectives: [
             {
               title: 'Data warehouse architecture',
@@ -737,6 +753,7 @@ async function main() {
           title: 'Self-service BI tools',
           description: 'Deploy business intelligence platform',
           targetDate: formatDate(addDays(today, 60)),
+          assignedUnits: [tier2Units[1].id],
           childObjectives: [
             {
               title: 'BI tool selection and setup',
@@ -768,6 +785,7 @@ async function main() {
           title: 'API gateway and management',
           description: 'Implement API infrastructure',
           targetDate: formatDate(addDays(today, 45)),
+          assignedUnits: [tier2Units[2].id],
           childObjectives: [
             {
               title: 'API gateway setup',
@@ -787,6 +805,7 @@ async function main() {
           title: 'API documentation portal',
           description: 'Create developer documentation site',
           targetDate: formatDate(addDays(today, 60)),
+          assignedUnits: [tier2Units[1].id],
           childObjectives: [
             {
               title: 'Documentation platform',
@@ -819,7 +838,7 @@ async function main() {
     let workItemCount = 0;
 
     for (const objData of objectives) {
-      const { childObjectives, ...tier1Fields } = objData;
+      const { childObjectives, assignedUnits: tier1AssignedUnits, ...tier1Fields } = objData;
       
       // Create Tier 1 objective
       const tier1Objective = await prisma.objective.create({
@@ -831,6 +850,15 @@ async function main() {
         },
       });
       tier1Count++;
+
+      // Assign Tier 1 objective to Tier 2 units if specified
+      if (tier1AssignedUnits) {
+        for (const unitId of tier1AssignedUnits) {
+          await prisma.objectiveAssignment.create({
+            data: { objectiveId: tier1Objective.id, unitId: unitId },
+          });
+        }
+      }
 
       if (childObjectives) {
         // Create refinement session for Tier 1 → Tier 2 refinement
@@ -928,6 +956,7 @@ async function main() {
           title: 'Checkout experience redesign',
           description: 'Streamline purchase flow',
           targetDate: formatDate(addDays(today, 20)),
+          assignedUnits: [tier2Units[0].id],
           childObjectives: [
             {
               title: 'One-click checkout',
@@ -960,6 +989,7 @@ async function main() {
           title: 'Product recommendations engine',
           description: 'Personalized product suggestions',
           targetDate: formatDate(addDays(today, 40)),
+          assignedUnits: [tier2Units[1].id],
           childObjectives: [
             {
               title: 'Recommendation algorithm',
@@ -979,6 +1009,7 @@ async function main() {
           title: 'Mobile shopping experience',
           description: 'Optimize for mobile devices',
           targetDate: formatDate(addDays(today, 50)),
+          assignedUnits: [tier2Units[2].id],
           childObjectives: [
             {
               title: 'Mobile-first product pages',
