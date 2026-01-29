@@ -22,6 +22,28 @@ router.get('/', async (req, res) => {
               },
             },
             completedByUnits: true,
+            dependenciesFrom: {
+              include: {
+                successor: {
+                  select: {
+                    id: true,
+                    title: true,
+                    projectId: true,
+                  }
+                }
+              }
+            },
+            dependenciesTo: {
+              include: {
+                predecessor: {
+                  select: {
+                    id: true,
+                    title: true,
+                    projectId: true,
+                  }
+                }
+              }
+            },
           },
         },
         risks: true,

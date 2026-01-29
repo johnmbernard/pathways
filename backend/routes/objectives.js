@@ -32,6 +32,26 @@ router.get('/project/:projectId', async (req, res) => {
             },
           },
         },
+        dependenciesFrom: {
+          include: {
+            successor: {
+              select: {
+                id: true,
+                title: true,
+              }
+            }
+          }
+        },
+        dependenciesTo: {
+          include: {
+            predecessor: {
+              select: {
+                id: true,
+                title: true,
+              }
+            }
+          }
+        },
       },
       orderBy: {
         createdAt: 'asc',

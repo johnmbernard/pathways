@@ -113,8 +113,28 @@ model Objective {
   completedByUnits    ObjectiveCompletion[]
   refinementSessions  RefinementSession[]
   risks               Risk[]
+  dependenciesFrom    ObjectiveDependency[] @relation("DependencyFrom")
+  dependenciesTo      ObjectiveDependency[] @relation("DependencyTo")
   
   @@map("objectives")
+}
+
+// Objective dependencies for critical path
+model ObjectiveDependency {
+  id              String   @id @default(cuid())
+  predecessorId   String   // The objective that must happen first
+  successorId     String   // The objective that depends on predecessor
+  type            String   // FS (Finish-to-Start), SS (Start-to-Start), FF (Finish-to-Finish), SF (Start-to-Finish)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  predecessor     Objective @relation("DependencyFrom", fields: [predecessorId], references: [id], onDelete: Cascade)
+  successor       Objective @relation("DependencyTo", fields: [successorId], references: [id], onDelete: Cascade)
+  
+  @@unique([predecessorId, successorId])
+  @@index([predecessorId])
+  @@index([successorId])
+  @@map("objective_dependencies")
 }
 
 // Junction table for many-to-many relationship between Objectives and Units
