@@ -767,11 +767,19 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
           {(() => {
             const isProjectOwner = project.ownerUnit === currentUser?.organizationalUnit;
             
+            // Split objectives into complete (with units) and incomplete (without units)
+            const completeObjectives = project.objectives.filter(obj => 
+              obj.assignedUnits && obj.assignedUnits.length > 0
+            );
+            const incompleteObjectives = project.objectives.filter(obj => 
+              !obj.assignedUnits || obj.assignedUnits.length === 0
+            );
+            
             // Project owners see all objectives (to release for refinement)
             // Assigned units only see their objectives (to work on them)
-            const relevantObjectives = isProjectOwner 
-              ? project.objectives
-              : project.objectives.filter(objective => 
+            const relevantCompleteObjectives = isProjectOwner 
+              ? completeObjectives
+              : completeObjectives.filter(objective => 
                   objective.assignedUnits?.some(assignment => assignment.unitId === currentUser?.organizationalUnit)
                 );
             
@@ -785,7 +793,7 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
               );
             }
             
-            if (relevantObjectives.length === 0) {
+            if (relevantCompleteObjectives.length === 0 && incompleteObjectives.length === 0 && !isProjectOwner) {
               return (
                 <div className={styles.emptyObjectives}>
                   <AlertTriangle size={24} />
@@ -797,13 +805,16 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
             
             return (
               <div className={styles.objectivesRefinementList}>
-                {isProjectOwner && (
-                  <div className={styles.refinementInfo}>
-                    <strong>Release Objectives for Refinement</strong>
-                    <p>Select objectives to release for refinement. All assigned units will receive the objective and can collaborate on breaking it down.</p>
-                  </div>
-                )}
-                {relevantObjectives.map((objective) => {
+                {/* Complete Objectives - Ready for Release */}
+                {relevantCompleteObjectives.length > 0 && (
+                  <>
+                    {isProjectOwner && (
+                      <div className={styles.refinementInfo}>
+                        <strong>Objectives Ready for Release</strong>
+                        <p>Select objectives to release for refinement. All assigned units will receive the objective and can collaborate on breaking it down.</p>
+                      </div>
+                    )}
+                    {relevantCompleteObjectives.map((objective) => {
                   // Filter assigned units to only show those at the correct tier (next tier after project owner)
                   const expectedTier = project.ownerTier + 1;
                   const assignedUnits = objective.assignedUnits
@@ -896,7 +907,48 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
                   </div>
                 );
               })}
-            </div>
+                  </>
+                )}
+
+                {/* Incomplete Objectives - Need More Information */}
+                {incompleteObjectives.length > 0 && isProjectOwner && (
+                  <>
+                    <div className={styles.refinementInfo}>
+                      <strong>Incomplete Objectives</strong>
+                      <p className={styles.warningText}>These objectives need assigned units before they can be released for refinement.</p>
+                    </div>
+                    {incompleteObjectives.map(objective => (
+                      <div key={objective.id} className={`${styles.objectiveRefinementCard} ${styles.incompleteObjective}`}>
+                        <div className={styles.objectiveHeader}>
+                          <h3>
+                            <AlertTriangle size={18} className={styles.warningIcon} />
+                            {objective.title}
+                          </h3>
+                          <div className={styles.objectiveMeta}>
+                            {objective.targetDate && (
+                              <span className={styles.targetDate}>
+                                <Calendar size={14} />
+                                {new Date(objective.targetDate).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {objective.description && (
+                          <p className={styles.objectiveDescription}>{objective.description}</p>
+                        )}
+                        
+                        <div className={styles.assignedUnits}>
+                          <label>Status:</label>
+                          <p className={styles.noUnits}>
+                            ⚠️ No units assigned - Edit project to assign units before releasing
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
             );
           })()}
         </div>

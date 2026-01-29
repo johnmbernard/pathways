@@ -832,3 +832,36 @@
 .openRefinementButton:active {
   transform: translateY(0);
 }
+
+/* Incomplete Objectives Styles */
+.incompleteObjective {
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  opacity: 0.85;
+}
+
+.incompleteObjective .objectiveHeader h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #92400e;
+}
+
+.warningIcon {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.warningText {
+  color: #92400e;
+  font-style: italic;
+}
+
+.incompleteObjective .objectiveDescription {
+  color: #78350f;
+}
+
+.incompleteObjective .noUnits {
+  color: #92400e;
+  font-weight: 500;
+}
