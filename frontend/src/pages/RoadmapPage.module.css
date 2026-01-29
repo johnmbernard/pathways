@@ -152,10 +152,11 @@
 
 .weekLine {
   position: absolute;
-  top: 30px;
+  top: 50px;
   bottom: 0;
   width: 1px;
   background: #e5e7eb;
+  pointer-events: none;
 }
 
 .weekLine:nth-child(4n) {
@@ -168,14 +169,13 @@
 
 .weekDateLabel {
   position: absolute;
-  top: -26px;
+  top: 30px;
   left: 2px;
   font-size: 0.625rem;
   color: #6b7280;
   font-weight: 500;
   white-space: nowrap;
-  background: transparent;
-  padding: 0 2px;
+  pointer-events: none;
 }
 
 .todayLine {

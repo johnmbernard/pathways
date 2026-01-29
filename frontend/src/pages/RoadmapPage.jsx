@@ -636,21 +636,33 @@ export default function RoadmapPage() {
                     </div>
                   ))}
                   
-                  {/* Week grid lines with dates */}
+                  {/* Week date labels */}
                   {Array.from({ length: totalWeeks }).map((_, week) => {
                     const weekDate = new Date(minDate.getTime() + week * 7 * 24 * 60 * 60 * 1000);
                     const dateLabel = formatDate(weekDate, 'MM/dd');
+                    
+                    return (
+                      <div
+                        key={`date-${week}`}
+                        className={styles.weekDateLabel}
+                        style={{ left: week * weekWidth }}
+                        title={formatDate(weekDate, 'MMM dd, yyyy')}
+                      >
+                        {dateLabel}
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Week grid lines */}
+                  {Array.from({ length: totalWeeks }).map((_, week) => {
                     const isMonthStart = week % 4 === 0;
                     
                     return (
                       <div
-                        key={week}
+                        key={`line-${week}`}
                         className={`${styles.weekLine} ${isMonthStart ? styles.weekLineMonth : ''}`}
                         style={{ left: week * weekWidth }}
-                        title={formatDate(weekDate, 'MMM dd, yyyy')}
-                      >
-                        <div className={styles.weekDateLabel}>{dateLabel}</div>
-                      </div>
+                      />
                     );
                   })}
                   
