@@ -172,23 +172,18 @@
   position: absolute;
   top: 30px;
   left: 2px;
-  font-size: 11px !important;
-  color: #ff0000 !important;
-  font-weight: 700 !important;
+  font-size: 10px !important;
+  color: #6b7280 !important;
+  font-weight: 600 !important;
   white-space: nowrap;
   pointer-events: none;
-  z-index: 100;
-  background: #ffff00 !important;
-  padding: 4px 6px !important;
-  border: 2px solid #ff0000 !important;
-  border-radius: 3px;
+  z-index: 5;
+  background: transparent !important;
+  padding: 2px 0 !important;
   display: inline-block !important;
-  line-height: 1.4 !important;
-  min-height: 20px !important;
-  min-width: 35px !important;
+  line-height: 1.2 !important;
   text-align: center;
-  visibility: visible !important;
-  opacity: 1 !important;
+  min-width: 35px;
 }
 
 .todayLine {
