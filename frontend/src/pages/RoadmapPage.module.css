@@ -128,7 +128,7 @@
 .ganttRight {
   flex: 1;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   position: relative;
 }
 
@@ -137,6 +137,7 @@
   height: 80px;
   min-width: 100%;
   padding-top: 0.5rem;
+  overflow: visible;
 }
 
 .monthLabel {
