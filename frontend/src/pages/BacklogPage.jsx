@@ -146,11 +146,6 @@ function ProjectRow({ project, workItemCount, owningUnit, objectives, workItems 
           {project.description || 'No description'}
         </div>
         
-        <div className={styles.projectOwner}>
-          <Users size={12} />
-          <span>{owningUnit?.name || 'No owner'}</span>
-        </div>
-        
         <div className={styles.projectMeta}>
           <span>{rootObjectives.length} root objective{rootObjectives.length !== 1 ? 's' : ''}</span>
           {totalObjectives > rootObjectives.length && <> • <span>{totalObjectives - rootObjectives.length} refined</span></>}
