@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MessageSquare, Plus, X, Calendar, Users, AlertTriangle } from 'lucide-react';
+import { MessageSquare, Plus, X, Calendar, Users, AlertTriangle, Link2 } from 'lucide-react';
 import useRefinementStore from '../store/refinementStore';
 import { useProjectsStore } from '../store/projectsStore';
 import { useOrganizationStore } from '../store/organizationStore';
 import { useWorkItemsStore } from '../store/workItemsStore';
 import { useUserStore } from '../store/userStore';
 import { HelpTooltip } from '../components/ui';
+import DependencyManager from '../components/DependencyManager';
 import styles from './RefinementPage.module.css';
 
 export default function RefinementPage() {
@@ -41,6 +42,7 @@ export default function RefinementPage() {
   const [showWorkItemModal, setShowWorkItemModal] = useState(false);
   const [editingObjective, setEditingObjective] = useState(null);
   const [editingWorkItem, setEditingWorkItem] = useState(null);
+  const [managingDependenciesFor, setManagingDependenciesFor] = useState(null);
   
   // Fetch sessions and projects on mount to get latest data
   useEffect(() => {
@@ -454,6 +456,18 @@ export default function RefinementPage() {
                       <span className={styles.itemNumber}>{index + 1}.</span>
                       <h3>{obj.title}</h3>
                       <button
+                        onClick={() => setManagingDependenciesFor(obj)}
+                        className={styles.dependencyButton}
+                        title="Manage dependencies"
+                      >
+                        <Link2 size={14} />
+                        {(obj.dependenciesFrom?.length || 0) + (obj.dependenciesTo?.length || 0) > 0 && (
+                          <span className={styles.dependencyCount}>
+                            {(obj.dependenciesFrom?.length || 0) + (obj.dependenciesTo?.length || 0)}
+                          </span>
+                        )}
+                      </button>
+                      <button
                         onClick={() => {
                           setEditingObjective(obj);
                           setShowObjectiveModal(true);
@@ -551,6 +565,22 @@ export default function RefinementPage() {
           onClose={() => {
             setShowWorkItemModal(false);
             setEditingWorkItem(null);
+          }}
+        />
+      )}
+      
+      {/* Dependency Manager Modal */}
+      {managingDependenciesFor && (
+        <DependencyManager
+          objective={managingDependenciesFor}
+          allObjectives={[
+            ...(project?.objectives || []),
+            ...useProjectsStore.getState().projects.flatMap(p => p.objectives || [])
+          ]}
+          onClose={() => setManagingDependenciesFor(null)}
+          onUpdate={() => {
+            // Refresh projects to get updated dependencies
+            fetchProjects();
           }}
         />
       )}
