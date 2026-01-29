@@ -639,14 +639,16 @@ export default function RoadmapPage() {
                   {/* Week date labels */}
                   {Array.from({ length: totalWeeks }).map((_, week) => {
                     const weekDate = new Date(minDate.getTime() + week * 7 * 24 * 60 * 60 * 1000);
-                    const dateLabel = formatDate(weekDate, 'MM/dd');
+                    const month = weekDate.getMonth() + 1;
+                    const day = weekDate.getDate();
+                    const dateLabel = `${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`;
                     
                     return (
                       <div
                         key={`date-${week}`}
                         className={styles.weekDateLabel}
                         style={{ left: week * weekWidth }}
-                        title={formatDate(weekDate, 'MMM dd, yyyy')}
+                        title={weekDate.toLocaleDateString()}
                       >
                         {dateLabel}
                       </div>
