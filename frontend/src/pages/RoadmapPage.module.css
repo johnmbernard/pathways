@@ -160,6 +160,22 @@
   background: #d1d5db;
 }
 
+.weekLineMonth {
+  background: #d1d5db !important;
+}
+
+.weekDateLabel {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 2px;
+  font-size: 0.625rem;
+  color: #9ca3af;
+  font-weight: 500;
+  white-space: nowrap;
+  background: white;
+  padding: 0 2px;
+}
+
 .todayLine {
   position: absolute;
   top: 0;

@@ -636,14 +636,23 @@ export default function RoadmapPage() {
                     </div>
                   ))}
                   
-                  {/* Week grid lines */}
-                  {Array.from({ length: totalWeeks }).map((_, week) => (
-                    <div
-                      key={week}
-                      className={styles.weekLine}
-                      style={{ left: week * weekWidth }}
-                    />
-                  ))}
+                  {/* Week grid lines with dates */}
+                  {Array.from({ length: totalWeeks }).map((_, week) => {
+                    const weekDate = new Date(minDate.getTime() + week * 7 * 24 * 60 * 60 * 1000);
+                    const dateLabel = formatDate(weekDate, 'MM/dd');
+                    const isMonthStart = week % 4 === 0;
+                    
+                    return (
+                      <div
+                        key={week}
+                        className={`${styles.weekLine} ${isMonthStart ? styles.weekLineMonth : ''}`}
+                        style={{ left: week * weekWidth }}
+                        title={formatDate(weekDate, 'MMM dd, yyyy')}
+                      >
+                        <div className={styles.weekDateLabel}>{dateLabel}</div>
+                      </div>
+                    );
+                  })}
                   
                   {/* Today marker */}
                   {todayOffset >= 0 && todayOffset <= totalDays && (
