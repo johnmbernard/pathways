@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProjectsStore } from '../store/projectsStore';
-import { AlertCircle, Calendar, TrendingUp, Clock } from 'lucide-react';
-import { Button, HelpTooltip } from '../components/ui';
+import { useWorkItemsStore } from '../store/workItemsStore';
+import { AlertCircle, Calendar, TrendingUp, Clock, ChevronRight, ChevronDown, FolderOpen, Target, CheckSquare } from 'lucide-react';
+import { Button, Badge, HelpTooltip } from '../components/ui';
 import { PageHeader } from '../components/layout/Layout';
 import { formatDate } from '../utils/dateUtils';
 import { API_BASE_URL } from '../config';
@@ -21,24 +22,418 @@ function daysBetween(a, b) {
 }
 
 function formatHeaderDate(dt) {
-  return formatDate(dt, 'MM/dd');
+  return formatDate(dt, 'MMM yyyy');
+}
+
+// Work Item Row Component
+function WorkItemRow({ workItem, minDate, maxDate, timelineWidth, totalWeeks, weekWidth, depth = 2 }) {
+  const targetDate = workItem.targetDate ? parseYmd(workItem.targetDate) : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const indentPixels = 24 + (depth * 24);
+  
+  let barLeft = 0, barWidth = 0;
+  
+  if (targetDate) {
+    const startOffset = daysBetween(minDate, today);
+    const endOffset = daysBetween(minDate, targetDate);
+    const startWeek = Math.max(0, Math.floor(startOffset / 7));
+    const endWeek = Math.floor(endOffset / 7);
+    
+    barLeft = startWeek * weekWidth;
+    barWidth = Math.max(weekWidth, (endWeek - startWeek) * weekWidth);
+  }
+  
+  const statusColors = {
+    'To Do': '#94a3b8',
+    'In Progress': '#3b82f6',
+    'Done': '#10b981',
+    'Blocked': '#ef4444'
+  };
+  
+  return (
+    <div className={styles.ganttRow}>
+      <div className={styles.ganttLeft} style={{ paddingLeft: `${indentPixels}px` }}>
+        <div className={styles.ganttItemIcon}>
+          <CheckSquare size={14} />
+        </div>
+        <div className={styles.ganttItemTitle}>{workItem.title}</div>
+        <div className={styles.ganttItemMeta}>
+          <Badge variant="secondary" size="sm">{workItem.status}</Badge>
+          {workItem.priority && (
+            <Badge 
+              variant={workItem.priority === 'P1' ? 'danger' : workItem.priority === 'P2' ? 'warning' : 'secondary'}
+              size="sm"
+            >
+              {workItem.priority}
+            </Badge>
+          )}
+          {workItem.estimatedEffort && (
+            <span className={styles.effortBadge}>{workItem.estimatedEffort} pts</span>
+          )}
+        </div>
+      </div>
+      
+      <div className={styles.ganttRight}>
+        <div className={styles.ganttTimeline} style={{ width: timelineWidth }}>
+          {targetDate && (
+            <div
+              className={styles.ganttBar}
+              style={{
+                left: barLeft,
+                width: barWidth,
+                backgroundColor: statusColors[workItem.status] || '#94a3b8'
+              }}
+              title={`${workItem.title} - Due: ${formatDate(workItem.targetDate, 'MMM dd, yyyy')}`}
+            >
+              <span className={styles.ganttBarLabel}>{workItem.title}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Objective Row Component
+function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, timelineWidth, totalWeeks, weekWidth, forecast, depth = 1 }) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  
+  const childObjectives = allObjectives.filter(obj => obj.parentObjectiveId === objective.id);
+  const objectiveWorkItems = workItems.filter(wi => wi.objectiveId === objective.id);
+  
+  const hasChildren = childObjectives.length > 0;
+  const hasWorkItems = objectiveWorkItems.length > 0 && !hasChildren;
+  const hasContent = hasChildren || hasWorkItems;
+  
+  const indentPixels = 24 + (depth * 24);
+  
+  // Calculate date range for this objective
+  const targetDate = objective.targetDate ? parseYmd(objective.targetDate) : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Get forecast for this specific objective
+  const objForecast = forecast?.objectiveForecasts?.find(of => of.objectiveId === objective.id);
+  const forecastDate = objForecast?.estimatedDate ? parseYmd(objForecast.estimatedDate) : null;
+  
+  let targetBarLeft = 0, targetBarWidth = 0;
+  let forecastBarLeft = 0, forecastBarWidth = 0;
+  
+  if (targetDate) {
+    const startOffset = daysBetween(minDate, today);
+    const endOffset = daysBetween(minDate, targetDate);
+    const startWeek = Math.max(0, Math.floor(startOffset / 7));
+    const endWeek = Math.floor(endOffset / 7);
+    
+    targetBarLeft = startWeek * weekWidth;
+    targetBarWidth = Math.max(weekWidth, (endWeek - startWeek) * weekWidth);
+  }
+  
+  if (forecastDate) {
+    const startOffset = daysBetween(minDate, today);
+    const endOffset = daysBetween(minDate, forecastDate);
+    const startWeek = Math.max(0, Math.floor(startOffset / 7));
+    const endWeek = Math.floor(endOffset / 7);
+    
+    forecastBarLeft = startWeek * weekWidth;
+    forecastBarWidth = Math.max(weekWidth, (endWeek - startWeek) * weekWidth);
+  }
+  
+  const badgeVariants = ['primary', 'info', 'warning', 'secondary'];
+  const badgeVariant = badgeVariants[objective.fromTier % badgeVariants.length];
+  
+  // Check for alerts
+  const hasAlerts = objForecast?.alerts && objForecast.alerts.length > 0;
+  
+  return (
+    <>
+      <div className={styles.ganttRow}>
+        <div className={styles.ganttLeft} style={{ paddingLeft: `${indentPixels}px` }}>
+          <button
+            onClick={() => hasContent && setIsExpanded(!isExpanded)}
+            className={`${styles.expandButton} ${!hasContent ? styles.invisible : ''}`}
+          >
+            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+          
+          <div className={styles.ganttItemIcon}>
+            <Target size={16} />
+          </div>
+          
+          <div className={styles.ganttItemTitle}>
+            <strong>{objective.title}</strong>
+            {hasAlerts && <AlertCircle size={14} className={styles.alertIcon} />}
+          </div>
+          
+          <div className={styles.ganttItemMeta}>
+            <Badge variant={badgeVariant} size="sm">Tier {objective.fromTier}</Badge>
+            {hasChildren && <span className={styles.metaText}>{childObjectives.length} refined</span>}
+            {hasWorkItems && <span className={styles.metaText}>{objectiveWorkItems.length} items</span>}
+            {objForecast?.leadTimeWeeks && (
+              <span className={styles.metaText}>{objForecast.leadTimeWeeks}w lead time</span>
+            )}
+          </div>
+        </div>
+        
+        <div className={styles.ganttRight}>
+          <div className={styles.ganttTimeline} style={{ width: timelineWidth }}>
+            {targetDate && (
+              <div
+                className={`${styles.ganttBar} ${styles.ganttBarTarget}`}
+                style={{
+                  left: targetBarLeft,
+                  width: targetBarWidth,
+                  height: 12,
+                  opacity: 0.9
+                }}
+                title={`Target: ${formatDate(objective.targetDate, 'MMM dd, yyyy')}`}
+              >
+                <span className={styles.ganttBarLabel}>{objective.title}</span>
+              </div>
+            )}
+            {forecastDate && (
+              <div
+                className={`${styles.ganttBar} ${styles.ganttBarForecast}`}
+                style={{
+                  left: forecastBarLeft,
+                  width: forecastBarWidth,
+                  height: 8,
+                  marginTop: 14,
+                  opacity: 0.8
+                }}
+                title={`Forecast: ${formatDate(objForecast.estimatedDate, 'MMM dd, yyyy')}`}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {isExpanded && (
+        <>
+          {childObjectives.map(childObj => (
+            <ObjectiveRow
+              key={childObj.id}
+              objective={childObj}
+              allObjectives={allObjectives}
+              workItems={workItems}
+              minDate={minDate}
+              maxDate={maxDate}
+              timelineWidth={timelineWidth}
+              totalWeeks={totalWeeks}
+              weekWidth={weekWidth}
+              forecast={forecast}
+              depth={depth + 1}
+            />
+          ))}
+          
+          {!hasChildren && objectiveWorkItems.map(workItem => (
+            <WorkItemRow
+              key={workItem.id}
+              workItem={workItem}
+              minDate={minDate}
+              maxDate={maxDate}
+              timelineWidth={timelineWidth}
+              totalWeeks={totalWeeks}
+              weekWidth={weekWidth}
+              depth={depth + 1}
+            />
+          ))}
+        </>
+      )}
+    </>
+  );
+}
+
+// Project Row Component
+function ProjectRow({ project, objectives, workItems, minDate, maxDate, timelineWidth, totalWeeks, weekWidth, forecast }) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  
+  const rootObjectives = objectives.filter(obj => !obj.parentObjectiveId);
+  const hasObjectives = rootObjectives.length > 0;
+  
+  // Calculate project date range
+  const targetDate = project.targetDate ? parseYmd(project.targetDate) : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const forecastDate = forecast?.estimatedDate ? parseYmd(forecast.estimatedDate) : null;
+  
+  let targetBarLeft = 0, targetBarWidth = 0;
+  let forecastBarLeft = 0, forecastBarWidth = 0;
+  
+  if (targetDate) {
+    const startOffset = daysBetween(minDate, today);
+    const endOffset = daysBetween(minDate, targetDate);
+    const startWeek = Math.max(0, Math.floor(startOffset / 7));
+    const endWeek = Math.floor(endOffset / 7);
+    
+    targetBarLeft = startWeek * weekWidth;
+    targetBarWidth = Math.max(weekWidth * 2, (endWeek - startWeek) * weekWidth);
+  }
+  
+  if (forecastDate) {
+    const startOffset = daysBetween(minDate, today);
+    const endOffset = daysBetween(minDate, forecastDate);
+    const startWeek = Math.max(0, Math.floor(startOffset / 7));
+    const endWeek = Math.floor(endOffset / 7);
+    
+    forecastBarLeft = startWeek * weekWidth;
+    forecastBarWidth = Math.max(weekWidth * 2, (endWeek - startWeek) * weekWidth);
+  }
+  
+  // Calculate status
+  const getStatus = () => {
+    if (!forecast || !targetDate || !forecastDate) return 'unknown';
+    
+    const varianceDays = daysBetween(targetDate, forecastDate);
+    if (varianceDays <= 0) return 'on_track';
+    if (varianceDays <= 7) return 'at_risk';
+    return 'critical';
+  };
+  
+  const status = getStatus();
+  
+  // Count alerts
+  const allAlerts = forecast?.objectiveForecasts?.flatMap(of => of.alerts || []) || [];
+  const criticalAlerts = allAlerts.filter(a => a.severity === 'critical').length;
+  
+  return (
+    <>
+      <div className={styles.ganttRow} data-type="project">
+        <div className={styles.ganttLeft}>
+          <button
+            onClick={() => hasObjectives && setIsExpanded(!isExpanded)}
+            className={`${styles.expandButton} ${!hasObjectives ? styles.invisible : ''}`}
+          >
+            {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+          </button>
+          
+          <div className={styles.ganttItemIcon}>
+            <FolderOpen size={20} />
+          </div>
+          
+          <div className={styles.ganttItemTitle}>
+            <strong>{project.title}</strong>
+            {status !== 'unknown' && (
+              <div className={`${styles.statusDot} ${
+                status === 'on_track' ? styles.statusDotGreen :
+                status === 'at_risk' ? styles.statusDotYellow :
+                styles.statusDotRed
+              }`} />
+            )}
+          </div>
+          
+          <div className={styles.ganttItemMeta}>
+            {rootObjectives.length > 0 && (
+              <span className={styles.metaText}>{objectives.length} objectives</span>
+            )}
+            {workItems.length > 0 && (
+              <span className={styles.metaText}>{workItems.length} work items</span>
+            )}
+            {criticalAlerts > 0 && (
+              <Badge variant="danger" size="sm">{criticalAlerts} alerts</Badge>
+            )}
+            {forecast?.leadTimeWeeks && (
+              <span className={styles.metaText}>{forecast.leadTimeWeeks}w lead time</span>
+            )}
+          </div>
+        </div>
+        
+        <div className={styles.ganttRight}>
+          <div className={styles.ganttTimeline} style={{ width: timelineWidth }}>
+            {targetDate && (
+              <div
+                className={`${styles.ganttBar} ${styles.ganttBarTarget}`}
+                style={{
+                  left: targetBarLeft,
+                  width: targetBarWidth,
+                  height: 16
+                }}
+                title={`Target: ${formatDate(project.targetDate, 'MMM dd, yyyy')}`}
+              >
+                <span className={styles.ganttBarLabel}>{project.title}</span>
+              </div>
+            )}
+            {forecastDate && (
+              <div
+                className={`${styles.ganttBar} ${styles.ganttBarForecast}`}
+                style={{
+                  left: forecastBarLeft,
+                  width: forecastBarWidth,
+                  height: 12,
+                  marginTop: 18
+                }}
+                title={`Forecast: ${formatDate(forecast.estimatedDate, 'MMM dd, yyyy')}`}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {isExpanded && rootObjectives.map(rootObj => (
+        <ObjectiveRow
+          key={rootObj.id}
+          objective={rootObj}
+          allObjectives={objectives}
+          workItems={workItems}
+          minDate={minDate}
+          maxDate={maxDate}
+          timelineWidth={timelineWidth}
+          totalWeeks={totalWeeks}
+          weekWidth={weekWidth}
+          forecast={forecast}
+          depth={1}
+        />
+      ))}
+    </>
+  );
 }
 
 export default function RoadmapPage() {
   const navigate = useNavigate();
   const { projects, fetchProjects } = useProjectsStore();
+  const { items: workItems, fetchWorkItems } = useWorkItemsStore();
   const [forecasts, setForecasts] = React.useState({});
+  const [projectObjectives, setProjectObjectives] = React.useState({});
   const [loading, setLoading] = React.useState(true);
 
-  // Load projects and forecasts
+  // Load projects and work items
   React.useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await fetchProjects();
+      await Promise.all([
+        fetchProjects(),
+        fetchWorkItems()
+      ]);
       setLoading(false);
     };
     loadData();
-  }, [fetchProjects]);
+  }, [fetchProjects, fetchWorkItems]);
+
+  // Load objectives for all projects
+  React.useEffect(() => {
+    const loadObjectives = async () => {
+      if (projects.length === 0) return;
+      
+      const objectivesMap = {};
+      for (const project of projects) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/projects/${project.id}`);
+          if (response.ok) {
+            const projectData = await response.json();
+            objectivesMap[project.id] = projectData.objectives || [];
+          }
+        } catch (error) {
+          console.error(`Failed to fetch objectives for project ${project.id}:`, error);
+          objectivesMap[project.id] = [];
+        }
+      }
+      setProjectObjectives(objectivesMap);
+    };
+    loadObjectives();
+  }, [projects]);
 
   // Load forecasts for each project
   React.useEffect(() => {
@@ -62,9 +457,10 @@ export default function RoadmapPage() {
     }
   }, [projects]);
 
-  // Determine timeline range from all projects
+  // Determine timeline range from all projects, objectives, and work items
   const allDates = [];
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   
   projects.forEach(project => {
     if (project.targetDate) {
@@ -74,6 +470,21 @@ export default function RoadmapPage() {
     if (forecast?.estimatedDate) {
       allDates.push(parseYmd(forecast.estimatedDate));
     }
+    
+    // Add objective dates
+    const objectives = projectObjectives[project.id] || [];
+    objectives.forEach(obj => {
+      if (obj.targetDate) {
+        allDates.push(parseYmd(obj.targetDate));
+      }
+    });
+  });
+  
+  // Add work item dates
+  workItems.forEach(item => {
+    if (item.targetDate) {
+      allDates.push(parseYmd(item.targetDate));
+    }
   });
   
   let minDate, maxDate;
@@ -81,53 +492,55 @@ export default function RoadmapPage() {
     minDate = new Date(Math.min(today.getTime(), ...allDates.map(d => d.getTime())));
     maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
   } else {
-    minDate = new Date(today.setHours(0, 0, 0, 0));
+    minDate = new Date(today.getTime());
     maxDate = new Date(minDate.getTime() + 90 * 24 * 60 * 60 * 1000); // 3 months
   }
   
-  // Ensure at least 30 days visible
-  if (daysBetween(minDate, maxDate) < 30) {
-    maxDate = new Date(minDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+  // Ensure at least 60 days visible
+  if (daysBetween(minDate, maxDate) < 60) {
+    maxDate = new Date(minDate.getTime() + 60 * 24 * 60 * 60 * 1000);
   }
+  
+  // Add padding
+  minDate = new Date(minDate.getTime() - 7 * 24 * 60 * 60 * 1000); // 1 week before
+  maxDate = new Date(maxDate.getTime() + 14 * 24 * 60 * 60 * 1000); // 2 weeks after
 
-  const weekWidth = 50; // px per week
+  const weekWidth = 60; // px per week
   const totalDays = Math.max(1, daysBetween(minDate, maxDate) + 1);
   const totalWeeks = Math.ceil(totalDays / 7);
   const timelineWidth = totalWeeks * weekWidth;
 
-  // Calculate status for each project
-  const getProjectStatus = (project) => {
-    const forecast = forecasts[project.id];
-    if (!forecast) return { status: 'unknown', variance: null };
+  // Generate month labels for timeline header
+  const monthLabels = [];
+  let currentDate = new Date(minDate);
+  let lastMonth = -1;
+  
+  for (let week = 0; week < totalWeeks; week++) {
+    const weekDate = new Date(currentDate.getTime() + week * 7 * 24 * 60 * 60 * 1000);
+    const month = weekDate.getMonth();
+    const year = weekDate.getFullYear();
     
-    if (!project.targetDate) {
-      return { status: 'no_target', variance: null };
+    if (month !== lastMonth) {
+      monthLabels.push({
+        week,
+        label: formatHeaderDate(weekDate),
+        position: week * weekWidth
+      });
+      lastMonth = month;
     }
-    
-    const targetDate = parseYmd(project.targetDate);
-    const estimatedDate = parseYmd(forecast.estimatedDate);
-    
-    if (!targetDate || !estimatedDate) {
-      return { status: 'unknown', variance: null };
-    }
-    
-    const varianceDays = daysBetween(targetDate, estimatedDate);
-    
-    if (varianceDays <= 0) {
-      return { status: 'on_track', variance: varianceDays };
-    } else if (varianceDays <= 7) {
-      return { status: 'at_risk', variance: varianceDays };
-    } else {
-      return { status: 'critical', variance: varianceDays };
-    }
-  };
+  }
+
+  // Calculate today's position
+  const todayOffset = daysBetween(minDate, today);
+  const todayWeek = Math.floor(todayOffset / 7);
+  const todayPos = todayWeek * weekWidth;
 
   if (loading) {
     return (
       <div className={styles.page}>
         <PageHeader title="Roadmap" subtitle="Project timelines with lead time forecasting" />
         <div className={styles.loading}>
-          <div className={styles.loadingText}>Loading projects...</div>
+          <div className={styles.loadingText}>Loading roadmap...</div>
         </div>
       </div>
     );
@@ -140,17 +553,19 @@ export default function RoadmapPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             Roadmap
             <HelpTooltip
-              title="Project Roadmap"
+              title="Gantt-Style Roadmap"
               content={
                 <div>
-                  <p><strong>Visual timeline</strong> of all projects showing target dates and forecasted completion.</p>
+                  <p><strong>Comprehensive timeline view</strong> of all projects, objectives, and work items.</p>
                   <p><strong>Features:</strong></p>
                   <ul>
-                    <li><strong>Target Dates (Blue):</strong> Leadership-defined project deadlines</li>
-                    <li><strong>Forecasted Dates (Purple):</strong> Data-driven predictions based on historical lead times</li>
-                    <li><strong>Status Indicators:</strong> Green (on track), Yellow (at risk), Red (delayed)</li>
+                    <li><strong>Blue Bars:</strong> Target dates (leadership-defined deadlines)</li>
+                    <li><strong>Purple Bars:</strong> Forecasted dates (data-driven predictions)</li>
+                    <li><strong>Hierarchical View:</strong> Expand projects to see objectives and work items</li>
+                    <li><strong>Status Indicators:</strong> Green (on track), Yellow (at risk), Red (critical)</li>
+                    <li><strong>Alert Badges:</strong> Shows critical issues requiring attention</li>
                   </ul>
-                  <p>Forecasts use your organization's actual historical data to predict realistic completion times.</p>
+                  <p>Click expand/collapse arrows to view detailed breakdowns of each project.</p>
                 </div>
               }
               size="medium"
@@ -193,7 +608,7 @@ export default function RoadmapPage() {
           </div>
         </div>
 
-        {/* Projects */}
+        {/* Gantt Chart */}
         {projects.length === 0 ? (
           <div className={styles.emptyState}>
             <p className={styles.emptyText}>No projects found</p>
@@ -202,255 +617,73 @@ export default function RoadmapPage() {
             </Button>
           </div>
         ) : (
-          <>
-            {projects.map(project => {
-              const forecast = forecasts[project.id];
-              const projectStatus = getProjectStatus(project);
-              const targetDate = project.targetDate ? parseYmd(project.targetDate) : null;
-              const estimatedDate = forecast?.estimatedDate ? parseYmd(forecast.estimatedDate) : null;
-              const todayDate = new Date();
-              todayDate.setHours(0, 0, 0, 0);
-              
-              // Calculate positions on timeline
-              const todayOffset = daysBetween(minDate, todayDate);
-              const todayWeek = Math.floor(todayOffset / 7);
-              const todayPos = todayWeek * weekWidth;
-              
-              const targetOffset = targetDate ? daysBetween(minDate, targetDate) : null;
-              const targetWeek = targetOffset !== null ? Math.floor(targetOffset / 7) : null;
-              const targetPos = targetWeek !== null ? targetWeek * weekWidth : null;
-              
-              const estimatedOffset = estimatedDate ? daysBetween(minDate, estimatedDate) : null;
-              const estimatedWeek = estimatedOffset !== null ? Math.floor(estimatedOffset / 7) : null;
-              const estimatedPos = estimatedWeek !== null ? estimatedWeek * weekWidth : null;
-              
-              return (
-                <div key={project.id} className={styles.projectCard}>
-                  {/* Project Header */}
-                  <div className={styles.projectHeader}>
-                    <div className={styles.projectHeaderContent}>
-                      <div className={styles.projectHeaderLeft}>
-                        <div className={styles.projectTitleRow}>
-                          <h3 className={styles.projectTitle}>{project.title}</h3>
-                          {projectStatus.status !== 'unknown' && projectStatus.status !== 'no_target' && (
-                            <div className={`${styles.statusDot} ${
-                              projectStatus.status === 'on_track' ? styles.statusDotGreen :
-                              projectStatus.status === 'at_risk' ? styles.statusDotYellow :
-                              styles.statusDotRed
-                            }`} />
-                          )}
-                        </div>
-                        {project.description && (
-                          <p className={styles.projectDescription}>{project.description}</p>
-                        )}
-                      </div>
-                      
-                      <div className={styles.projectMetrics}>
-                        {project.targetDate && (
-                          <div className={styles.metricBox}>
-                            <Calendar size={16} className={styles.metricIcon} style={{ color: '#3b82f6' }} />
-                            <div className={styles.metricContent}>
-                              <div className={styles.metricLabel}>Target</div>
-                              <div className={styles.metricValue}>{formatDate(project.targetDate, 'MMM dd, yyyy')}</div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {forecast?.estimatedDate && (
-                          <div className={styles.metricBox}>
-                            <TrendingUp size={16} className={styles.metricIcon} style={{ color: '#8b5cf6' }} />
-                            <div className={styles.metricContent}>
-                              <div className={styles.metricLabel}>Forecast</div>
-                              <div className={styles.metricValue}>{formatDate(forecast.estimatedDate, 'MMM dd, yyyy')}</div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {forecast?.leadTimeWeeks !== undefined && (
-                          <div className={styles.metricBox}>
-                            <Clock size={16} className={styles.metricIcon} style={{ color: '#9ca3af' }} />
-                            <div className={styles.metricContent}>
-                              <div className={styles.metricLabel}>Lead Time</div>
-                              <div className={styles.metricValue}>{forecast.leadTimeWeeks} weeks</div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+          <div className={styles.ganttContainer}>
+            {/* Timeline Header */}
+            <div className={styles.ganttHeader}>
+              <div className={styles.ganttLeft}>
+                <strong>Projects & Objectives</strong>
+              </div>
+              <div className={styles.ganttRight}>
+                <div className={styles.ganttTimelineHeader} style={{ width: timelineWidth }}>
+                  {/* Month labels */}
+                  {monthLabels.map((label, idx) => (
+                    <div
+                      key={idx}
+                      className={styles.monthLabel}
+                      style={{ left: label.position }}
+                    >
+                      {label.label}
                     </div>
-                    
-                    {/* Status Message */}
-                    {projectStatus.status === 'at_risk' && (
-                      <div className={`${styles.statusMessage} ${styles.statusMessageWarning}`}>
-                        <AlertCircle size={16} className={styles.statusMessageIcon} style={{ color: '#d97706' }} />
-                        <div className={styles.statusMessageText}>
-                          Forecast is <strong>{Math.abs(projectStatus.variance)} days late</strong>. Consider reducing scope or increasing capacity.
-                        </div>
-                      </div>
-                    )}
-                    
-                    {projectStatus.status === 'critical' && (
-                      <div className={`${styles.statusMessage} ${styles.statusMessageError}`}>
-                        <AlertCircle size={16} className={styles.statusMessageIcon} style={{ color: '#dc2626' }} />
-                        <div className={styles.statusMessageText}>
-                          Forecast is <strong>{Math.abs(projectStatus.variance)} days late</strong>. Immediate action required.
-                        </div>
-                      </div>
-                    )}
-                    
-                    {projectStatus.status === 'on_track' && (
-                      <div className={`${styles.statusMessage} ${styles.statusMessageSuccess}`}>
-                        <div className={`${styles.statusDot} ${styles.statusDotGreen}`} style={{ marginTop: '0.125rem' }} />
-                        <div className={styles.statusMessageText}>
-                          On track to complete on or before target date.
-                        </div>
-                      </div>
-                    )}
-                    
-                    {projectStatus.status === 'no_target' && (
-                      <div className={`${styles.statusMessage} ${styles.statusMessageNeutral}`}>
-                        <Calendar size={16} className={styles.statusMessageIcon} style={{ color: '#9ca3af' }} />
-                        <div className={styles.statusMessageText}>
-                          No target date set. Forecast completion: <strong>{forecast?.estimatedDate ? formatDate(forecast.estimatedDate, 'MMM dd, yyyy') : 'N/A'}</strong>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  ))}
                   
-                  {/* Timeline Visualization */}
-                  <div className={styles.timelineSection}>
-                    <div className={styles.timelineContainer}>
-                      {/* Timeline background */}
-                      <div className={styles.timelineGrid} style={{ width: timelineWidth }}>
-                        {Array.from({ length: totalWeeks }).map((_, i) => (
-                          <div 
-                            key={i} 
-                            className={`${styles.timelineColumn} ${i % 4 === 0 ? styles.timelineColumnMonth : ''}`}
-                            style={{ width: weekWidth }}
-                          >
-                            {i % 4 === 0 && (
-                              <div className={styles.timelineLabel}>
-                                {formatHeaderDate(new Date(minDate.getTime() + i * 7 * 24 * 60 * 60 * 1000))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      
-                      {/* Today marker */}
-                      <div 
-                        className={styles.todayMarker}
-                        style={{ left: todayPos }}
-                        title="Today"
-                      >
-                        <div className={styles.todayDot} />
-                      </div>
-                      
-                      {/* Target date bar */}
-                      {targetPos !== null && (
-                        <div
-                          className={`${styles.timelineBar} ${styles.timelineBarTarget}`}
-                          style={{ 
-                            left: Math.max(todayPos, 0), 
-                            width: Math.max(weekWidth, targetPos - Math.max(todayPos, 0)),
-                            top: 24,
-                            height: 10
-                          }}
-                          title={`Target: ${formatDate(project.targetDate, 'MMM dd, yyyy')}`}
-                        />
-                      )}
-                      
-                      {/* Forecast bar */}
-                      {estimatedPos !== null && (
-                        <div
-                          className={`${styles.timelineBar} ${styles.timelineBarForecast}`}
-                          style={{ 
-                            left: Math.max(todayPos, 0), 
-                            width: Math.max(weekWidth, estimatedPos - Math.max(todayPos, 0)),
-                            top: 40,
-                            height: 10
-                          }}
-                          title={`Forecast: ${formatDate(forecast?.estimatedDate, 'MMM dd, yyyy')}`}
-                        />
-                      )}
-                    </div>
-                  </div>
+                  {/* Week grid lines */}
+                  {Array.from({ length: totalWeeks }).map((_, week) => (
+                    <div
+                      key={week}
+                      className={styles.weekLine}
+                      style={{ left: week * weekWidth }}
+                    />
+                  ))}
                   
-                  {/* Alerts & Objectives Summary */}
-                  {forecast?.objectiveForecasts && forecast.objectiveForecasts.length > 0 && (
-                    <div className={styles.objectivesSection}>
-                      {(() => {
-                        // Collect all alerts across objectives
-                        const allAlerts = forecast.objectiveForecasts.flatMap(obj => 
-                          (obj.alerts || []).map(alert => ({ ...alert, objectiveTitle: obj.objectiveTitle }))
-                        );
-                        const hasAlerts = allAlerts.length > 0;
-                        
-                        return (
-                          <>
-                            <h4 className={styles.objectivesTitle}>
-                              {hasAlerts ? `Alerts (${allAlerts.length})` : `Objectives (${forecast.objectiveForecasts.length})`}
-                            </h4>
-                            
-                            {hasAlerts ? (
-                              <div className={styles.objectivesList}>
-                                {allAlerts.slice(0, 4).map((alert, idx) => (
-                                  <div 
-                                    key={`${alert.workItemId || alert.type}-${idx}`} 
-                                    className={styles.alertItem}
-                                    data-severity={alert.severity}
-                                    onClick={() => {
-                                      if (alert.workItemId) {
-                                        // Navigate to backlog with work item highlighted
-                                        navigate(`/?highlight=${alert.workItemId}`);
-                                      }
-                                    }}
-                                    style={{ cursor: alert.workItemId ? 'pointer' : 'default' }}
-                                  >
-                                    <div className={styles.alertIcon}>
-                                      {alert.type === 'blocked' ? '🚧' : alert.type === 'stuck' ? '⚠️' : '📅'}
-                                    </div>
-                                    <div className={styles.alertContent}>
-                                      <div className={styles.alertTitle}>{alert.message}</div>
-                                      <div className={styles.alertMeta}>
-                                        {alert.objectiveTitle}
-                                        {alert.workItemId && <span className={styles.clickHint}> • Click to view</span>}
-                                      </div>
-                                    </div>
-                                    <div className={styles.alertBadge} data-severity={alert.severity}>
-                                      {alert.severity === 'critical' ? 'Critical' : 'Warning'}
-                                    </div>
-                                  </div>
-                                ))}
-                                {allAlerts.length > 4 && (
-                                  <div className={styles.objectivesMore}>
-                                    +{allAlerts.length - 4} more alerts
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className={styles.objectivesList}>
-                                {forecast.objectiveForecasts.slice(0, 3).map((obj) => (
-                                  <div key={obj.objectiveId} className={styles.objectiveItem}>
-                                    <span className={styles.objectiveName}>{obj.objectiveTitle}</span>
-                                    <span className={styles.objectiveWeeks}>{obj.leadTimeWeeks} weeks</span>
-                                  </div>
-                                ))}
-                                {forecast.objectiveForecasts.length > 3 && (
-                                  <div className={styles.objectivesMore}>
-                                    +{forecast.objectiveForecasts.length - 3} more objectives
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </>
-                        );
-                      })()}
+                  {/* Today marker */}
+                  {todayOffset >= 0 && todayOffset <= totalDays && (
+                    <div
+                      className={styles.todayLine}
+                      style={{ left: todayPos }}
+                    >
+                      <div className={styles.todayLabel}>Today</div>
                     </div>
                   )}
                 </div>
-              );
-            })}
-          </>
+              </div>
+            </div>
+
+            {/* Gantt Body */}
+            <div className={styles.ganttBody}>
+              {projects.map(project => {
+                const objectives = projectObjectives[project.id] || [];
+                const projectWorkItems = workItems.filter(wi =>
+                  objectives.some(obj => obj.id === wi.objectiveId)
+                );
+                const forecast = forecasts[project.id];
+                
+                return (
+                  <ProjectRow
+                    key={project.id}
+                    project={project}
+                    objectives={objectives}
+                    workItems={projectWorkItems}
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    timelineWidth={timelineWidth}
+                    totalWeeks={totalWeeks}
+                    weekWidth={weekWidth}
+                    forecast={forecast}
+                  />
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
     </div>

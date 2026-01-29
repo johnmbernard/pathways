@@ -29,22 +29,32 @@ export function Button({
 }
 
 // Badge component
-export function Badge({ children, variant = 'default', className = '' }) {
+export function Badge({ children, variant = 'default', size = 'md', className = '' }) {
   const variantClasses = {
     default: styles.badgeSecondary,
     primary: styles.badgePrimary,
+    secondary: styles.badgeSecondary,
     success: styles.badgeSuccess,
     warning: styles.badgeWarning,
+    danger: styles.badgeDanger,
     error: styles.badgeDanger,
+    info: styles.badgeInfo,
     tier1: styles.badgePrimary,
     tier2: styles.badgePrimary,
     tier3: styles.badgePrimary,
   };
   
+  const sizeClasses = {
+    sm: styles.badgeSm,
+    md: '',
+    lg: styles.badgeLg,
+  };
+  
   const variantClass = variantClasses[variant] || styles.badgeSecondary;
+  const sizeClass = sizeClasses[size] || '';
   
   return (
-    <span className={`${styles.badge} ${variantClass} ${className}`}>
+    <span className={`${styles.badge} ${variantClass} ${sizeClass} ${className}`}>
       {children}
     </span>
   );
