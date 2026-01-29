@@ -140,12 +140,16 @@ export default function ProjectInitiation() {
         {/* Show refinement button if: (1) user owns the project OR (2) user's unit is assigned to any objective */}
         {project.objectives && project.objectives.length > 0 && (() => {
           const isProjectOwner = project.ownerUnit === currentUser?.organizationalUnit;
-          const hasAssignedObjectives = project.objectives.some(obj => 
+          
+          // Only show top-level objectives (created by project owner, no parent)
+          const topLevelObjectives = project.objectives.filter(obj => !obj.parentObjectiveId);
+          
+          const hasAssignedObjectives = topLevelObjectives.some(obj => 
             obj.assignedUnits?.some(assignment => assignment.unitId === currentUser?.organizationalUnit)
           );
           
           // Count released vs total objectives (only count objectives with assigned units)
-          const objectivesWithUnits = project.objectives.filter(obj => 
+          const objectivesWithUnits = topLevelObjectives.filter(obj => 
             obj.assignedUnits && obj.assignedUnits.length > 0
           );
           const totalObjectives = objectivesWithUnits.length;
@@ -818,11 +822,14 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
           {(() => {
             const isProjectOwner = project.ownerUnit === currentUser?.organizationalUnit;
             
+            // Only show top-level objectives (created by project owner, no parent)
+            const topLevelObjectives = project.objectives.filter(obj => !obj.parentObjectiveId);
+            
             // Split objectives into complete (with units) and incomplete (without units)
-            const completeObjectives = project.objectives.filter(obj => 
+            const completeObjectives = topLevelObjectives.filter(obj => 
               obj.assignedUnits && obj.assignedUnits.length > 0
             );
-            const incompleteObjectives = project.objectives.filter(obj => 
+            const incompleteObjectives = topLevelObjectives.filter(obj => 
               !obj.assignedUnits || obj.assignedUnits.length === 0
             );
             
@@ -834,7 +841,7 @@ function RefinementModal({ project, onClose, onStartRefinement }) {
                   objective.assignedUnits?.some(assignment => assignment.unitId === currentUser?.organizationalUnit)
                 );
             
-            if (project.objectives.length === 0) {
+            if (topLevelObjectives.length === 0) {
               return (
                 <div className={styles.emptyObjectives}>
                   <AlertTriangle size={24} />
