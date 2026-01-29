@@ -7,7 +7,7 @@ import { Button, Badge, HelpTooltip } from '../components/ui';
 import { Calendar, Users, FolderOpen, ChevronRight, ChevronDown, Target, CheckSquare } from 'lucide-react';
 import { PageHeader } from '../components/layout/Layout';
 import { API_BASE_URL } from '../config';
-import styles from './WorkItemsPage.module.css';
+import styles from './BacklogPage.module.css';
 
 // Recursive Objective Row - dynamically handles any tier depth
 function ObjectiveRow({ objective, allObjectives, workItems, depth = 0 }) {
@@ -178,7 +178,7 @@ function ProjectRow({ project, workItemCount, owningUnit, objectives, workItems 
   );
 }
 
-export default function WorkItemsPage() {
+export default function BacklogPage() {
   const { projects, fetchProjects } = useProjectsStore();
   const { items, fetchWorkItems } = useWorkItemsStore();
   const { units } = useOrganizationStore();
