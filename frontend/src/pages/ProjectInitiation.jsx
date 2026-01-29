@@ -8,7 +8,8 @@ import useRefinementStore from '../store/refinementStore';
 import { API_BASE_URL } from '../config';
 import { PageHeader } from '../components/layout/Layout';
 import { Button, Badge, HelpTooltip } from '../components/ui';
-import { Plus, Calendar, DollarSign, Users, FolderOpen, AlertTriangle, Pencil, Trash2, X, PlayCircle } from 'lucide-react';
+import DependencyManager from '../components/DependencyManager';
+import { Plus, Calendar, DollarSign, Users, FolderOpen, AlertTriangle, Pencil, Trash2, X, PlayCircle, Link2 } from 'lucide-react';
 import styles from './ProjectInitiation.module.css';
 
 export default function ProjectInitiation() {
@@ -254,6 +255,7 @@ export default function ProjectInitiation() {
 
     const [newObjective, setNewObjective] = useState({ title: '', targetDate: '', assignedUnits: [] });
     const [editingObjectiveId, setEditingObjectiveId] = useState(null);
+    const [managingDependenciesFor, setManagingDependenciesFor] = useState(null);
 
     // Get units for current tier
     const currentTierUnits = useMemo(() => {
@@ -574,6 +576,19 @@ export default function ProjectInitiation() {
                       <div className={styles.objectiveActions}>
                         <button
                           type="button"
+                          onClick={() => setManagingDependenciesFor(obj)}
+                          className={styles.dependencyButton}
+                          title="Manage dependencies"
+                        >
+                          <Link2 size={14} />
+                          {(obj.dependenciesFrom?.length || 0) + (obj.dependenciesTo?.length || 0) > 0 && (
+                            <span className={styles.dependencyCount}>
+                              {(obj.dependenciesFrom?.length || 0) + (obj.dependenciesTo?.length || 0)}
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleEditObjective(obj)}
                           className={styles.editButton}
                           title="Edit objective"
@@ -670,6 +685,19 @@ export default function ProjectInitiation() {
             </div>
           </form>
         </div>
+        
+        {/* Dependency Manager Modal */}
+        {managingDependenciesFor && (
+          <DependencyManager
+            objective={managingDependenciesFor}
+            allObjectives={projects.flatMap(p => p.objectives || [])}
+            onClose={() => setManagingDependenciesFor(null)}
+            onUpdate={() => {
+              // Refresh projects to get updated dependencies
+              fetchProjects();
+            }}
+          />
+        )}
       </div>
     );
   };
