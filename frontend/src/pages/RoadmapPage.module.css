@@ -134,24 +134,25 @@
 
 .ganttTimelineHeader {
   position: relative;
-  height: 70px;
+  height: 80px;
   min-width: 100%;
   padding-top: 0.5rem;
 }
 
 .monthLabel {
   position: absolute;
-  top: 0.25rem;
+  top: 0.5rem;
   font-size: 0.875rem;
   font-weight: 600;
   color: #374151;
   padding: 0 0.5rem;
   white-space: nowrap;
+  z-index: 5;
 }
 
 .weekLine {
   position: absolute;
-  top: 0;
+  top: 30px;
   bottom: 0;
   width: 1px;
   background: #e5e7eb;
@@ -167,13 +168,13 @@
 
 .weekDateLabel {
   position: absolute;
-  bottom: 0.5rem;
+  top: -26px;
   left: 2px;
   font-size: 0.625rem;
-  color: #9ca3af;
+  color: #6b7280;
   font-weight: 500;
   white-space: nowrap;
-  background: white;
+  background: transparent;
   padding: 0 2px;
 }
 
