@@ -75,13 +75,6 @@ export default function NavBar({ onOpenHierarchy }) {
                 Organization
               </Link>
               <Link
-                to="/app"
-                className={`${styles.navItem} ${isActive('/app') || isActive('/app/') ? styles.active : ''}`}
-              >
-                <List className={styles.navItemIcon} size={18} />
-                Backlog
-              </Link>
-              <Link
                 to="/app/projects"
                 className={`${styles.navItem} ${isActive('/app/projects') ? styles.active : ''}`}
               >
@@ -94,6 +87,13 @@ export default function NavBar({ onOpenHierarchy }) {
               >
                 <ClipboardList className={styles.navItemIcon} size={18} />
                 My Refinements
+              </Link>
+              <Link
+                to="/app"
+                className={`${styles.navItem} ${isActive('/app') || isActive('/app/') ? styles.active : ''}`}
+              >
+                <List className={styles.navItemIcon} size={18} />
+                Backlog
               </Link>
               <Link
                 to="/app/roadmap"
