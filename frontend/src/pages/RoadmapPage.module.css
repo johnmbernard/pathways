@@ -172,12 +172,17 @@
   position: absolute;
   top: 30px;
   left: 2px;
-  font-size: 0.7rem;
-  color: #374151;
+  font-size: 0.75rem;
+  color: #111827;
   font-weight: 600;
   white-space: nowrap;
   pointer-events: none;
   z-index: 5;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1px 3px;
+  border-radius: 2px;
+  display: inline-block;
+  min-width: fit-content;
 }
 
 .todayLine {
