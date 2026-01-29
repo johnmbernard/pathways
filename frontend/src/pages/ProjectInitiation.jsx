@@ -144,41 +144,69 @@ export default function ProjectInitiation() {
             obj.assignedUnits?.some(assignment => assignment.unitId === currentUser?.organizationalUnit)
           );
           
-          // Count released vs total objectives
-          const totalObjectives = project.objectives.length;
-          const releasedObjectives = project.objectives.filter(obj => 
+          // Count released vs total objectives (only count objectives with assigned units)
+          const objectivesWithUnits = project.objectives.filter(obj => 
+            obj.assignedUnits && obj.assignedUnits.length > 0
+          );
+          const totalObjectives = objectivesWithUnits.length;
+          const releasedObjectives = objectivesWithUnits.filter(obj => 
             sessions.some(s => s.projectId === project.id && s.objectiveId === obj.id)
           ).length;
           
-          // Determine button text based on release status
+          // Determine button text and whether to show released badge
           let buttonText = 'Start Refinement';
+          let showReleasedBadge = false;
+          
           if (releasedObjectives === totalObjectives && totalObjectives > 0) {
-            buttonText = 'Released';
+            buttonText = 'Add Scope';
+            showReleasedBadge = true;
           } else if (releasedObjectives > 0) {
             buttonText = 'In Progress';
           }
           
+          const handleButtonClick = () => {
+            if (buttonText === 'Add Scope') {
+              // Open edit modal to add new objectives
+              setEditingProject(project);
+            } else {
+              // Open refinement modal
+              setRefinementProject(project);
+            }
+          };
+          
           return (isProjectOwner || hasAssignedObjectives) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {showReleasedBadge && (
+                <Badge variant="success">Released</Badge>
+              )}
               <button
-                onClick={() => setRefinementProject(project)}
+                onClick={handleButtonClick}
                 className={styles.refinementButton}
               >
-                <PlayCircle size={16} />
+                {buttonText === 'Add Scope' ? <Plus size={16} /> : <PlayCircle size={16} />}
                 {buttonText}
               </button>
               <HelpTooltip
-                title="Release for Refinement"
+                title={buttonText === 'Add Scope' ? 'Add Scope' : 'Release for Refinement'}
                 content={
                   <div>
-                    <p>Release objectives to assigned units for collaborative refinement.</p>
-                    <p><strong>Release Status:</strong></p>
-                    <ul>
-                      <li><strong>Start Refinement:</strong> No objectives released yet</li>
-                      <li><strong>In Progress:</strong> Some objectives released, more to go</li>
-                      <li><strong>Released:</strong> All objectives released to teams</li>
-                    </ul>
-                    <p>Release objectives one at a time or in batches based on priority. Once released, assigned units can begin breaking them down.</p>
+                    {buttonText === 'Add Scope' ? (
+                      <>
+                        <p>All objectives have been released. Add new objectives to expand project scope.</p>
+                        <p>After adding new objectives, the project will return to "In Progress" status until the new objectives are released.</p>
+                      </>
+                    ) : (
+                      <>
+                        <p>Release objectives to assigned units for collaborative refinement.</p>
+                        <p><strong>Release Status:</strong></p>
+                        <ul>
+                          <li><strong>Start Refinement:</strong> No objectives released yet</li>
+                          <li><strong>In Progress:</strong> Some objectives released, more to go</li>
+                          <li><strong>Released:</strong> All objectives released to teams</li>
+                        </ul>
+                        <p>Release objectives one at a time or in batches based on priority. Once released, assigned units can begin breaking them down.</p>
+                      </>
+                    )}
                   </div>
                 }
                 size="small"
@@ -305,15 +333,19 @@ export default function ProjectInitiation() {
           
           // Save objectives for existing project
           if (formData.objectives && formData.objectives.length > 0) {
+            console.log('Saving objectives:', formData.objectives);
+            
             for (const obj of formData.objectives) {
               if (obj.id && !obj.id.startsWith('temp-')) {
                 // Update existing objective
+                console.log('Updating objective:', obj.id);
+                
                 // Extract unit IDs from assignedUnits (handles both array of IDs and array of objects)
                 const unitIds = obj.assignedUnits?.map(item => 
                   typeof item === 'string' ? item : (item.unitId || item.unit?.id || item.id)
                 ).filter(Boolean) || [];
                 
-                await fetch(`${API_BASE_URL}/objectives/${obj.id}`, {
+                const response = await fetch(`${API_BASE_URL}/objectives/${obj.id}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -322,24 +354,42 @@ export default function ProjectInitiation() {
                     assignedUnits: unitIds,
                   }),
                 });
+                
+                if (!response.ok) {
+                  const errorData = await response.json();
+                  console.error('Failed to update objective:', errorData);
+                  throw new Error(`Failed to update objective: ${errorData.error || response.statusText}`);
+                }
               } else {
                 // Create new objective
+                console.log('Creating new objective:', obj);
+                
                 // Extract unit IDs from assignedUnits (handles both array of IDs and array of objects)
                 const unitIds = obj.assignedUnits?.map(item => 
                   typeof item === 'string' ? item : (item.unitId || item.unit?.id || item.id)
                 ).filter(Boolean) || [];
                 
-                await fetch(`${API_BASE_URL}/objectives`, {
+                const response = await fetch(`${API_BASE_URL}/objectives`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     title: obj.title,
+                    description: obj.description,
                     targetDate: obj.targetDate,
                     projectId: project.id,
                     assignedUnits: unitIds,
                     createdBy: currentUser?.id,
                   }),
                 });
+                
+                if (!response.ok) {
+                  const errorData = await response.json();
+                  console.error('Failed to create objective:', errorData);
+                  throw new Error(`Failed to create objective: ${errorData.error || response.statusText}`);
+                }
+                
+                const newObjective = await response.json();
+                console.log('Created objective:', newObjective);
               }
             }
           }
@@ -357,6 +407,7 @@ export default function ProjectInitiation() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   title: obj.title,
+                  description: obj.description,
                   targetDate: obj.targetDate,
                   projectId: savedProject.id,
                   assignedUnits: obj.assignedUnits || [],
@@ -372,7 +423,7 @@ export default function ProjectInitiation() {
         onClose();
       } catch (error) {
         console.error('Error saving project:', error);
-        alert('Failed to save project');
+        alert(`Failed to save project: ${error.message}`);
       }
     };
 
