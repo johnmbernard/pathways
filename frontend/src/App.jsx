@@ -1,6 +1,6 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import WorkItemsPage from './pages/WorkItemsPage'
+import BacklogPage from './pages/BacklogPage'
 import OrganizationBuilder from './pages/OrganizationBuilder'
 import ProjectInitiation from './pages/ProjectInitiation'
 import RefinementPage from './pages/RefinementPage'
@@ -37,7 +37,7 @@ function App() {
                   <NavBar onOpenHierarchy={() => setHierarchyOpen(true)} />
                   <main className="flex-1 overflow-auto">
                     <Routes>
-                      <Route path="/" element={<ProtectedRoute><WorkItemsPage hierarchyOpen={hierarchyOpen} setHierarchyOpen={setHierarchyOpen} /></ProtectedRoute>} />
+                      <Route path="/" element={<ProtectedRoute><BacklogPage hierarchyOpen={hierarchyOpen} setHierarchyOpen={setHierarchyOpen} /></ProtectedRoute>} />
                       <Route path="/organization" element={<ProtectedRoute><OrganizationBuilder /></ProtectedRoute>} />
                       <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
                       <Route path="/projects" element={<ProtectedRoute><ProjectInitiation /></ProtectedRoute>} />
