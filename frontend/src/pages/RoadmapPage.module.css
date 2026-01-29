@@ -172,19 +172,23 @@
   position: absolute;
   top: 30px;
   left: 2px;
-  font-size: 0.75rem !important;
-  color: #111827 !important;
-  font-weight: 600 !important;
+  font-size: 11px !important;
+  color: #ff0000 !important;
+  font-weight: 700 !important;
   white-space: nowrap;
   pointer-events: none;
-  z-index: 5;
-  background: rgba(255, 255, 255, 0.9) !important;
-  padding: 2px 4px !important;
-  border-radius: 2px;
+  z-index: 100;
+  background: #ffff00 !important;
+  padding: 4px 6px !important;
+  border: 2px solid #ff0000 !important;
+  border-radius: 3px;
   display: inline-block !important;
-  line-height: 1.2 !important;
-  height: auto !important;
-  width: auto !important;
+  line-height: 1.4 !important;
+  min-height: 20px !important;
+  min-width: 35px !important;
+  text-align: center;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .todayLine {
