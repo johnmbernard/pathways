@@ -489,6 +489,63 @@ async function forecastTeamObjective(teamId, itemCount, earliestStart, workItems
   };
 }
 
+/**
+ * Identify which objectives are on the critical path
+ * An objective is on the critical path if any delay would push out the project end date
+ * @param {Array} objectiveForecasts - All objective forecast results
+ * @param {Date} projectFinish - Overall project finish date
+ * @param {Array} dependencies - All dependencies
+ * @returns {Set} Set of objective IDs on critical path
+ */
+function identifyCriticalPath(objectiveForecasts, projectFinish, dependencies) {
+  const criticalPath = new Set();
+  
+  // Find objectives that finish at or near project completion
+  const projectFinishTime = new Date(projectFinish).getTime();
+  
+  // Start with objectives that determine project end (within 1 day tolerance)
+  const criticalLeaves = objectiveForecasts.filter(obj => {
+    const objFinish = new Date(obj.consolidatedFinish).getTime();
+    return Math.abs(objFinish - projectFinishTime) < (24 * 60 * 60 * 1000); // Within 1 day
+  });
+  
+  // Add these to critical path
+  criticalLeaves.forEach(obj => criticalPath.add(obj.objectiveId));
+  
+  // Walk backwards through dependencies to find all objectives on critical chain
+  const queue = [...criticalLeaves];
+  const visited = new Set();
+  
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (visited.has(current.objectiveId)) continue;
+    visited.add(current.objectiveId);
+    
+    // Find all predecessors of this objective
+    const predecessors = dependencies
+      .filter(dep => dep.type === 'FS' && dep.successorId === current.objectiveId)
+      .map(dep => dep.predecessorId);
+    
+    predecessors.forEach(predId => {
+      const predForecast = objectiveForecasts.find(obj => obj.objectiveId === predId);
+      if (predForecast) {
+        // Check if predecessor's finish directly feeds into current's start
+        const predFinish = new Date(predForecast.consolidatedFinish).getTime();
+        const currentStart = new Date(current.consolidatedStart).getTime();
+        
+        // If there's no slack (finish -> start), it's on critical path
+        const slack = (currentStart - predFinish) / (1000 * 60 * 60 * 24); // days
+        if (slack <= 1) { // Within 1 day tolerance
+          criticalPath.add(predId);
+          queue.push(predForecast);
+        }
+      }
+    });
+  }
+  
+  return criticalPath;
+}
+
 // ============================================
 // PROJECT-LEVEL FORECASTING
 // ============================================
@@ -676,20 +733,32 @@ export async function forecastProject(projectId) {
     predecessorResults.set(objective.id, forecastResult);
   }
   
+  // Step 3: Identify critical path
   // Project completes when last objective completes
-  const latestObjective = objectiveForecasts.length > 0
-    ? objectiveForecasts.reduce((latest, obj) => 
-        obj.leadTimeWeeks > (latest.leadTimeWeeks || 0) ? obj : latest
-      , objectiveForecasts[0])
-    : { leadTimeWeeks: 0, estimatedDate: null };
+  const latestFinish = objectiveForecasts.length > 0
+    ? objectiveForecasts.reduce((latest, obj) => {
+        const objFinish = new Date(obj.consolidatedFinish);
+        const latestFinish = new Date(latest.consolidatedFinish);
+        return objFinish > latestFinish ? obj : latest;
+      }, objectiveForecasts[0])
+    : null;
+  
+  const projectFinish = latestFinish ? new Date(latestFinish.consolidatedFinish) : new Date();
+  const criticalPathIds = identifyCriticalPath(objectiveForecasts, projectFinish, dependencies);
+  
+  // Mark objectives on critical path
+  objectiveForecasts.forEach(obj => {
+    obj.isOnCriticalPath = criticalPathIds.has(obj.objectiveId);
+  });
   
   return {
     projectId: project.id,
     projectTitle: project.title,
     targetDate: project.targetDate,
-    estimatedDate: latestObjective.estimatedDate,
-    leadTimeWeeks: latestObjective.leadTimeWeeks || 0,
+    estimatedDate: latestFinish?.estimatedDate || null,
+    leadTimeWeeks: latestFinish?.leadTimeWeeks || 0,
     objectiveForecasts,
+    criticalPathObjectiveIds: Array.from(criticalPathIds),
   };
 }
 
@@ -706,4 +775,5 @@ export default {
   topologicalSort,
   calculateEarliestStart,
   forecastTeamObjective,
+  identifyCriticalPath,
 };
