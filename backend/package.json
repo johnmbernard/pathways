@@ -8,6 +8,7 @@
     "dev": "node --watch server.js",
     "start": "node server.js",
     "seed": "node prisma/seedComprehensive.js",
+    "seed:production": "node prisma/seedProduction.js",
     "seed:reset": "npx prisma migrate reset --force && node prisma/seedComprehensive.js",
     "seed:old": "node prisma/seed.js"
   },
