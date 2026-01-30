@@ -751,6 +751,42 @@ export async function forecastProject(projectId) {
     obj.isOnCriticalPath = criticalPathIds.has(obj.objectiveId);
   });
   
+  // Generate project-level alerts
+  const projectAlerts = [];
+  
+  if (project.targetDate && latestFinish) {
+    const projectTargetDate = new Date(project.targetDate);
+    const projectEstimatedDate = new Date(latestFinish.consolidatedFinish);
+    const projectVariance = Math.floor((projectEstimatedDate - projectTargetDate) / (1000 * 60 * 60 * 24));
+    
+    if (projectVariance > 0) {
+      // Project is behind schedule
+      const criticalObjectives = objectiveForecasts.filter(obj => obj.isOnCriticalPath);
+      const behindObjectives = criticalObjectives.filter(obj => 
+        obj.alerts.some(alert => alert.type === 'behind_schedule')
+      );
+      
+      projectAlerts.push({
+        type: 'project_behind_schedule',
+        severity: projectVariance > 14 ? 'critical' : 'warning',
+        message: `Project is ${projectVariance} days behind target date`,
+        daysLate: projectVariance,
+        criticalPathCount: criticalObjectives.length,
+        behindObjectiveIds: behindObjectives.map(obj => obj.objectiveId),
+      });
+      
+      // Add specific alert about critical path objectives
+      if (behindObjectives.length > 0) {
+        projectAlerts.push({
+          type: 'critical_path_delay',
+          severity: 'warning',
+          message: `${behindObjectives.length} objective(s) on critical path are behind schedule`,
+          affectedObjectiveIds: behindObjectives.map(obj => obj.objectiveId),
+        });
+      }
+    }
+  }
+  
   return {
     projectId: project.id,
     projectTitle: project.title,
@@ -759,6 +795,7 @@ export async function forecastProject(projectId) {
     leadTimeWeeks: latestFinish?.leadTimeWeeks || 0,
     objectiveForecasts,
     criticalPathObjectiveIds: Array.from(criticalPathIds),
+    alerts: projectAlerts,
   };
 }
 
