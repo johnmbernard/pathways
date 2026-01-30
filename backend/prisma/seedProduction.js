@@ -1155,7 +1155,244 @@ async function main() {
 
   console.log('✅ Created 20+ objectives with dependencies');
 
-  console.log('🌱 Seed complete! Ready to add work items and throughput data...');
+  // ============================================
+  // REFINEMENT SESSIONS & WORK ITEMS
+  // ============================================
+  console.log('📝 Creating refinement sessions and work items...');
+
+  // Create refinement session for Portal v2 Backend
+  const portal2BackendSession = await prisma.refinementSession.create({
+    data: {
+      projectId: portal2.id,
+      objectiveId: portal2Backend.id,
+      status: 'completed',
+      createdBy: getUserByUnit(backendDept.id).id,
+      completedAt: daysAgo(5),
+    },
+  });
+
+  // Work items for Portal v2 Backend (Backend Alpha team)
+  const portal2BackendItems = [
+    { title: 'Design API authentication system', priority: 'P1', status: 'Done', completedAt: daysAgo(20) },
+    { title: 'Implement user management endpoints', priority: 'P1', status: 'Done', completedAt: daysAgo(18) },
+    { title: 'Build dashboard data aggregation API', priority: 'P1', status: 'In Progress', completedAt: null },
+    { title: 'Create notification service', priority: 'P2', status: 'Ready', completedAt: null },
+    { title: 'Implement search functionality', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Add rate limiting middleware', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Build reporting API', priority: 'P3', status: 'Backlog', completedAt: null },
+    { title: 'Add API versioning', priority: 'P3', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of portal2BackendItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: portal2BackendSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: backendAlpha.id,
+        createdBy: getUserByUnit(backendAlpha.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // Work items for Portal v2 Frontend (Frontend Alpha team)
+  const portal2FrontendSession = await prisma.refinementSession.create({
+    data: {
+      projectId: portal2.id,
+      objectiveId: portal2Frontend.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(frontendDept.id).id,
+    },
+  });
+
+  const portal2FrontendItems = [
+    { title: 'Setup React app with TypeScript', priority: 'P1', status: 'Done', completedAt: daysAgo(15) },
+    { title: 'Create design system components', priority: 'P1', status: 'Done', completedAt: daysAgo(12) },
+    { title: 'Build authentication flow', priority: 'P1', status: 'In Progress', completedAt: null },
+    { title: 'Implement dashboard UI', priority: 'P1', status: 'Ready', completedAt: null },
+    { title: 'Create user profile pages', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Build notification center', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Add dark mode support', priority: 'P3', status: 'Backlog', completedAt: null },
+    { title: 'Implement accessibility features', priority: 'P2', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of portal2FrontendItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: portal2FrontendSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: frontendAlpha.id,
+        createdBy: getUserByUnit(frontendAlpha.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // Work items for Cloud Migration
+  const cloudInfraSession = await prisma.refinementSession.create({
+    data: {
+      projectId: cloudMigration.id,
+      objectiveId: cloudInfra.id,
+      status: 'completed',
+      createdBy: getUserByUnit(devopsDept.id).id,
+      completedAt: daysAgo(3),
+    },
+  });
+
+  const cloudInfraItems = [
+    { title: 'Create AWS organization structure', priority: 'P1', status: 'Done', completedAt: daysAgo(25) },
+    { title: 'Setup VPC and subnets', priority: 'P1', status: 'Done', completedAt: daysAgo(22) },
+    { title: 'Configure security groups', priority: 'P1', status: 'Done', completedAt: daysAgo(20) },
+    { title: 'Setup NAT gateways', priority: 'P1', status: 'In Progress', completedAt: null },
+    { title: 'Configure VPN connection', priority: 'P2', status: 'Ready', completedAt: null },
+    { title: 'Setup AWS Transit Gateway', priority: 'P2', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of cloudInfraItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: cloudInfraSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: devopsInfra.id,
+        createdBy: getUserByUnit(devopsInfra.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  const cloudSecuritySession = await prisma.refinementSession.create({
+    data: {
+      projectId: cloudMigration.id,
+      objectiveId: cloudSecurity.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(secEngDept.id).id,
+    },
+  });
+
+  const cloudSecurityItems = [
+    { title: 'Setup IAM roles and policies', priority: 'P1', status: 'Ready', completedAt: null },
+    { title: 'Enable AWS CloudTrail', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Configure AWS GuardDuty', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Setup AWS Security Hub', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Implement KMS encryption', priority: 'P1', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of cloudSecurityItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: cloudSecuritySession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: secOps.id,
+        createdBy: getUserByUnit(secOps.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // Add O&M work items (not tied to projects) for various teams
+  console.log('🔧 Creating O&M work items...');
+
+  const omItems = [
+    // Backend teams O&M
+    { team: backendAlpha, title: 'Fix memory leak in user service', priority: 'P1', status: 'In Progress' },
+    { team: backendAlpha, title: 'Upgrade database driver version', priority: 'P2', status: 'Backlog' },
+    { team: backendAlpha, title: 'Optimize slow query on reports table', priority: 'P2', status: 'Backlog' },
+    { team: backendBeta, title: 'Address API performance degradation', priority: 'P1', status: 'Ready' },
+    { team: backendBeta, title: 'Update API documentation', priority: 'P3', status: 'Backlog' },
+    { team: backendGamma, title: 'Fix broken webhook notifications', priority: 'P1', status: 'Blocked' },
+    { team: backendGamma, title: 'Implement request caching', priority: 'P2', status: 'Backlog' },
+    
+    // Frontend teams O&M
+    { team: frontendAlpha, title: 'Fix mobile responsive issues', priority: 'P1', status: 'In Progress' },
+    { team: frontendAlpha, title: 'Update to React 18', priority: 'P2', status: 'Backlog' },
+    { team: frontendBeta, title: 'Address accessibility violations', priority: 'P1', status: 'Ready' },
+    { team: frontendBeta, title: 'Optimize bundle size', priority: 'P2', status: 'Backlog' },
+    
+    // DevOps O&M
+    { team: devopsInfra, title: 'Upgrade Kubernetes cluster', priority: 'P1', status: 'Ready' },
+    { team: devopsInfra, title: 'Patch security vulnerabilities', priority: 'P1', status: 'In Progress' },
+    { team: devopsPlatform, title: 'Improve CI/CD pipeline speed', priority: 'P2', status: 'Backlog' },
+    { team: devopsPlatform, title: 'Setup cost monitoring dashboards', priority: 'P3', status: 'Backlog' },
+    
+    // QA O&M
+    { team: qaAutomation, title: 'Fix flaky integration tests', priority: 'P1', status: 'In Progress' },
+    { team: qaAutomation, title: 'Add test coverage for new features', priority: 'P2', status: 'Backlog' },
+    { team: qaManual, title: 'Update test cases for v2 features', priority: 'P2', status: 'Backlog' },
+    
+    // Security O&M
+    { team: secOps, title: 'Investigate suspicious login attempts', priority: 'P1', status: 'Done', completedAt: daysAgo(3) },
+    { team: secOps, title: 'Update firewall rules', priority: 'P2', status: 'Backlog' },
+    { team: secAppSec, title: 'Conduct security code review', priority: 'P1', status: 'Ready' },
+    { team: secAppSec, title: 'Update security scanning tools', priority: 'P2', status: 'Backlog' },
+  ];
+
+  for (const [idx, item] of omItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: item.team.id,
+        createdBy: getUserByUnit(item.team.id).id,
+        completedAt: item.completedAt || null,
+      },
+    });
+  }
+
+  console.log('✅ Created 60+ work items (project + O&M)');
+
+  // ============================================
+  // HISTORICAL THROUGHPUT DATA
+  // ============================================
+  console.log('📊 Creating historical throughput data...');
+
+  // Generate 12 weeks of throughput data for each leaf team
+  for (const team of leafTeams) {
+    for (let weekOffset = 12; weekOffset > 0; weekOffset--) {
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - (weekOffset * 7));
+      weekStart.setHours(0, 0, 0, 0);
+      
+      // Vary throughput by team type (some teams faster than others)
+      let baseRate = 2; // Default 2 items/week
+      if (team.name.includes('Backend') || team.name.includes('Frontend')) {
+        baseRate = 3; // Dev teams slightly faster
+      } else if (team.name.includes('QA')) {
+        baseRate = 4; // QA can process more items
+      } else if (team.name.includes('Security')) {
+        baseRate = 2; // Security more thorough, slower
+      }
+      
+      // Add some randomness (+/- 1)
+      const itemsCompleted = Math.max(1, baseRate + Math.floor(Math.random() * 3) - 1);
+      
+      await prisma.teamThroughput.create({
+        data: {
+          teamId: team.id,
+          weekStartDate: weekStart,
+          itemsCompleted,
+        },
+      });
+    }
+  }
+
+  console.log('✅ Created 12 weeks of throughput data for all leaf teams');
+
+  console.log('🌱 Seed data created successfully!');
+}
 }
 
 main()
