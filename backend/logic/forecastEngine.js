@@ -21,7 +21,7 @@ import prisma from '../lib/prisma.js';
  * @param {number} weeksToAnalyze - Rolling window (default 6 weeks)
  * @returns {Promise<number>} Average items completed per week
  */
-export async function calculateTeamThroughput(teamId, weeksToAnalyze = 6) {
+async function calculateTeamThroughput(teamId, weeksToAnalyze = 6) {
   // Get throughput records for this team from last N weeks
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - (weeksToAnalyze * 7));
@@ -68,7 +68,7 @@ async function calculateThroughputFromWorkItems(teamId, weeksToAnalyze) {
 /**
  * Get all teams' throughput in one query (for dashboard)
  */
-export async function calculateAllTeamsThroughput(weeksToAnalyze = 6) {
+async function calculateAllTeamsThroughput(weeksToAnalyze = 6) {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - (weeksToAnalyze * 7));
   
@@ -101,7 +101,7 @@ export async function calculateAllTeamsThroughput(weeksToAnalyze = 6) {
  * @param {string} teamId - Organizational unit ID
  * @returns {Promise<Object>} Counts by priority
  */
-export async function getQueueCounts(teamId) {
+async function getQueueCounts(teamId) {
   const workItems = await prisma.workItem.findMany({
     where: {
       assignedOrgUnit: teamId,
@@ -137,7 +137,7 @@ export async function getQueueCounts(teamId) {
  * @param {string} teamId - Organizational unit ID
  * @returns {Promise<Object>} Lead time forecast
  */
-export async function forecastWorkItem(workItemId, teamId) {
+async function forecastWorkItem(workItemId, teamId) {
   // Get the work item
   const workItem = await prisma.workItem.findUnique({
     where: { id: workItemId },
@@ -226,7 +226,7 @@ export async function forecastWorkItem(workItemId, teamId) {
  * @param {string} teamId - Organizational unit ID
  * @returns {Promise<Object>} Team load analysis
  */
-export async function calculateTeamLoad(teamId) {
+async function calculateTeamLoad(teamId) {
   const throughput = await calculateTeamThroughput(teamId);
   const queue = await getQueueCounts(teamId);
   
@@ -273,7 +273,7 @@ export async function calculateTeamLoad(teamId) {
  * @param {string} teamId - Organizational unit ID
  * @returns {Promise<Array>} Forecasts for all items
  */
-export async function forecastTeamBacklog(teamId) {
+async function forecastTeamBacklog(teamId) {
   const queue = await getQueueCounts(teamId);
   const throughput = await calculateTeamThroughput(teamId);
   
@@ -557,7 +557,7 @@ function identifyCriticalPath(objectiveForecasts, projectFinish, dependencies) {
  * @param {string} projectId - Project ID
  * @returns {Promise<Object>} Project timeline forecast
  */
-export async function forecastProject(projectId) {
+async function forecastProject(projectId) {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
@@ -812,7 +812,7 @@ export async function forecastProject(projectId) {
   };
 }
 
-export default {
+module.exports = {
   calculateTeamThroughput,
   calculateAllTeamsThroughput,
   getQueueCounts,
