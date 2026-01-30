@@ -434,6 +434,61 @@ function calculateEarliestStart(objectiveId, predecessorResults, dependencies, o
   return latestPredecessorFinish;
 }
 
+/**
+ * Forecast when a team can actually start and finish their portion of an objective
+ * considering their current queue and priorities
+ * @param {string} teamId - Team ID
+ * @param {number} itemCount - Number of work items for this objective
+ * @param {Date} earliestStart - Can't start before this date
+ * @param {Array} workItems - Work items for this objective
+ * @returns {Promise<Object>} Team-specific forecast
+ */
+async function forecastTeamObjective(teamId, itemCount, earliestStart, workItems) {
+  const teamLoad = await calculateTeamLoad(teamId);
+  const teamName = ''; // Will be filled by caller
+  
+  if (teamLoad.throughput === 0) {
+    return {
+      teamId,
+      teamName,
+      currentLoad: 0,
+      workItemCount: itemCount,
+      leadTimeWeeks: null,
+      teamStart: earliestStart.toISOString().split('T')[0],
+      teamFinish: earliestStart.toISOString().split('T')[0],
+      status: 'no_throughput_data',
+    };
+  }
+  
+  // Calculate when team can start based on queue
+  // If their P1/P2 queue has work, this objective waits
+  const queueDays = Math.ceil(teamLoad.totalLoadWeeks * 7);
+  const queueBasedStart = new Date();
+  queueBasedStart.setDate(queueBasedStart.getDate() + queueDays);
+  
+  // Actual start = max(earliest from dependencies, queue-based)
+  const teamStart = queueBasedStart > earliestStart ? queueBasedStart : earliestStart;
+  
+  // Duration for this team
+  const durationWeeks = itemCount / teamLoad.throughput;
+  const durationDays = Math.ceil(durationWeeks * 7);
+  
+  // Finish = start + duration
+  const teamFinish = new Date(teamStart);
+  teamFinish.setDate(teamFinish.getDate() + durationDays);
+  
+  return {
+    teamId,
+    teamName,
+    currentLoad: teamLoad.totalLoadWeeks,
+    workItemCount: itemCount,
+    leadTimeWeeks: Math.round(durationWeeks * 10) / 10,
+    teamStart: teamStart.toISOString().split('T')[0],
+    teamFinish: teamFinish.toISOString().split('T')[0],
+    queueDays,
+  };
+}
+
 // ============================================
 // PROJECT-LEVEL FORECASTING
 // ============================================
@@ -558,35 +613,30 @@ export async function forecastProject(projectId) {
       });
     });
     
-    // Get forecasts for each assigned team
+    // Get forecasts for each assigned team (Option B: teams start when they can)
     const teamForecasts = [];
     for (const assignment of objective.assignedUnits) {
-      const teamLoad = await calculateTeamLoad(assignment.unitId);
       const itemsForTeam = Math.ceil(workItems.length / objective.assignedUnits.length); // Assume even split
-      const leadTimeWeeks = teamLoad.throughput > 0 
-        ? (teamLoad.queue.total + itemsForTeam) / teamLoad.throughput 
-        : null;
-      
-      teamForecasts.push({
-        teamId: assignment.unitId,
-        teamName: assignment.unit.name,
-        currentLoad: teamLoad.totalLoadWeeks,
-        additionalItems: itemsForTeam,
-        leadTimeWeeks,
-      });
+      const teamForecast = await forecastTeamObjective(
+        assignment.unitId,
+        itemsForTeam,
+        earliestStart,
+        workItems
+      );
+      teamForecast.teamName = assignment.unit.name; // Add team name
+      teamForecasts.push(teamForecast);
     }
     
-    // Calculate duration = longest team lead time (teams work in parallel)
+    // Consolidate: start = earliest team start, finish = latest team finish
+    const teamStarts = teamForecasts.map(tf => new Date(tf.teamStart));
+    const teamFinishes = teamForecasts.map(tf => new Date(tf.teamFinish));
+    
+    const consolidatedStart = new Date(Math.min(...teamStarts));
+    const consolidatedFinish = new Date(Math.max(...teamFinishes));
+    
+    const durationDays = Math.ceil((consolidatedFinish - consolidatedStart) / (1000 * 60 * 60 * 24));
     const maxLeadTimeWeeks = Math.max(...teamForecasts.map(tf => tf.leadTimeWeeks || 0));
-    const durationDays = Math.ceil(maxLeadTimeWeeks * 7);
     
-    // Actual start = earliest start (can't start before dependencies)
-    // TODO Step 3: Will consider queue position to determine actual start
-    const consolidatedStart = earliestStart;
-    
-    // Finish = start + duration
-    const consolidatedFinish = new Date(consolidatedStart);
-    consolidatedFinish.setDate(consolidatedFinish.getDate() + durationDays);
     
     // Check if objective is behind schedule
     if (objective.targetDate) {
@@ -655,4 +705,5 @@ export default {
   fetchObjectiveDependencies,
   topologicalSort,
   calculateEarliestStart,
+  forecastTeamObjective,
 };
