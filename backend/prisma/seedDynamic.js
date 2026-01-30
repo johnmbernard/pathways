@@ -288,8 +288,6 @@ async function createThroughputData(teams, users, org) {
     for (let weekOffset = 12; weekOffset > 0; weekOffset--) {
       const weekStart = new Date();
       weekStart.setDate(weekStart.getDate() - weekOffset * 7);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6);
 
       // Random throughput 3-8 items per week
       const itemsCompleted = Math.floor(Math.random() * 6) + 3;
@@ -298,7 +296,6 @@ async function createThroughputData(teams, users, org) {
         teamId: team.id,
         weekStartDate: weekStart,
         itemsCompleted,
-        createdBy: getUserByUnit(team.id, users, org).id,
       });
     }
   }
