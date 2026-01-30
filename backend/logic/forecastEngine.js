@@ -627,6 +627,7 @@ async function forecastProject(projectId) {
     const objDeps = dependencies.filter(d => d.successorId === objective.id);
     if (objDeps.length > 0) {
       console.log(`  Dependencies: ${objDeps.length} predecessor(s)`);
+    }
     
     // Get work items for this objective with alerts
     const workItems = await prisma.workItem.findMany({
