@@ -28,15 +28,15 @@ function formatHeaderDate(dt) {
 // Work Item Row Component
 function WorkItemRow({ workItem, minDate, maxDate, timelineWidth, totalWeeks, weekWidth, depth = 2 }) {
   const targetDate = workItem.targetDate ? parseYmd(workItem.targetDate) : null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const startDate = workItem.createdAt ? new Date(workItem.createdAt) : new Date();
+  startDate.setHours(0, 0, 0, 0);
   
   const indentPixels = 24 + (depth * 24);
   
   let barLeft = 0, barWidth = 0;
   
   if (targetDate) {
-    const startOffset = daysBetween(minDate, today);
+    const startOffset = daysBetween(minDate, startDate);
     const endOffset = daysBetween(minDate, targetDate);
     const startWeek = Math.max(0, Math.floor(startOffset / 7));
     const endWeek = Math.floor(endOffset / 7);
@@ -111,8 +111,8 @@ function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, t
   
   // Calculate date range for this objective
   const targetDate = objective.targetDate ? parseYmd(objective.targetDate) : null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const startDate = objective.createdAt ? new Date(objective.createdAt) : new Date();
+  startDate.setHours(0, 0, 0, 0);
   
   // Get forecast for this specific objective
   const objForecast = forecast?.objectiveForecasts?.find(of => of.objectiveId === objective.id);
@@ -122,7 +122,7 @@ function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, t
   let forecastBarLeft = 0, forecastBarWidth = 0;
   
   if (targetDate) {
-    const startOffset = daysBetween(minDate, today);
+    const startOffset = daysBetween(minDate, startDate);
     const endOffset = daysBetween(minDate, targetDate);
     const startWeek = Math.max(0, Math.floor(startOffset / 7));
     const endWeek = Math.floor(endOffset / 7);
@@ -132,7 +132,7 @@ function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, t
   }
   
   if (forecastDate) {
-    const startOffset = daysBetween(minDate, today);
+    const startOffset = daysBetween(minDate, startDate);
     const endOffset = daysBetween(minDate, forecastDate);
     const startWeek = Math.max(0, Math.floor(startOffset / 7));
     const endWeek = Math.floor(endOffset / 7);
@@ -255,8 +255,8 @@ function ProjectRow({ project, objectives, workItems, minDate, maxDate, timeline
   
   // Calculate project date range
   const targetDate = project.targetDate ? parseYmd(project.targetDate) : null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const startDate = project.startDate ? parseYmd(project.startDate) : (project.createdAt ? new Date(project.createdAt) : new Date());
+  startDate.setHours(0, 0, 0, 0);
   
   const forecastDate = forecast?.estimatedDate ? parseYmd(forecast.estimatedDate) : null;
   
@@ -264,7 +264,7 @@ function ProjectRow({ project, objectives, workItems, minDate, maxDate, timeline
   let forecastBarLeft = 0, forecastBarWidth = 0;
   
   if (targetDate) {
-    const startOffset = daysBetween(minDate, today);
+    const startOffset = daysBetween(minDate, startDate);
     const endOffset = daysBetween(minDate, targetDate);
     const startWeek = Math.max(0, Math.floor(startOffset / 7));
     const endWeek = Math.floor(endOffset / 7);
@@ -274,7 +274,7 @@ function ProjectRow({ project, objectives, workItems, minDate, maxDate, timeline
   }
   
   if (forecastDate) {
-    const startOffset = daysBetween(minDate, today);
+    const startOffset = daysBetween(minDate, startDate);
     const endOffset = daysBetween(minDate, forecastDate);
     const startWeek = Math.max(0, Math.floor(startOffset / 7));
     const endWeek = Math.floor(endOffset / 7);
