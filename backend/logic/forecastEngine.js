@@ -813,7 +813,7 @@ async function forecastProject(projectId) {
   };
 }
 
-module.exports = {
+export {
   calculateTeamThroughput,
   calculateAllTeamsThroughput,
   getQueueCounts,
