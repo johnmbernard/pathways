@@ -333,6 +333,7 @@ async function createProjectWithCascade({
         title: objConfig.title,
         description: objConfig.description || null,
         projectId: project.id,
+        fromTier: ownerTierNum,
         targetDate: objConfig.targetDate,
         createdBy: getUserByUnit(ownerUnit.id, users, org).id,
       },
@@ -378,12 +379,18 @@ async function refineObjectiveIntoDeeperLevel({
   const childSessions = [];
 
   for (const childConfig of childObjectivesConfig) {
+    // Get the tier of the parent unit
+    const parentUnit = await prisma.organizationalUnit.findUnique({
+      where: { id: parentSession.assignedUnitId },
+    });
+    
     const childObjective = await prisma.objective.create({
       data: {
         title: childConfig.title,
         description: childConfig.description || null,
         projectId: parentSession.projectId,
-        parentId: parentSession.objectiveId,
+        parentObjectiveId: parentSession.objectiveId,
+        fromTier: parentUnit.tier,
         targetDate: childConfig.targetDate,
         createdBy: getUserByUnit(parentSession.assignedUnitId, users, org).id,
       },
