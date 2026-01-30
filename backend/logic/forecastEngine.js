@@ -466,6 +466,8 @@ async function forecastTeamObjective(teamId, itemCount, earliestStart, workItems
   const queueBasedStart = new Date(earliestStart);
   queueBasedStart.setDate(queueBasedStart.getDate() + queueDays);
   
+  console.log(`    Team ${teamId}: currentLoad=${teamLoad.totalLoadWeeks.toFixed(1)}w, queueDays=${queueDays}, queueBasedStart=${queueBasedStart.toISOString().split('T')[0]}`);
+  
   // Actual start = when queue clears after dependencies are met
   const teamStart = queueBasedStart;
   
@@ -618,11 +620,13 @@ export async function forecastProject(projectId) {
     );
     
     // Debug logging
+    console.log(`\n[Forecast] Objective: "${objective.title}" (ID: ${objective.id})`);
+    console.log(`  Project start: ${(project.startDate || project.createdAt).split('T')[0]}`);
+    console.log(`  Earliest start: ${earliestStart.toISOString().split('T')[0]}`);
+    
     const objDeps = dependencies.filter(d => d.successorId === objective.id);
     if (objDeps.length > 0) {
-      console.log(`📌 Objective "${objective.title}" has ${objDeps.length} dependencies`);
-      console.log(`   Earliest start: ${earliestStart.toISOString().split('T')[0]}`);
-    }
+      console.log(`  Dependencies: ${objDeps.length} predecessor(s)`);
     
     // Get work items for this objective with alerts
     const workItems = await prisma.workItem.findMany({
@@ -697,6 +701,8 @@ export async function forecastProject(projectId) {
     
     const consolidatedStart = new Date(Math.min(...teamStarts));
     const consolidatedFinish = new Date(Math.max(...teamFinishes));
+    
+    console.log(`  → Consolidated: ${consolidatedStart.toISOString().split('T')[0]} to ${consolidatedFinish.toISOString().split('T')[0]}`);
     
     const durationDays = Math.ceil((consolidatedFinish - consolidatedStart) / (1000 * 60 * 60 * 24));
     const maxLeadTimeWeeks = Math.max(...teamForecasts.map(tf => tf.leadTimeWeeks || 0));
