@@ -1113,7 +1113,305 @@ async function main() {
     data: { predecessorId: socTools.id, successorId: socProcesses.id, type: 'FS' },
   });
 
-  console.log('✅ Created 20+ objectives with dependencies');
+  // ============================================
+  // OBJECTIVES FOR MORE ACTIVE PROJECTS
+  // ============================================
+  console.log('🎯 Creating objectives for API Marketplace...');
+
+  const apiMarketplaceMain = await prisma.objective.create({
+    data: {
+      title: 'Launch API Marketplace',
+      targetDate: formatDate(daysFromNow(70)),
+      projectId: apiMarketplace.id,
+      fromTier: 2,
+      createdBy: getUserByUnit(backendDept.id).id,
+    },
+  });
+
+  const apiDesign = await prisma.objective.create({
+    data: {
+      title: 'Design API Marketplace Architecture',
+      targetDate: formatDate(daysFromNow(30)),
+      projectId: apiMarketplace.id,
+      fromTier: 3,
+      parentObjectiveId: apiMarketplaceMain.id,
+      createdBy: getUserByUnit(backendDept.id).id,
+    },
+  });
+
+  const apiCatalog = await prisma.objective.create({
+    data: {
+      title: 'Build API Catalog',
+      targetDate: formatDate(daysFromNow(50)),
+      projectId: apiMarketplace.id,
+      fromTier: 3,
+      parentObjectiveId: apiMarketplaceMain.id,
+      createdBy: getUserByUnit(backendDept.id).id,
+    },
+  });
+
+  const apiDocs = await prisma.objective.create({
+    data: {
+      title: 'Create API Documentation Portal',
+      targetDate: formatDate(daysFromNow(65)),
+      projectId: apiMarketplace.id,
+      fromTier: 3,
+      parentObjectiveId: apiMarketplaceMain.id,
+      createdBy: getUserByUnit(frontendDept.id).id,
+    },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: apiDesign.id, successorId: apiCatalog.id, type: 'FS' },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: apiCatalog.id, successorId: apiDocs.id, type: 'FS' },
+  });
+
+  console.log('🎯 Creating objectives for Mobile App v2.0...');
+
+  const mobileMain = await prisma.objective.create({
+    data: {
+      title: 'Launch Mobile App v2.0',
+      targetDate: formatDate(daysFromNow(95)),
+      projectId: mobileApp2.id,
+      fromTier: 2,
+      createdBy: getUserByUnit(frontendDept.id).id,
+    },
+  });
+
+  const mobileIOS = await prisma.objective.create({
+    data: {
+      title: 'Build iOS App',
+      targetDate: formatDate(daysFromNow(70)),
+      projectId: mobileApp2.id,
+      fromTier: 3,
+      parentObjectiveId: mobileMain.id,
+      createdBy: getUserByUnit(frontendDept.id).id,
+    },
+  });
+
+  const mobileAndroid = await prisma.objective.create({
+    data: {
+      title: 'Build Android App',
+      targetDate: formatDate(daysFromNow(70)),
+      projectId: mobileApp2.id,
+      fromTier: 3,
+      parentObjectiveId: mobileMain.id,
+      createdBy: getUserByUnit(frontendDept.id).id,
+    },
+  });
+
+  const mobileBackend = await prisma.objective.create({
+    data: {
+      title: 'Build Mobile Backend Services',
+      targetDate: formatDate(daysFromNow(50)),
+      projectId: mobileApp2.id,
+      fromTier: 3,
+      parentObjectiveId: mobileMain.id,
+      createdBy: getUserByUnit(backendDept.id).id,
+    },
+  });
+
+  const mobileQA = await prisma.objective.create({
+    data: {
+      title: 'Mobile QA & Testing',
+      targetDate: formatDate(daysFromNow(90)),
+      projectId: mobileApp2.id,
+      fromTier: 3,
+      parentObjectiveId: mobileMain.id,
+      createdBy: getUserByUnit(qaDept.id).id,
+    },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: mobileBackend.id, successorId: mobileIOS.id, type: 'FS' },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: mobileBackend.id, successorId: mobileAndroid.id, type: 'FS' },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: mobileIOS.id, successorId: mobileQA.id, type: 'FS' },
+  });
+
+  console.log('🎯 Creating objectives for Marketing Analytics Dashboard...');
+
+  const marketingAnalyticsMain = await prisma.objective.create({
+    data: {
+      title: 'Launch Marketing Analytics Dashboard',
+      targetDate: formatDate(daysFromNow(60)),
+      projectId: marketingAnalytics.id,
+      fromTier: 2,
+      createdBy: getUserByUnit(marketingDept.id).id,
+    },
+  });
+
+  const analyticsDataModel = await prisma.objective.create({
+    data: {
+      title: 'Design Analytics Data Model',
+      targetDate: formatDate(daysFromNow(30)),
+      projectId: marketingAnalytics.id,
+      fromTier: 3,
+      parentObjectiveId: marketingAnalyticsMain.id,
+      createdBy: getUserByUnit(dataDept.id).id,
+    },
+  });
+
+  const analyticsBackend = await prisma.objective.create({
+    data: {
+      title: 'Build Analytics APIs',
+      targetDate: formatDate(daysFromNow(45)),
+      projectId: marketingAnalytics.id,
+      fromTier: 3,
+      parentObjectiveId: marketingAnalyticsMain.id,
+      createdBy: getUserByUnit(backendDept.id).id,
+    },
+  });
+
+  const analyticsDashboard = await prisma.objective.create({
+    data: {
+      title: 'Build Dashboard UI',
+      targetDate: formatDate(daysFromNow(55)),
+      projectId: marketingAnalytics.id,
+      fromTier: 3,
+      parentObjectiveId: marketingAnalyticsMain.id,
+      createdBy: getUserByUnit(frontendDept.id).id,
+    },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: analyticsDataModel.id, successorId: analyticsBackend.id, type: 'FS' },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: analyticsBackend.id, successorId: analyticsDashboard.id, type: 'FS' },
+  });
+
+  console.log('🎯 Creating objectives for QA Test Automation Framework...');
+
+  const qaFrameworkMain = await prisma.objective.create({
+    data: {
+      title: 'Launch QA Test Automation Framework',
+      targetDate: formatDate(daysFromNow(55)),
+      projectId: qaFramework.id,
+      fromTier: 2,
+      createdBy: getUserByUnit(qaDept.id).id,
+    },
+  });
+
+  const qaTooling = await prisma.objective.create({
+    data: {
+      title: 'Setup Test Automation Tooling',
+      targetDate: formatDate(daysFromNow(25)),
+      projectId: qaFramework.id,
+      fromTier: 3,
+      parentObjectiveId: qaFrameworkMain.id,
+      createdBy: getUserByUnit(qaDept.id).id,
+    },
+  });
+
+  const qaE2E = await prisma.objective.create({
+    data: {
+      title: 'Build E2E Test Suite',
+      targetDate: formatDate(daysFromNow(45)),
+      projectId: qaFramework.id,
+      fromTier: 3,
+      parentObjectiveId: qaFrameworkMain.id,
+      createdBy: getUserByUnit(qaDept.id).id,
+    },
+  });
+
+  const qaCI = await prisma.objective.create({
+    data: {
+      title: 'Integrate with CI/CD Pipeline',
+      targetDate: formatDate(daysFromNow(50)),
+      projectId: qaFramework.id,
+      fromTier: 3,
+      parentObjectiveId: qaFrameworkMain.id,
+      createdBy: getUserByUnit(devopsDept.id).id,
+    },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: qaTooling.id, successorId: qaE2E.id, type: 'FS' },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: qaE2E.id, successorId: qaCI.id, type: 'FS' },
+  });
+
+  console.log('🎯 Creating objectives for Zero Trust Architecture...');
+
+  const zeroTrustMain = await prisma.objective.create({
+    data: {
+      title: 'Implement Zero Trust Architecture',
+      targetDate: formatDate(daysFromNow(105)),
+      projectId: zeroTrust.id,
+      fromTier: 2,
+      createdBy: getUserByUnit(security.id).id,
+    },
+  });
+
+  const zeroTrustDesign = await prisma.objective.create({
+    data: {
+      title: 'Design Zero Trust Model',
+      targetDate: formatDate(daysFromNow(30)),
+      projectId: zeroTrust.id,
+      fromTier: 3,
+      parentObjectiveId: zeroTrustMain.id,
+      createdBy: getUserByUnit(secEngDept.id).id,
+    },
+  });
+
+  const zeroTrustIdentity = await prisma.objective.create({
+    data: {
+      title: 'Implement Identity & Access Management',
+      targetDate: formatDate(daysFromNow(60)),
+      projectId: zeroTrust.id,
+      fromTier: 3,
+      parentObjectiveId: zeroTrustMain.id,
+      createdBy: getUserByUnit(secEngDept.id).id,
+    },
+  });
+
+  const zeroTrustNetwork = await prisma.objective.create({
+    data: {
+      title: 'Implement Network Segmentation',
+      targetDate: formatDate(daysFromNow(80)),
+      projectId: zeroTrust.id,
+      fromTier: 3,
+      parentObjectiveId: zeroTrustMain.id,
+      createdBy: getUserByUnit(secEngDept.id).id,
+    },
+  });
+
+  const zeroTrustMonitoring = await prisma.objective.create({
+    data: {
+      title: 'Deploy Continuous Monitoring',
+      targetDate: formatDate(daysFromNow(95)),
+      projectId: zeroTrust.id,
+      fromTier: 3,
+      parentObjectiveId: zeroTrustMain.id,
+      createdBy: getUserByUnit(secEngDept.id).id,
+    },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: zeroTrustDesign.id, successorId: zeroTrustIdentity.id, type: 'FS' },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: zeroTrustIdentity.id, successorId: zeroTrustNetwork.id, type: 'FS' },
+  });
+
+  await prisma.objectiveDependency.create({
+    data: { predecessorId: zeroTrustNetwork.id, successorId: zeroTrustMonitoring.id, type: 'FS' },
+  });
+
+  console.log('✅ Created 50+ objectives with dependencies');
 
   // ============================================
   // REFINEMENT SESSIONS & WORK ITEMS
@@ -1530,6 +1828,572 @@ async function main() {
   }
 
   console.log('✅ Added 50+ additional work items for key objectives');
+
+  // ============================================
+  // WORK ITEMS FOR NEW PROJECT OBJECTIVES
+  // ============================================
+  console.log('📝 Adding work items for API Marketplace objectives...');
+
+  // API Design work items
+  const apiDesignSession = await prisma.refinementSession.create({
+    data: {
+      projectId: apiMarketplace.id,
+      objectiveId: apiDesign.id,
+      status: 'completed',
+      createdBy: getUserByUnit(backendDept.id).id,
+      completedAt: daysAgo(5),
+    },
+  });
+
+  const apiDesignItems = [
+    { title: 'Define API taxonomy', priority: 'P1', status: 'Done', completedAt: daysAgo(12) },
+    { title: 'Design versioning strategy', priority: 'P1', status: 'Done', completedAt: daysAgo(10) },
+    { title: 'Create API standards document', priority: 'P1', status: 'In Progress', completedAt: null },
+    { title: 'Design rate limiting model', priority: 'P2', status: 'Ready', completedAt: null },
+  ];
+
+  for (const [idx, item] of apiDesignItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: apiDesignSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: backendBeta.id,
+        createdBy: getUserByUnit(backendBeta.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // API Catalog work items
+  const apiCatalogSession = await prisma.refinementSession.create({
+    data: {
+      projectId: apiMarketplace.id,
+      objectiveId: apiCatalog.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(backendDept.id).id,
+    },
+  });
+
+  const apiCatalogItems = [
+    { title: 'Build API registry database', priority: 'P1', status: 'Ready', completedAt: null },
+    { title: 'Implement API discovery service', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Create API key management', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Build usage tracking', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Add monetization support', priority: 'P3', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of apiCatalogItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: apiCatalogSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: backendGamma.id,
+        createdBy: getUserByUnit(backendGamma.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // API Documentation work items
+  const apiDocsSession = await prisma.refinementSession.create({
+    data: {
+      projectId: apiMarketplace.id,
+      objectiveId: apiDocs.id,
+      status: 'backlog',
+      createdBy: getUserByUnit(backendDept.id).id,
+    },
+  });
+
+  const apiDocsItems = [
+    { title: 'Write API documentation', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Create code examples', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Build interactive playground', priority: 'P2', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of apiDocsItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: apiDocsSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: backendBeta.id,
+        createdBy: getUserByUnit(backendBeta.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  console.log('📝 Adding work items for Mobile App v2.0 objectives...');
+
+  // Mobile Backend work items
+  const mobileBackendSession = await prisma.refinementSession.create({
+    data: {
+      projectId: mobileApp2.id,
+      objectiveId: mobileBackend.id,
+      status: 'completed',
+      createdBy: getUserByUnit(backendDept.id).id,
+      completedAt: daysAgo(10),
+    },
+  });
+
+  const mobileBackendItems = [
+    { title: 'Design mobile API', priority: 'P1', status: 'Done', completedAt: daysAgo(25) },
+    { title: 'Implement sync endpoints', priority: 'P1', status: 'Done', completedAt: daysAgo(20) },
+    { title: 'Add push notification service', priority: 'P1', status: 'Done', completedAt: daysAgo(15) },
+    { title: 'Setup CDN for assets', priority: 'P2', status: 'Done', completedAt: daysAgo(12) },
+  ];
+
+  for (const [idx, item] of mobileBackendItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: mobileBackendSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: backendAlpha.id,
+        createdBy: getUserByUnit(backendAlpha.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // Mobile iOS work items
+  const mobileIOSSession = await prisma.refinementSession.create({
+    data: {
+      projectId: mobileApp2.id,
+      objectiveId: mobileIOS.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(frontendDept.id).id,
+    },
+  });
+
+  const mobileIOSItems = [
+    { title: 'Setup iOS project with Swift', priority: 'P1', status: 'Done', completedAt: daysAgo(20) },
+    { title: 'Implement navigation', priority: 'P1', status: 'Done', completedAt: daysAgo(15) },
+    { title: 'Build authentication screens', priority: 'P1', status: 'In Progress', completedAt: null },
+    { title: 'Implement offline sync', priority: 'P1', status: 'Ready', completedAt: null },
+    { title: 'Add push notifications', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Implement dark mode', priority: 'P2', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of mobileIOSItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: mobileIOSSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: frontendBeta.id,
+        createdBy: getUserByUnit(frontendBeta.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // Mobile Android work items
+  const mobileAndroidSession = await prisma.refinementSession.create({
+    data: {
+      projectId: mobileApp2.id,
+      objectiveId: mobileAndroid.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(frontendDept.id).id,
+    },
+  });
+
+  const mobileAndroidItems = [
+    { title: 'Setup Android project with Kotlin', priority: 'P1', status: 'Done', completedAt: daysAgo(18) },
+    { title: 'Implement navigation', priority: 'P1', status: 'In Progress', completedAt: null },
+    { title: 'Build authentication screens', priority: 'P1', status: 'Ready', completedAt: null },
+    { title: 'Implement offline sync', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Add push notifications', priority: 'P2', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of mobileAndroidItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: mobileAndroidSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: frontendBeta.id,
+        createdBy: getUserByUnit(frontendBeta.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // Mobile QA work items
+  const mobileQASession = await prisma.refinementSession.create({
+    data: {
+      projectId: mobileApp2.id,
+      objectiveId: mobileQA.id,
+      status: 'backlog',
+      createdBy: getUserByUnit(qaDept.id).id,
+    },
+  });
+
+  const mobileQAItems = [
+    { title: 'Write iOS test plan', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Write Android test plan', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Setup device farm', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Run compatibility tests', priority: 'P2', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of mobileQAItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: mobileQASession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: qaManual.id,
+        createdBy: getUserByUnit(qaManual.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  console.log('📝 Adding work items for Marketing Analytics objectives...');
+
+  // Analytics Data Model work items
+  const analyticsDataModelSession = await prisma.refinementSession.create({
+    data: {
+      projectId: marketingAnalytics.id,
+      objectiveId: analyticsDataModel.id,
+      status: 'completed',
+      createdBy: getUserByUnit(dataSciDept.id).id,
+      completedAt: daysAgo(3),
+    },
+  });
+
+  const analyticsDataModelItems = [
+    { title: 'Define metrics schema', priority: 'P1', status: 'Done', completedAt: daysAgo(15) },
+    { title: 'Design data warehouse', priority: 'P1', status: 'Done', completedAt: daysAgo(10) },
+    { title: 'Create ETL pipelines', priority: 'P1', status: 'Done', completedAt: daysAgo(5) },
+  ];
+
+  for (const [idx, item] of analyticsDataModelItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: analyticsDataModelSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: dataSciBeta.id,
+        createdBy: getUserByUnit(dataSciBeta.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // Analytics Backend work items
+  const analyticsBackendSession = await prisma.refinementSession.create({
+    data: {
+      projectId: marketingAnalytics.id,
+      objectiveId: analyticsBackend.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(backendDept.id).id,
+    },
+  });
+
+  const analyticsBackendItems = [
+    { title: 'Design metrics API', priority: 'P1', status: 'Done', completedAt: daysAgo(10) },
+    { title: 'Build data aggregation service', priority: 'P1', status: 'In Progress', completedAt: null },
+    { title: 'Implement caching layer', priority: 'P1', status: 'Ready', completedAt: null },
+    { title: 'Add real-time updates', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Create export functionality', priority: 'P3', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of analyticsBackendItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: analyticsBackendSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: backendAlpha.id,
+        createdBy: getUserByUnit(backendAlpha.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // Analytics Dashboard work items
+  const analyticsDashboardSession = await prisma.refinementSession.create({
+    data: {
+      projectId: marketingAnalytics.id,
+      objectiveId: analyticsDashboard.id,
+      status: 'backlog',
+      createdBy: getUserByUnit(frontendDept.id).id,
+    },
+  });
+
+  const analyticsDashboardItems = [
+    { title: 'Design dashboard UI', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Build chart components', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Add filtering capabilities', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Implement custom reports', priority: 'P3', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of analyticsDashboardItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: analyticsDashboardSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: frontendAlpha.id,
+        createdBy: getUserByUnit(frontendAlpha.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  console.log('📝 Adding work items for QA Framework objectives...');
+
+  // QA Tooling work items
+  const qaToolingSession = await prisma.refinementSession.create({
+    data: {
+      projectId: qaFramework.id,
+      objectiveId: qaTooling.id,
+      status: 'completed',
+      createdBy: getUserByUnit(qaDept.id).id,
+      completedAt: daysAgo(2),
+    },
+  });
+
+  const qaToolingItems = [
+    { title: 'Evaluate test frameworks', priority: 'P1', status: 'Done', completedAt: daysAgo(12) },
+    { title: 'Setup test infrastructure', priority: 'P1', status: 'Done', completedAt: daysAgo(8) },
+    { title: 'Configure parallel execution', priority: 'P2', status: 'Done', completedAt: daysAgo(4) },
+  ];
+
+  for (const [idx, item] of qaToolingItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: qaToolingSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: qaAutomation.id,
+        createdBy: getUserByUnit(qaAutomation.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // QA E2E work items
+  const qaE2ESession = await prisma.refinementSession.create({
+    data: {
+      projectId: qaFramework.id,
+      objectiveId: qaE2E.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(qaDept.id).id,
+    },
+  });
+
+  const qaE2EItems = [
+    { title: 'Setup Playwright framework', priority: 'P1', status: 'Done', completedAt: daysAgo(8) },
+    { title: 'Write login flow tests', priority: 'P1', status: 'Done', completedAt: daysAgo(5) },
+    { title: 'Write checkout flow tests', priority: 'P1', status: 'In Progress', completedAt: null },
+    { title: 'Add visual regression tests', priority: 'P2', status: 'Ready', completedAt: null },
+    { title: 'Write mobile E2E tests', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Add performance tests', priority: 'P3', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of qaE2EItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: qaE2ESession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: qaAutomation.id,
+        createdBy: getUserByUnit(qaAutomation.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // QA CI/CD work items
+  const qaCISession = await prisma.refinementSession.create({
+    data: {
+      projectId: qaFramework.id,
+      objectiveId: qaCI.id,
+      status: 'backlog',
+      createdBy: getUserByUnit(qaDept.id).id,
+    },
+  });
+
+  const qaCIItems = [
+    { title: 'Integrate tests with CI', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Setup test reporting', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Configure failure notifications', priority: 'P2', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of qaCIItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: qaCISession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: qaAutomation.id,
+        createdBy: getUserByUnit(qaAutomation.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  console.log('📝 Adding work items for Zero Trust objectives...');
+
+  // Zero Trust Design work items
+  const zeroTrustDesignSession = await prisma.refinementSession.create({
+    data: {
+      projectId: zeroTrust.id,
+      objectiveId: zeroTrustDesign.id,
+      status: 'completed',
+      createdBy: getUserByUnit(secEngDept.id).id,
+      completedAt: daysAgo(7),
+    },
+  });
+
+  const zeroTrustDesignItems = [
+    { title: 'Research zero trust models', priority: 'P1', status: 'Done', completedAt: daysAgo(20) },
+    { title: 'Design architecture', priority: 'P1', status: 'Done', completedAt: daysAgo(15) },
+    { title: 'Create implementation roadmap', priority: 'P1', status: 'Done', completedAt: daysAgo(10) },
+  ];
+
+  for (const [idx, item] of zeroTrustDesignItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: zeroTrustDesignSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: secAppSec.id,
+        createdBy: getUserByUnit(secAppSec.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // Zero Trust Identity work items
+  const zeroTrustIdentitySession = await prisma.refinementSession.create({
+    data: {
+      projectId: zeroTrust.id,
+      objectiveId: zeroTrustIdentity.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(secEngDept.id).id,
+    },
+  });
+
+  const zeroTrustIdentityItems = [
+    { title: 'Evaluate IAM solutions', priority: 'P1', status: 'Done', completedAt: daysAgo(15) },
+    { title: 'Implement SSO', priority: 'P1', status: 'In Progress', completedAt: null },
+    { title: 'Add MFA enforcement', priority: 'P1', status: 'Ready', completedAt: null },
+    { title: 'Configure privilege escalation', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Setup identity governance', priority: 'P2', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of zeroTrustIdentityItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: zeroTrustIdentitySession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: secAppSec.id,
+        createdBy: getUserByUnit(secAppSec.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // Zero Trust Network work items
+  const zeroTrustNetworkSession = await prisma.refinementSession.create({
+    data: {
+      projectId: zeroTrust.id,
+      objectiveId: zeroTrustNetwork.id,
+      status: 'backlog',
+      createdBy: getUserByUnit(secEngDept.id).id,
+    },
+  });
+
+  const zeroTrustNetworkItems = [
+    { title: 'Implement network segmentation', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Deploy microsegmentation', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Configure DDoS protection', priority: 'P2', status: 'Backlog', completedAt: null },
+    { title: 'Setup VPN alternative', priority: 'P2', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of zeroTrustNetworkItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: zeroTrustNetworkSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: secInfraSec.id,
+        createdBy: getUserByUnit(secInfraSec.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  // Zero Trust Monitoring work items
+  const zeroTrustMonitoringSession = await prisma.refinementSession.create({
+    data: {
+      projectId: zeroTrust.id,
+      objectiveId: zeroTrustMonitoring.id,
+      status: 'backlog',
+      createdBy: getUserByUnit(secEngDept.id).id,
+    },
+  });
+
+  const zeroTrustMonitoringItems = [
+    { title: 'Setup SIEM integration', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Configure anomaly detection', priority: 'P1', status: 'Backlog', completedAt: null },
+    { title: 'Build security dashboards', priority: 'P2', status: 'Backlog', completedAt: null },
+  ];
+
+  for (const [idx, item] of zeroTrustMonitoringItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: zeroTrustMonitoringSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: secAppSec.id,
+        createdBy: getUserByUnit(secAppSec.id).id,
+        completedAt: item.completedAt,
+      },
+    });
+  }
+
+  console.log('✅ Created 100+ work items for new objectives (total now ~250)');
 
   // ============================================
   // HISTORICAL THROUGHPUT DATA
