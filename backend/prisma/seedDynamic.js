@@ -9,13 +9,13 @@ const prisma = new PrismaClient();
 function daysAgo(days) {
   const date = new Date();
   date.setDate(date.getDate() - days);
-  return date;
+  return date.toISOString().split('T')[0]; // Return YYYY-MM-DD string
 }
 
 function daysFromNow(days) {
   const date = new Date();
   date.setDate(date.getDate() + days);
-  return date;
+  return date.toISOString().split('T')[0]; // Return YYYY-MM-DD string
 }
 
 function randomItem(array) {
