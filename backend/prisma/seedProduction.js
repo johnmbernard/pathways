@@ -917,10 +917,6 @@ async function main() {
     },
   });
 
-  await prisma.objectiveAssignment.create({
-    data: { objectiveId: portal2Backend.id, unitId: backendAlpha.id },
-  });
-
   const portal2Frontend = await prisma.objective.create({
     data: {
       title: 'Build Portal v2 Frontend',
@@ -933,10 +929,6 @@ async function main() {
     },
   });
 
-  await prisma.objectiveAssignment.create({
-    data: { objectiveId: portal2Frontend.id, unitId: frontendAlpha.id },
-  });
-
   const portal2QA = await prisma.objective.create({
     data: {
       title: 'QA Portal v2',
@@ -947,10 +939,6 @@ async function main() {
       parentObjectiveId: portal2Main.id,
       createdBy: getUserByUnit(qaDept.id).id,
     },
-  });
-
-  await prisma.objectiveAssignment.create({
-    data: { objectiveId: portal2QA.id, unitId: qaAutomation.id },
   });
 
   // Create dependencies: Backend must finish before Frontend and QA
@@ -997,10 +985,6 @@ async function main() {
     },
   });
 
-  await prisma.objectiveAssignment.create({
-    data: { objectiveId: cloudInfra.id, unitId: devopsInfra.id },
-  });
-
   const cloudDatabase = await prisma.objective.create({
     data: {
       title: 'Migrate Databases',
@@ -1011,10 +995,6 @@ async function main() {
       parentObjectiveId: cloudMain.id,
       createdBy: getUserByUnit(devopsDept.id).id,
     },
-  });
-
-  await prisma.objectiveAssignment.create({
-    data: { objectiveId: cloudDatabase.id, unitId: devopsPlatform.id },
   });
 
   const cloudApps = await prisma.objective.create({
@@ -1029,10 +1009,6 @@ async function main() {
     },
   });
 
-  await prisma.objectiveAssignment.create({
-    data: { objectiveId: cloudApps.id, unitId: devopsInfra.id },
-  });
-
   const cloudSecurity = await prisma.objective.create({
     data: {
       title: 'Implement Cloud Security',
@@ -1043,10 +1019,6 @@ async function main() {
       parentObjectiveId: cloudMain.id,
       createdBy: getUserByUnit(secEngDept.id).id,
     },
-  });
-
-  await prisma.objectiveAssignment.create({
-    data: { objectiveId: cloudSecurity.id, unitId: secOps.id },
   });
 
   // Dependencies: Infra → Security → Database → Apps
@@ -1088,9 +1060,6 @@ async function main() {
       createdBy: getUserByUnit(dataDept.id).id,
     },
   });
-  await prisma.objectiveAssignment.create({
-    data: { objectiveId: aiModel.id, unitId: dataEngineering.id },
-  });
 
   const aiAPI = await prisma.objective.create({
     data: {
@@ -1101,9 +1070,6 @@ async function main() {
       parentObjectiveId: aiMain.id,
       createdBy: getUserByUnit(backendDept.id).id,
     },
-  });
-  await prisma.objectiveAssignment.create({
-    data: { objectiveId: aiAPI.id, unitId: backendAlpha.id },
   });
 
   await prisma.objectiveDependency.create({
@@ -1131,9 +1097,6 @@ async function main() {
       createdBy: getUserByUnit(secEngDept.id).id,
     },
   });
-  await prisma.objectiveAssignment.create({
-    data: { objectiveId: socTools.id, unitId: secOps.id },
-  });
 
   const socProcesses = await prisma.objective.create({
     data: {
@@ -1144,9 +1107,6 @@ async function main() {
       parentObjectiveId: socMain.id,
       createdBy: getUserByUnit(secEngDept.id).id,
     },
-  });
-  await prisma.objectiveAssignment.create({
-    data: { objectiveId: socProcesses.id, unitId: secOps.id },
   });
 
   await prisma.objectiveDependency.create({

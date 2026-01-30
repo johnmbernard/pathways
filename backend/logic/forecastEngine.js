@@ -606,11 +606,6 @@ async function forecastProject(projectId) {
   const predecessorResults = new Map(); // objectiveId -> forecast result
   
   for (const objective of sortedObjectives) {
-    // Skip objectives with no team assignments
-    if (!objective.assignedUnits || objective.assignedUnits.length === 0) {
-      continue;
-    }
-    
     // Calculate earliest start based on dependencies
     const earliestStart = calculateEarliestStart(
       objective.id,
@@ -629,7 +624,7 @@ async function forecastProject(projectId) {
       console.log(`  Dependencies: ${objDeps.length} predecessor(s)`);
     }
     
-    // Get work items for this objective with alerts
+    // Get work items for this objective
     const workItems = await prisma.workItem.findMany({
       where: {
         refinementSession: {
@@ -641,6 +636,12 @@ async function forecastProject(projectId) {
         creator: true,
       },
     });
+    
+    // Skip objectives with no work items
+    if (workItems.length === 0) {
+      console.log(`  ⚠️  No work items - skipping forecast`);
+      continue;
+    }
     
     // Identify alerts
     const alerts = [];
@@ -682,17 +683,41 @@ async function forecastProject(projectId) {
       });
     });
     
-    // Get forecasts for each assigned team (Option B: teams start when they can)
+    // Group work items by assigned team
+    const workItemsByTeam = {};
+    workItems.forEach(item => {
+      if (!item.assignedOrgUnit) return;
+      if (!workItemsByTeam[item.assignedOrgUnit]) {
+        workItemsByTeam[item.assignedOrgUnit] = [];
+      }
+      workItemsByTeam[item.assignedOrgUnit].push(item);
+    });
+    
+    const teamIds = Object.keys(workItemsByTeam);
+    
+    // If no teams assigned to work items, skip
+    if (teamIds.length === 0) {
+      console.log(`  ⚠️  No teams assigned to work items - skipping forecast`);
+      continue;
+    }
+    
+    // Forecast for each team
     const teamForecasts = [];
-    for (const assignment of objective.assignedUnits) {
-      const itemsForTeam = Math.ceil(workItems.length / objective.assignedUnits.length); // Assume even split
+    for (const teamId of teamIds) {
+      const teamWorkItems = workItemsByTeam[teamId];
       const teamForecast = await forecastTeamObjective(
-        assignment.unitId,
-        itemsForTeam,
+        teamId,
+        teamWorkItems.length,
         earliestStart,
-        workItems
+        teamWorkItems
       );
-      teamForecast.teamName = assignment.unit.name; // Add team name
+      
+      // Get team name
+      const team = await prisma.organizationalUnit.findUnique({
+        where: { id: teamId },
+        select: { name: true },
+      });
+      teamForecast.teamName = team?.name || teamId;
       teamForecasts.push(teamForecast);
     }
     
