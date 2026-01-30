@@ -475,13 +475,35 @@ export async function forecastProject(projectId) {
     };
   }
   
-  const objectiveForecasts = [];
+  // Step 1: Fetch dependencies and sort objectives topologically
+  const dependencies = await fetchObjectiveDependencies(projectId);
+  let sortedObjectives;
   
-  for (const objective of project.objectives) {
+  try {
+    sortedObjectives = topologicalSort(project.objectives, dependencies);
+  } catch (error) {
+    // If circular dependency, fall back to original order and flag it
+    console.error('Circular dependency detected:', error);
+    sortedObjectives = project.objectives;
+  }
+  
+  // Step 2: Process objectives in dependency order
+  const objectiveForecasts = [];
+  const predecessorResults = new Map(); // objectiveId -> forecast result
+  
+  for (const objective of sortedObjectives) {
     // Skip objectives with no team assignments
     if (!objective.assignedUnits || objective.assignedUnits.length === 0) {
       continue;
     }
+    
+    // Calculate earliest start based on dependencies
+    const earliestStart = calculateEarliestStart(
+      objective.id,
+      predecessorResults,
+      dependencies,
+      objective.createdAt
+    );
     
     // Get work items for this objective with alerts
     const workItems = await prisma.workItem.findMany({
@@ -554,15 +576,22 @@ export async function forecastProject(projectId) {
       });
     }
     
-    // Critical path = longest team lead time
-    const maxLeadTime = Math.max(...teamForecasts.map(tf => tf.leadTimeWeeks || 0));
-    const estimatedDate = new Date();
-    estimatedDate.setDate(estimatedDate.getDate() + (maxLeadTime * 7));
+    // Calculate duration = longest team lead time (teams work in parallel)
+    const maxLeadTimeWeeks = Math.max(...teamForecasts.map(tf => tf.leadTimeWeeks || 0));
+    const durationDays = Math.ceil(maxLeadTimeWeeks * 7);
+    
+    // Actual start = earliest start (can't start before dependencies)
+    // TODO Step 3: Will consider queue position to determine actual start
+    const consolidatedStart = earliestStart;
+    
+    // Finish = start + duration
+    const consolidatedFinish = new Date(consolidatedStart);
+    consolidatedFinish.setDate(consolidatedFinish.getDate() + durationDays);
     
     // Check if objective is behind schedule
     if (objective.targetDate) {
       const targetDate = new Date(objective.targetDate);
-      const variance = Math.floor((estimatedDate - targetDate) / (1000 * 60 * 60 * 24));
+      const variance = Math.floor((consolidatedFinish - targetDate) / (1000 * 60 * 60 * 24));
       if (variance > 0) {
         alerts.push({
           type: 'behind_schedule',
@@ -573,12 +602,16 @@ export async function forecastProject(projectId) {
       }
     }
     
-    objectiveForecasts.push({
+    const forecastResult = {
       objectiveId: objective.id,
       objectiveTitle: objective.title,
       targetDate: objective.targetDate,
-      estimatedDate: estimatedDate.toISOString().split('T')[0],
-      leadTimeWeeks: Math.round(maxLeadTime * 10) / 10,
+      earliestStart: earliestStart.toISOString().split('T')[0],
+      consolidatedStart: consolidatedStart.toISOString().split('T')[0],
+      consolidatedFinish: consolidatedFinish.toISOString().split('T')[0],
+      estimatedDate: consolidatedFinish.toISOString().split('T')[0],
+      leadTimeWeeks: Math.round(maxLeadTimeWeeks * 10) / 10,
+      durationDays,
       teamForecasts,
       alerts: alerts.sort((a, b) => {
         // Sort by severity (critical first) then by type
@@ -586,7 +619,11 @@ export async function forecastProject(projectId) {
         return severityOrder[a.severity] - severityOrder[b.severity];
       }),
       workItemCount: workItems.length,
-    });
+      isOnCriticalPath: false, // Will be determined in Step 4
+    };
+    
+    objectiveForecasts.push(forecastResult);
+    predecessorResults.set(objective.id, forecastResult);
   }
   
   // Project completes when last objective completes
