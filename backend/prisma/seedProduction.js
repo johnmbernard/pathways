@@ -1355,6 +1355,223 @@ async function main() {
   console.log('✅ Created 60+ work items (project + O&M)');
 
   // ============================================
+  // ADDITIONAL WORK ITEMS FOR CLOUD MIGRATION
+  // ============================================
+  console.log('📝 Adding work items for Cloud Migration objectives...');
+
+  // Database Migration work items
+  const cloudDatabaseSession = await prisma.refinementSession.create({
+    data: {
+      projectId: cloudMigration.id,
+      objectiveId: cloudDatabase.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(devopsDept.id).id,
+    },
+  });
+
+  const cloudDatabaseItems = [
+    { title: 'Assess current database schemas', priority: 'P1', status: 'Backlog' },
+    { title: 'Design RDS architecture', priority: 'P1', status: 'Backlog' },
+    { title: 'Setup RDS instances', priority: 'P1', status: 'Backlog' },
+    { title: 'Configure database replication', priority: 'P1', status: 'Backlog' },
+    { title: 'Migrate production database', priority: 'P1', status: 'Backlog' },
+    { title: 'Verify data integrity', priority: 'P2', status: 'Backlog' },
+    { title: 'Setup automated backups', priority: 'P2', status: 'Backlog' },
+  ];
+
+  for (const [idx, item] of cloudDatabaseItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: cloudDatabaseSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: devopsInfra.id,
+        createdBy: getUserByUnit(devopsInfra.id).id,
+      },
+    });
+  }
+
+  // Application Migration work items
+  const cloudAppsSession = await prisma.refinementSession.create({
+    data: {
+      projectId: cloudMigration.id,
+      objectiveId: cloudApps.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(devopsDept.id).id,
+    },
+  });
+
+  const cloudAppsItems = [
+    { title: 'Containerize applications', priority: 'P1', status: 'Backlog' },
+    { title: 'Setup ECS clusters', priority: 'P1', status: 'Backlog' },
+    { title: 'Configure load balancers', priority: 'P1', status: 'Backlog' },
+    { title: 'Deploy staging environment', priority: 'P1', status: 'Backlog' },
+    { title: 'Run load tests', priority: 'P2', status: 'Backlog' },
+    { title: 'Deploy production', priority: 'P1', status: 'Backlog' },
+    { title: 'Cutover DNS', priority: 'P1', status: 'Backlog' },
+    { title: 'Decommission old infrastructure', priority: 'P3', status: 'Backlog' },
+  ];
+
+  for (const [idx, item] of cloudAppsItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: cloudAppsSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: devopsPlatform.id,
+        createdBy: getUserByUnit(devopsPlatform.id).id,
+      },
+    });
+  }
+
+  // ============================================
+  // WORK ITEMS FOR AI RECOMMENDATIONS
+  // ============================================
+  console.log('📝 Adding work items for AI Recommendations objectives...');
+
+  // ML Model Training work items
+  const aiModelSession = await prisma.refinementSession.create({
+    data: {
+      projectId: aiRecommendations.id,
+      objectiveId: aiModel.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(dataDept.id).id,
+    },
+  });
+
+  const aiModelItems = [
+    { title: 'Collect and clean training data', priority: 'P1', status: 'In Progress' },
+    { title: 'Feature engineering', priority: 'P1', status: 'Ready' },
+    { title: 'Train initial model', priority: 'P1', status: 'Backlog' },
+    { title: 'Evaluate model performance', priority: 'P1', status: 'Backlog' },
+    { title: 'Optimize hyperparameters', priority: 'P2', status: 'Backlog' },
+    { title: 'Setup model versioning', priority: 'P2', status: 'Backlog' },
+  ];
+
+  for (const [idx, item] of aiModelItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: aiModelSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: dataEngineering.id,
+        createdBy: getUserByUnit(dataEngineering.id).id,
+      },
+    });
+  }
+
+  // Recommendations API work items
+  const aiAPISession = await prisma.refinementSession.create({
+    data: {
+      projectId: aiRecommendations.id,
+      objectiveId: aiAPI.id,
+      status: 'not-started',
+      createdBy: getUserByUnit(backendDept.id).id,
+    },
+  });
+
+  const aiAPIItems = [
+    { title: 'Design recommendations API endpoints', priority: 'P1', status: 'Backlog' },
+    { title: 'Implement model serving layer', priority: 'P1', status: 'Backlog' },
+    { title: 'Build caching mechanism', priority: 'P1', status: 'Backlog' },
+    { title: 'Add monitoring and logging', priority: 'P2', status: 'Backlog' },
+    { title: 'Performance testing', priority: 'P2', status: 'Backlog' },
+  ];
+
+  for (const [idx, item] of aiAPIItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: aiAPISession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: backendAlpha.id,
+        createdBy: getUserByUnit(backendAlpha.id).id,
+      },
+    });
+  }
+
+  // ============================================
+  // WORK ITEMS FOR SOC
+  // ============================================
+  console.log('📝 Adding work items for SOC objectives...');
+
+  // SIEM and Monitoring Tools work items
+  const socToolsSession = await prisma.refinementSession.create({
+    data: {
+      projectId: soc.id,
+      objectiveId: socTools.id,
+      status: 'in-progress',
+      createdBy: getUserByUnit(secEngDept.id).id,
+    },
+  });
+
+  const socToolsItems = [
+    { title: 'Select SIEM platform', priority: 'P1', status: 'Done', completedAt: daysAgo(10) },
+    { title: 'Deploy SIEM infrastructure', priority: 'P1', status: 'In Progress' },
+    { title: 'Configure log collection', priority: 'P1', status: 'Ready' },
+    { title: 'Setup alerting rules', priority: 'P1', status: 'Backlog' },
+    { title: 'Integrate with existing tools', priority: 'P2', status: 'Backlog' },
+    { title: 'Build SOC dashboard', priority: 'P2', status: 'Backlog' },
+  ];
+
+  for (const [idx, item] of socToolsItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: socToolsSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: secOps.id,
+        createdBy: getUserByUnit(secOps.id).id,
+        completedAt: item.completedAt || null,
+      },
+    });
+  }
+
+  // SOC Processes work items
+  const socProcessesSession = await prisma.refinementSession.create({
+    data: {
+      projectId: soc.id,
+      objectiveId: socProcesses.id,
+      status: 'not-started',
+      createdBy: getUserByUnit(secEngDept.id).id,
+    },
+  });
+
+  const socProcessesItems = [
+    { title: 'Define incident response procedures', priority: 'P1', status: 'Backlog' },
+    { title: 'Create runbooks for common scenarios', priority: 'P1', status: 'Backlog' },
+    { title: 'Establish escalation paths', priority: 'P1', status: 'Backlog' },
+    { title: 'Document SOC workflows', priority: 'P2', status: 'Backlog' },
+    { title: 'Train SOC team', priority: 'P2', status: 'Backlog' },
+  ];
+
+  for (const [idx, item] of socProcessesItems.entries()) {
+    await prisma.workItem.create({
+      data: {
+        refinementSessionId: socProcessesSession.id,
+        title: item.title,
+        priority: item.priority,
+        stackRank: idx,
+        status: item.status,
+        assignedOrgUnit: secOps.id,
+        createdBy: getUserByUnit(secOps.id).id,
+      },
+    });
+  }
+
+  console.log('✅ Added 50+ additional work items for key objectives');
+
+  // ============================================
   // HISTORICAL THROUGHPUT DATA
   // ============================================
   console.log('📊 Creating historical throughput data...');
