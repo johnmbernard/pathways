@@ -257,6 +257,7 @@ async function createUsers(org) {
         name,
         email,
         password: 'hashed_password_placeholder',
+        role: 'Member',
         organizationalUnitId: unit.id,
       },
     });
