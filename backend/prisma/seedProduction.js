@@ -918,7 +918,7 @@ async function main() {
   });
 
   await prisma.objectiveAssignment.create({
-    data: { objectiveId: portal2Backend.id, unitId: backendDept.id },
+    data: { objectiveId: portal2Backend.id, unitId: backendAlpha.id },
   });
 
   const portal2Frontend = await prisma.objective.create({
@@ -934,7 +934,7 @@ async function main() {
   });
 
   await prisma.objectiveAssignment.create({
-    data: { objectiveId: portal2Frontend.id, unitId: frontendDept.id },
+    data: { objectiveId: portal2Frontend.id, unitId: frontendAlpha.id },
   });
 
   const portal2QA = await prisma.objective.create({
@@ -950,7 +950,7 @@ async function main() {
   });
 
   await prisma.objectiveAssignment.create({
-    data: { objectiveId: portal2QA.id, unitId: qaDept.id },
+    data: { objectiveId: portal2QA.id, unitId: qaAutomation.id },
   });
 
   // Create dependencies: Backend must finish before Frontend and QA
@@ -998,7 +998,7 @@ async function main() {
   });
 
   await prisma.objectiveAssignment.create({
-    data: { objectiveId: cloudInfra.id, unitId: devopsDept.id },
+    data: { objectiveId: cloudInfra.id, unitId: devopsInfra.id },
   });
 
   const cloudDatabase = await prisma.objective.create({
@@ -1014,7 +1014,7 @@ async function main() {
   });
 
   await prisma.objectiveAssignment.create({
-    data: { objectiveId: cloudDatabase.id, unitId: devopsDept.id },
+    data: { objectiveId: cloudDatabase.id, unitId: devopsPlatform.id },
   });
 
   const cloudApps = await prisma.objective.create({
@@ -1030,7 +1030,7 @@ async function main() {
   });
 
   await prisma.objectiveAssignment.create({
-    data: { objectiveId: cloudApps.id, unitId: devopsDept.id },
+    data: { objectiveId: cloudApps.id, unitId: devopsInfra.id },
   });
 
   const cloudSecurity = await prisma.objective.create({
@@ -1046,7 +1046,7 @@ async function main() {
   });
 
   await prisma.objectiveAssignment.create({
-    data: { objectiveId: cloudSecurity.id, unitId: secEngDept.id },
+    data: { objectiveId: cloudSecurity.id, unitId: secOps.id },
   });
 
   // Dependencies: Infra → Security → Database → Apps
@@ -1387,8 +1387,8 @@ async function main() {
         priority: item.priority,
         stackRank: idx,
         status: item.status,
-        assignedOrgUnit: devopsInfra.id,
-        createdBy: getUserByUnit(devopsInfra.id).id,
+        assignedOrgUnit: devopsPlatform.id,
+        createdBy: getUserByUnit(devopsPlatform.id).id,
       },
     });
   }
@@ -1422,8 +1422,8 @@ async function main() {
         priority: item.priority,
         stackRank: idx,
         status: item.status,
-        assignedOrgUnit: devopsPlatform.id,
-        createdBy: getUserByUnit(devopsPlatform.id).id,
+        assignedOrgUnit: devopsInfra.id,
+        createdBy: getUserByUnit(devopsInfra.id).id,
       },
     });
   }
