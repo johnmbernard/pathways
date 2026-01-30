@@ -149,8 +149,9 @@ export default function BoardsPage() {
     })
   );
 
-  // Get all tier 3 teams
-  const teams = units.filter(u => u.tier === 3);
+  // Get all leaf units (teams with no children)
+  const childIds = new Set(units.map(u => u.parentId).filter(Boolean));
+  const teams = units.filter(u => !childIds.has(u.id));
 
   useEffect(() => {
     const loadData = async () => {

@@ -22,7 +22,9 @@ export default function AnalysisPage() {
   const [selectedView, setSelectedView] = useState('throughput'); // 'throughput' or 'forecasts'
 
   // Get all tier 3 teams (leaf units)
-  const teams = units.filter(u => u.tier === 3);
+  // Get all leaf units (teams with no children)
+  const childIds = new Set(units.map(u => u.parentId).filter(Boolean));
+  const teams = units.filter(u => !childIds.has(u.id));
 
   useEffect(() => {
     fetchUnits();
@@ -46,7 +48,8 @@ export default function AnalysisPage() {
       }
 
       // Get tier 3 teams from the store
-      const currentTeams = units.filter(u => u.tier === 3);
+      const childIds = new Set(units.map(u => u.parentId).filter(Boolean));
+      const currentTeams = units.filter(u => !childIds.has(u.id));
       console.log('Fetching forecasts for teams:', currentTeams.length);
 
       // Fetch forecast data for each team

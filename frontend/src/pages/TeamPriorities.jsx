@@ -336,7 +336,10 @@ export default function TeamPriorities() {
           >
             <option value="all">All Teams (Organization View)</option>
             <optgroup label="Teams">
-              {units.filter(u => u.tier === 3).map(unit => (
+              {(() => {
+                const childIds = new Set(units.map(u => u.parentId).filter(Boolean));
+                return units.filter(u => !childIds.has(u.id));
+              })().map(unit => (
                 <option key={unit.id} value={unit.id}>
                   {unit.name}
                 </option>
