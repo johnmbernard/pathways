@@ -621,72 +621,74 @@ export default function RoadmapPage() {
           </div>
         ) : (
           <div className={styles.ganttContainer}>
-            {/* Timeline Header */}
-            <div className={styles.ganttHeader}>
-              <div className={styles.ganttLeft}>
-                <strong>Projects & Objectives</strong>
-              </div>
-              <div className={styles.ganttRight}>
-                <div className={styles.ganttTimelineHeader} style={{ width: timelineWidth }}>
-                  {/* Month labels */}
-                  {monthLabels.map((label, idx) => (
-                    <div
-                      key={idx}
-                      className={styles.monthLabel}
-                      style={{ left: label.position }}
-                    >
-                      {label.label}
-                    </div>
-                  ))}
-                  
-                  {/* Week date labels */}
-                  {Array.from({ length: totalWeeks }).map((_, week) => {
-                    const weekDate = new Date(minDate.getTime() + week * 7 * 24 * 60 * 60 * 1000);
-                    const month = weekDate.getMonth() + 1;
-                    const day = weekDate.getDate();
-                    const dateLabel = `${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`;
-                    
-                    return (
+            {/* Scrollable wrapper for both header and body */}
+            <div className={styles.ganttScrollWrapper}>
+              {/* Timeline Header */}
+              <div className={styles.ganttHeader}>
+                <div className={styles.ganttLeft}>
+                  <strong>Projects & Objectives</strong>
+                </div>
+                <div className={styles.ganttRight}>
+                  <div className={styles.ganttTimelineHeader} style={{ width: timelineWidth }}>
+                    {/* Month labels */}
+                    {monthLabels.map((label, idx) => (
                       <div
-                        key={`date-${week}`}
-                        className={styles.weekDateLabel}
-                        style={{ left: week * weekWidth }}
-                        title={weekDate.toLocaleDateString()}
+                        key={idx}
+                        className={styles.monthLabel}
+                        style={{ left: label.position }}
                       >
-                        {dateLabel}
+                        {label.label}
                       </div>
-                    );
-                  })}
-                  
-                  {/* Week grid lines */}
-                  {Array.from({ length: totalWeeks }).map((_, week) => {
-                    const isMonthStart = week % 4 === 0;
+                    ))}
                     
-                    return (
+                    {/* Week date labels */}
+                    {Array.from({ length: totalWeeks }).map((_, week) => {
+                      const weekDate = new Date(minDate.getTime() + week * 7 * 24 * 60 * 60 * 1000);
+                      const month = weekDate.getMonth() + 1;
+                      const day = weekDate.getDate();
+                      const dateLabel = `${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`;
+                      
+                      return (
+                        <div
+                          key={`date-${week}`}
+                          className={styles.weekDateLabel}
+                          style={{ left: week * weekWidth }}
+                          title={weekDate.toLocaleDateString()}
+                        >
+                          {dateLabel}
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Week grid lines */}
+                    {Array.from({ length: totalWeeks }).map((_, week) => {
+                      const isMonthStart = week % 4 === 0;
+                      
+                      return (
+                        <div
+                          key={`line-${week}`}
+                          className={`${styles.weekLine} ${isMonthStart ? styles.weekLineMonth : ''}`}
+                          style={{ left: week * weekWidth }}
+                        />
+                      );
+                    })}
+                    
+                    {/* Today marker */}
+                    {todayOffset >= 0 && todayOffset <= totalDays && (
                       <div
-                        key={`line-${week}`}
-                        className={`${styles.weekLine} ${isMonthStart ? styles.weekLineMonth : ''}`}
-                        style={{ left: week * weekWidth }}
-                      />
-                    );
-                  })}
-                  
-                  {/* Today marker */}
-                  {todayOffset >= 0 && todayOffset <= totalDays && (
-                    <div
-                      className={styles.todayLine}
-                      style={{ left: todayPos }}
-                    >
-                      <div className={styles.todayLabel}>Today</div>
-                    </div>
-                  )}
+                        className={styles.todayLine}
+                        style={{ left: todayPos }}
+                      >
+                        <div className={styles.todayLabel}>Today</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Gantt Body */}
-            <div className={styles.ganttBody}>
-              {projects.map(project => {
+              {/* Gantt Body */}
+              <div className={styles.ganttBodyContent}>
+                {projects.map(project => {
                 const objectives = projectObjectives[project.id] || [];
                 const projectWorkItems = workItems.filter(wi =>
                   objectives.some(obj => obj.id === wi.objectiveId)
@@ -708,6 +710,7 @@ export default function RoadmapPage() {
                   />
                 );
               })}
+              </div>
             </div>
           </div>
         )}

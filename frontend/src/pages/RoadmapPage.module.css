@@ -98,9 +98,19 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: visible;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollable wrapper for header and body */
+.ganttScrollWrapper {
+  max-height: calc(100vh - 250px);
+  overflow-x: auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Gantt Header */
@@ -111,6 +121,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
+  flex-shrink: 0;
 }
 
 .ganttLeft {
@@ -132,7 +143,8 @@
 .ganttRight {
   flex: 1;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .ganttTimelineHeader {
@@ -215,10 +227,9 @@
 }
 
 /* Gantt Body */
-.ganttBody {
-  max-height: calc(100vh - 300px);
-  overflow-y: auto;
-  overflow-x: visible;
+.ganttBodyContent {
+  flex: 1;
+  overflow: visible;
 }
 
 /* Gantt Row */
