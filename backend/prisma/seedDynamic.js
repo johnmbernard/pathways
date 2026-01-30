@@ -345,7 +345,7 @@ async function createProjectWithCascade({
     await prisma.objectiveAssignment.createMany({
       data: assignedUnits.map((unit) => ({
         objectiveId: objective.id,
-        organizationalUnitId: unit.id,
+        unitId: unit.id,
       })),
     });
 
@@ -402,7 +402,7 @@ async function refineObjectiveIntoDeeperLevel({
     await prisma.objectiveAssignment.createMany({
       data: assignedUnits.map((unit) => ({
         objectiveId: childObjective.id,
-        organizationalUnitId: unit.id,
+        unitId: unit.id,
       })),
     });
 
