@@ -402,11 +402,11 @@ function topologicalSort(objectives, dependencies) {
  * @param {string} objectiveId - Objective ID
  * @param {Map} predecessorResults - Map of objectiveId -> forecast result
  * @param {Array} dependencies - All dependencies
- * @param {Date} objectiveCreatedAt - When objective was created
+ * @param {Date} projectStartDate - When project started
  * @returns {Date} Earliest date this objective can start
  */
-function calculateEarliestStart(objectiveId, predecessorResults, dependencies, objectiveCreatedAt) {
-  const createdDate = new Date(objectiveCreatedAt);
+function calculateEarliestStart(objectiveId, predecessorResults, dependencies, projectStartDate) {
+  const projectStart = new Date(projectStartDate);
   
   // Find all FS dependencies where this objective is the successor
   const blockingDependencies = dependencies.filter(
@@ -414,12 +414,12 @@ function calculateEarliestStart(objectiveId, predecessorResults, dependencies, o
   );
   
   if (blockingDependencies.length === 0) {
-    // No dependencies, can start from creation date
-    return createdDate;
+    // No dependencies, can start from project start date
+    return projectStart;
   }
   
   // Find the latest finish date among all predecessors
-  let latestPredecessorFinish = createdDate;
+  let latestPredecessorFinish = projectStart;
   
   blockingDependencies.forEach(dep => {
     const predecessorResult = predecessorResults.get(dep.predecessorId);
@@ -614,7 +614,7 @@ export async function forecastProject(projectId) {
       objective.id,
       predecessorResults,
       dependencies,
-      objective.createdAt
+      project.startDate || project.createdAt
     );
     
     // Debug logging
