@@ -258,7 +258,7 @@ async function createUsers(org) {
         email,
         password: 'hashed_password_placeholder',
         role: 'Member',
-        organizationalUnitId: unit.id,
+        organizationalUnit: unit.id,
       },
     });
     users.push(user);
@@ -275,7 +275,7 @@ function getUserByUnit(unitId, users, org) {
     ...Object.values(org.departments),
     ...org.teams,
   ];
-  const user = users.find((u) => u.organizationalUnitId === unitId);
+  const user = users.find((u) => u.organizationalUnit === unitId);
   return user || users[0];
 }
 
