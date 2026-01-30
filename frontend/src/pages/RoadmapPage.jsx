@@ -120,6 +120,16 @@ function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, t
   const forecastStartDate = objForecast?.consolidatedStart ? parseYmd(objForecast.consolidatedStart) : null;
   const forecastFinishDate = objForecast?.consolidatedFinish ? parseYmd(objForecast.consolidatedFinish) : null;
   
+  // Debug logging
+  if (objForecast) {
+    console.log(`Objective: ${objective.title}`, {
+      consolidatedStart: objForecast.consolidatedStart,
+      consolidatedFinish: objForecast.consolidatedFinish,
+      forecastStartDate,
+      forecastFinishDate
+    });
+  }
+  
   let targetBarLeft = 0, targetBarWidth = 0;
   let forecastBarLeft = 0, forecastBarWidth = 0;
   
@@ -196,7 +206,7 @@ function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, t
                 <span className={styles.ganttBarLabel}>{objective.title}</span>
               </div>
             )}
-            {forecastDate && (
+            {(forecastStartDate && forecastFinishDate) && (
               <div
                 className={`${styles.ganttBar} ${styles.ganttBarForecast}`}
                 style={{
@@ -206,7 +216,7 @@ function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, t
                   marginTop: 14,
                   opacity: 0.8
                 }}
-                title={`Forecast: ${formatDate(objForecast.estimatedDate, 'MMM dd, yyyy')}`}
+                title={`Forecast: ${formatDate(objForecast.consolidatedStart, 'MMM dd, yyyy')} - ${formatDate(objForecast.consolidatedFinish, 'MMM dd, yyyy')}`}
               />
             )}
           </div>
