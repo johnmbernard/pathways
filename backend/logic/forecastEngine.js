@@ -461,13 +461,13 @@ async function forecastTeamObjective(teamId, itemCount, earliestStart, workItems
   }
   
   // Calculate when team can start based on queue
-  // If their P1/P2 queue has work, this objective waits
+  // Queue time starts AFTER dependencies are satisfied
   const queueDays = Math.ceil(teamLoad.totalLoadWeeks * 7);
-  const queueBasedStart = new Date();
+  const queueBasedStart = new Date(earliestStart);
   queueBasedStart.setDate(queueBasedStart.getDate() + queueDays);
   
-  // Actual start = max(earliest from dependencies, queue-based)
-  const teamStart = queueBasedStart > earliestStart ? queueBasedStart : earliestStart;
+  // Actual start = when queue clears after dependencies are met
+  const teamStart = queueBasedStart;
   
   // Duration for this team
   const durationWeeks = itemCount / teamLoad.throughput;
@@ -616,6 +616,13 @@ export async function forecastProject(projectId) {
       dependencies,
       objective.createdAt
     );
+    
+    // Debug logging
+    const objDeps = dependencies.filter(d => d.successorId === objective.id);
+    if (objDeps.length > 0) {
+      console.log(`📌 Objective "${objective.title}" has ${objDeps.length} dependencies`);
+      console.log(`   Earliest start: ${earliestStart.toISOString().split('T')[0]}`);
+    }
     
     // Get work items for this objective with alerts
     const workItems = await prisma.workItem.findMany({
