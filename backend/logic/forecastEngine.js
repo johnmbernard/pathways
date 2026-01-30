@@ -309,6 +309,132 @@ export async function forecastTeamBacklog(teamId) {
 }
 
 // ============================================
+// DEPENDENCY & CRITICAL PATH MANAGEMENT
+// ============================================
+
+/**
+ * Fetch all dependencies for objectives in a project
+ * @param {string} projectId - Project ID
+ * @returns {Promise<Array>} Array of dependency relationships
+ */
+async function fetchObjectiveDependencies(projectId) {
+  const objectives = await prisma.objective.findMany({
+    where: { projectId },
+    select: { id: true },
+  });
+  
+  const objectiveIds = objectives.map(obj => obj.id);
+  
+  const dependencies = await prisma.objectiveDependency.findMany({
+    where: {
+      OR: [
+        { predecessorId: { in: objectiveIds } },
+        { successorId: { in: objectiveIds } },
+      ],
+    },
+    include: {
+      predecessor: { select: { id: true, title: true } },
+      successor: { select: { id: true, title: true } },
+    },
+  });
+  
+  return dependencies;
+}
+
+/**
+ * Topological sort of objectives based on dependencies
+ * Uses Kahn's algorithm to determine valid execution order
+ * @param {Array} objectives - Array of objective objects with id
+ * @param {Array} dependencies - Array of dependency objects (FS only)
+ * @returns {Array} Sorted objectives (dependencies first) or throws if cycle detected
+ */
+function topologicalSort(objectives, dependencies) {
+  // Build adjacency list and in-degree count
+  const adjList = new Map(); // successorId -> [predecessorIds]
+  const inDegree = new Map(); // objectiveId -> count of dependencies
+  
+  // Initialize all objectives
+  objectives.forEach(obj => {
+    adjList.set(obj.id, []);
+    inDegree.set(obj.id, 0);
+  });
+  
+  // Build graph (only Finish-to-Start dependencies)
+  dependencies.forEach(dep => {
+    if (dep.type === 'FS') {
+      adjList.get(dep.successorId).push(dep.predecessorId);
+      inDegree.set(dep.successorId, inDegree.get(dep.successorId) + 1);
+    }
+  });
+  
+  // Find all nodes with no dependencies
+  const queue = objectives.filter(obj => inDegree.get(obj.id) === 0);
+  const sorted = [];
+  
+  while (queue.length > 0) {
+    const current = queue.shift();
+    sorted.push(current);
+    
+    // For each objective that depends on current
+    dependencies.forEach(dep => {
+      if (dep.type === 'FS' && dep.predecessorId === current.id) {
+        const successor = dep.successorId;
+        inDegree.set(successor, inDegree.get(successor) - 1);
+        
+        if (inDegree.get(successor) === 0) {
+          const successorObj = objectives.find(obj => obj.id === successor);
+          if (successorObj) queue.push(successorObj);
+        }
+      }
+    });
+  }
+  
+  // If we haven't processed all objectives, there's a cycle
+  if (sorted.length !== objectives.length) {
+    throw new Error('Circular dependency detected in objectives');
+  }
+  
+  return sorted;
+}
+
+/**
+ * Calculate earliest start date for an objective based on dependencies
+ * @param {string} objectiveId - Objective ID
+ * @param {Map} predecessorResults - Map of objectiveId -> forecast result
+ * @param {Array} dependencies - All dependencies
+ * @param {Date} objectiveCreatedAt - When objective was created
+ * @returns {Date} Earliest date this objective can start
+ */
+function calculateEarliestStart(objectiveId, predecessorResults, dependencies, objectiveCreatedAt) {
+  const createdDate = new Date(objectiveCreatedAt);
+  
+  // Find all FS dependencies where this objective is the successor
+  const blockingDependencies = dependencies.filter(
+    dep => dep.type === 'FS' && dep.successorId === objectiveId
+  );
+  
+  if (blockingDependencies.length === 0) {
+    // No dependencies, can start from creation date
+    return createdDate;
+  }
+  
+  // Find the latest finish date among all predecessors
+  let latestPredecessorFinish = createdDate;
+  
+  blockingDependencies.forEach(dep => {
+    const predecessorResult = predecessorResults.get(dep.predecessorId);
+    if (predecessorResult && predecessorResult.consolidatedFinish) {
+      const predFinish = new Date(predecessorResult.consolidatedFinish);
+      if (predFinish > latestPredecessorFinish) {
+        latestPredecessorFinish = predFinish;
+      }
+    }
+  });
+  
+  return latestPredecessorFinish;
+}
+
+// ============================================
 // PROJECT-LEVEL FORECASTING
 // ============================================
 
@@ -488,4 +614,8 @@ export default {
   calculateTeamLoad,
   forecastTeamBacklog,
   forecastProject,
+  // Critical path utilities (exported for testing)
+  fetchObjectiveDependencies,
+  topologicalSort,
+  calculateEarliestStart,
 };
