@@ -295,9 +295,8 @@ async function createThroughputData(teams, users, org) {
       const itemsCompleted = Math.floor(Math.random() * 6) + 3;
 
       throughputData.push({
-        organizationalUnitId: team.id,
-        weekStart,
-        weekEnd,
+        teamId: team.id,
+        weekStartDate: weekStart,
         itemsCompleted,
         createdBy: getUserByUnit(team.id, users, org).id,
       });
