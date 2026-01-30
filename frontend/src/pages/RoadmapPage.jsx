@@ -117,6 +117,8 @@ function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, t
   // Get forecast for this specific objective
   const objForecast = forecast?.objectiveForecasts?.find(of => of.objectiveId === objective.id);
   const forecastDate = objForecast?.estimatedDate ? parseYmd(objForecast.estimatedDate) : null;
+  const forecastStartDate = objForecast?.consolidatedStart ? parseYmd(objForecast.consolidatedStart) : null;
+  const forecastFinishDate = objForecast?.consolidatedFinish ? parseYmd(objForecast.consolidatedFinish) : null;
   
   let targetBarLeft = 0, targetBarWidth = 0;
   let forecastBarLeft = 0, forecastBarWidth = 0;
@@ -131,9 +133,10 @@ function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, t
     targetBarWidth = Math.max(weekWidth, (endWeek - startWeek) * weekWidth);
   }
   
-  if (forecastDate) {
-    const startOffset = daysBetween(minDate, startDate);
-    const endOffset = daysBetween(minDate, forecastDate);
+  // Use consolidatedStart and consolidatedFinish from forecast for accurate positioning
+  if (forecastStartDate && forecastFinishDate) {
+    const startOffset = daysBetween(minDate, forecastStartDate);
+    const endOffset = daysBetween(minDate, forecastFinishDate);
     const startWeek = Math.max(0, Math.floor(startOffset / 7));
     const endWeek = Math.floor(endOffset / 7);
     
