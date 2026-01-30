@@ -7,9 +7,10 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "seed": "node prisma/seedComprehensive.js",
-    "seed:production": "node prisma/seedProduction.js",
-    "seed:reset": "npx prisma migrate reset --force && node prisma/seedComprehensive.js",
+    "seed": "node prisma/seedProductionDynamic.js",
+    "seed:production": "node prisma/seedProductionDynamic.js",
+    "seed:static": "node prisma/seedProduction.js",
+    "seed:reset": "npx prisma migrate reset --force && node prisma/seedProductionDynamic.js",
     "seed:old": "node prisma/seed.js"
   },
   "keywords": [],
