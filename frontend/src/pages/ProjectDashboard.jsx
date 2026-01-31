@@ -112,7 +112,7 @@ export function ProjectDashboard() {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/roadmap')}
-            icon={ArrowLeft}
+            icon={<ArrowLeft size={16} />}
           >
             Back to Roadmap
           </Button>
