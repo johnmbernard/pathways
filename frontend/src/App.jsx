@@ -20,6 +20,14 @@ import { useUserStore } from './store/userStore'
 function App() {
   const [hierarchyOpen, setHierarchyOpen] = React.useState(false);
   const isAuthenticated = useUserStore(state => state.isAuthenticated);
+  const fetchCurrentUser = useUserStore(state => state.fetchCurrentUser);
+
+  // Refresh current user data on mount
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      fetchCurrentUser();
+    }
+  }, [isAuthenticated, fetchCurrentUser]);
 
   return (
     <ErrorBoundary>

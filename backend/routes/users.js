@@ -27,6 +27,35 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/users/:id - Get single user
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        organizationalUnit: true,
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ message: 'Failed to fetch user' });
+  }
+});
+
 // POST /api/users - Create new user
 router.post('/', async (req, res) => {
   try {

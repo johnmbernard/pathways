@@ -80,6 +80,24 @@ export const useUserStore = create(
           currentUser: state.currentUser ? { ...state.currentUser, ...updates } : null
         }));
       },
+
+      // Fetch current user from backend (refresh data)
+      fetchCurrentUser: async () => {
+        try {
+          const { currentUser } = get();
+          if (!currentUser?.id) return;
+
+          const response = await apiFetch(`/users/${currentUser.id}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch user');
+          }
+
+          const user = await response.json();
+          set({ currentUser: user });
+        } catch (error) {
+          console.error('Fetch current user error:', error);
+        }
+      },
     }),
     {
       name: 'user-storage',
