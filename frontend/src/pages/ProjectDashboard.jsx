@@ -15,8 +15,8 @@ export function ProjectDashboard() {
   const projectsStore = useProjectsStore();
   const workItemsStore = useWorkItemsStore();
   
-  const { projects = [], objectives = [], fetchProjects, fetchObjectives } = projectsStore;
-  const { workItems = [], fetchWorkItems } = workItemsStore;
+  const { projects = [], fetchProjects } = projectsStore;
+  const { items: workItems = [], fetchWorkItems } = workItemsStore;
   
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
@@ -31,23 +31,7 @@ export function ProjectDashboard() {
     loadProjectData();
   }, [projectId]);
   
-  // Update filtered data when store data changes
-  useEffect(() => {
-    if (objectives && projectId) {
-      const filtered = objectives.filter(obj => obj.projectId === projectId);
-      console.log('Filtering objectives:', { 
-        totalObjectives: objectives.length, 
-        projectId, 
-        filtered: filtered.length,
-        sample: objectives[0]
-      });
-      // Only update if the count changed (prevents infinite loop)
-      if (filtered.length !== projectObjectives.length) {
-        setProjectObjectives(filtered);
-      }
-    }
-  }, [objectives, projectId, projectObjectives.length]);
-  
+  // Filter work items when they change
   useEffect(() => {
     if (workItems && projectId) {
       const filtered = workItems.filter(wi => wi.projectId === projectId);
@@ -57,14 +41,11 @@ export function ProjectDashboard() {
         filtered: filtered.length,
         sample: workItems[0]
       });
-      // Only update if the count changed (prevents infinite loop)
-      if (filtered.length !== projectWorkItems.length) {
-        setProjectWorkItems(filtered);
-      }
+      setProjectWorkItems(filtered);
     }
-  }, [workItems, projectId, projectWorkItems.length]);
+  }, [workItems, projectId]);
   
-  // Load dependencies once objectives are filtered
+  // Load dependencies once objectives are loaded
   useEffect(() => {
     if (projectObjectives.length > 0 && !loading) {
       loadDependencies();
@@ -75,19 +56,28 @@ export function ProjectDashboard() {
     setLoading(true);
     try {
       console.log('Loading project data for:', projectId);
-      // Load data sequentially to avoid race conditions
+      
+      // Load projects
       if (fetchProjects) {
         await fetchProjects();
         console.log('Projects loaded:', projects?.length);
       }
-      if (fetchObjectives) {
-        await fetchObjectives();
-        console.log('Objectives loaded:', objectives?.length);
+      
+      // Load objectives for this specific project from API
+      const objResponse = await fetch(`${API_BASE_URL}/projects/${projectId}`);
+      if (objResponse.ok) {
+        const projectData = await objResponse.json();
+        const objectives = projectData.objectives || [];
+        console.log('Objectives loaded:', objectives.length);
+        setProjectObjectives(objectives);
       }
+      
+      // Load all work items
       if (fetchWorkItems) {
         await fetchWorkItems();
         console.log('Work items loaded:', workItems?.length);
       }
+      
       await loadForecast();
     } catch (error) {
       console.error('Failed to load project data:', error);
