@@ -609,7 +609,7 @@ async function createProjects(org, users) {
         title: 'Design Portal UI/UX',
         assignedUnits: [divisions.productDiv],
         targetDate: daysFromNow(20),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
     ],
     users,
@@ -728,12 +728,12 @@ async function createProjects(org, users) {
       {
         title: 'Migrate Infrastructure',
         targetDate: daysFromNow(30),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
       {
         title: 'Implement Security Controls',
         targetDate: daysFromNow(50),
-        sessionStatus: 'not-started',
+        sessionStatus: 'in-progress',
       },
     ],
     users,
@@ -749,13 +749,13 @@ async function createProjects(org, users) {
         title: 'Setup AWS Infrastructure',
         assignedUnits: [departments.devopsDept],
         targetDate: daysFromNow(20),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
       {
         title: 'Migrate Application Services',
         assignedUnits: [departments.backendDept],
         targetDate: daysFromNow(30),
-        sessionStatus: 'not-started',
+        sessionStatus: 'in-progress',
       },
     ],
     users,
@@ -775,15 +775,40 @@ async function createProjects(org, users) {
     workItemsConfig: [
       { title: 'Provision VPC and subnets', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
       { title: 'Setup EKS cluster', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(12) },
-      { title: 'Configure RDS instances', priority: 'P1', status: 'In Progress' },
-      { title: 'Setup CloudFront CDN', priority: 'P1', status: 'In Progress' },
-      { title: 'Implement monitoring', priority: 'P2', status: 'Ready' },
-      { title: 'Configure auto-scaling', priority: 'P2', status: 'Ready' },
-      { title: 'Setup backup strategy', priority: 'P2', status: 'Ready' },
-      { title: 'Configure WAF', priority: 'P2', status: 'Backlog' },
-      { title: 'Setup disaster recovery', priority: 'P2', status: 'Backlog' },
-      { title: 'Implement blue-green deployment', priority: 'P2', status: 'Backlog' },
+      { title: 'Configure RDS instances', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
+      { title: 'Setup CloudFront CDN', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(8) },
+      { title: 'Implement monitoring', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(6) },
+      { title: 'Configure auto-scaling', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(5) },
+      { title: 'Setup backup strategy', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(4) },
+      { title: 'Configure WAF', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(3) },
+      { title: 'Setup disaster recovery', priority: 'P2', status: 'In Progress' },
+      { title: 'Implement blue-green deployment', priority: 'P2', status: 'Ready' },
       { title: 'Cost optimization review', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
+  // Start Migrate Application Services with work items
+  const migrateAppObjective = cloudInfraRefinement.childObjectives.find(
+    (o) => o.title === 'Migrate Application Services'
+  );
+  const migrateAppSession = cloudInfraRefinement.childSessions.find(
+    (s) => s.objectiveId === migrateAppObjective.id
+  );
+  const backendTeamsForCloud = teams.filter((t) => t.parentId === departments.backendDept.id);
+  await createWorkItemsForSession({
+    session: migrateAppSession,
+    leafTeam: backendTeamsForCloud[2],
+    workItemsConfig: [
+      { title: 'Audit current services', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(8) },
+      { title: 'Containerize applications', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(6) },
+      { title: 'Create Kubernetes manifests', priority: 'P1', status: 'In Progress' },
+      { title: 'Migrate authentication service', priority: 'P1', status: 'In Progress' },
+      { title: 'Migrate API gateway', priority: 'P2', status: 'Ready' },
+      { title: 'Update service discovery', priority: 'P2', status: 'Ready' },
+      { title: 'Configure health checks', priority: 'P2', status: 'Backlog' },
+      { title: 'Load testing', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -870,15 +895,41 @@ async function createProjects(org, users) {
     workItemsConfig: [
       { title: 'Setup iOS project', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(18) },
       { title: 'Implement navigation', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(14) },
-      { title: 'Build auth screens', priority: 'P1', status: 'In Progress' },
-      { title: 'Implement offline sync', priority: 'P1', status: 'In Progress' },
-      { title: 'Add push notifications', priority: 'P2', status: 'Ready' },
-      { title: 'Build settings screen', priority: 'P2', status: 'Ready' },
-      { title: 'Implement dark mode', priority: 'P2', status: 'Ready' },
-      { title: 'Add biometric auth', priority: 'P2', status: 'Backlog' },
-      { title: 'Localization support', priority: 'P2', status: 'Backlog' },
+      { title: 'Build auth screens', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
+      { title: 'Implement offline sync', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(7) },
+      { title: 'Add push notifications', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(5) },
+      { title: 'Build settings screen', priority: 'P2', status: 'In Progress' },
+      { title: 'Implement dark mode', priority: 'P2', status: 'In Progress' },
+      { title: 'Add biometric auth', priority: 'P2', status: 'Ready' },
+      { title: 'Localization support', priority: 'P2', status: 'Ready' },
       { title: 'App Store assets', priority: 'P2', status: 'Backlog' },
       { title: 'Crash reporting setup', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
+  // Add Android work items
+  const androidObjective = mobileProject.objectives.find(
+    (o) => o.title === 'Develop Android App'
+  );
+  const androidSession = mobileProject.refinementSessions.find(
+    (s) => s.objectiveId === androidObjective.id
+  );
+  await createWorkItemsForSession({
+    session: androidSession,
+    leafTeam: frontendTeams[1],
+    workItemsConfig: [
+      { title: 'Setup Android project', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(16) },
+      { title: 'Implement navigation', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(12) },
+      { title: 'Build auth screens', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(9) },
+      { title: 'Implement offline sync', priority: 'P1', status: 'In Progress' },
+      { title: 'Add push notifications', priority: 'P2', status: 'In Progress' },
+      { title: 'Build settings screen', priority: 'P2', status: 'Ready' },
+      { title: 'Implement Material Design', priority: 'P2', status: 'Ready' },
+      { title: 'Add fingerprint auth', priority: 'P2', status: 'Ready' },
+      { title: 'Localization support', priority: 'P2', status: 'Backlog' },
+      { title: 'Play Store assets', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -906,12 +957,12 @@ async function createProjects(org, users) {
       {
         title: 'Train ML Models',
         targetDate: daysFromNow(20),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
       {
         title: 'Build Recommendations API',
         targetDate: daysFromNow(35),
-        sessionStatus: 'not-started',
+        sessionStatus: 'in-progress',
       },
     ],
     users,
@@ -927,13 +978,13 @@ async function createProjects(org, users) {
         title: 'Develop ML Models',
         assignedUnits: [departments.dataSciDept],
         targetDate: daysFromNow(15),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
       {
         title: 'Build Data Pipeline',
         assignedUnits: [departments.dataEngDept],
         targetDate: daysFromNow(20),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
     ],
     users,
@@ -954,14 +1005,39 @@ async function createProjects(org, users) {
       { title: 'Collect training data', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(25) },
       { title: 'Feature engineering', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(18) },
       { title: 'Data cleaning & preprocessing', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
-      { title: 'Train baseline model', priority: 'P1', status: 'In Progress' },
-      { title: 'Hyperparameter tuning', priority: 'P2', status: 'In Progress' },
-      { title: 'Model evaluation', priority: 'P2', status: 'Ready' },
-      { title: 'Cross-validation', priority: 'P2', status: 'Ready' },
-      { title: 'Deploy model to staging', priority: 'P2', status: 'Ready' },
-      { title: 'A/B testing setup', priority: 'P2', status: 'Backlog' },
-      { title: 'Model monitoring', priority: 'P2', status: 'Backlog' },
+      { title: 'Train baseline model', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(12) },
+      { title: 'Hyperparameter tuning', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(9) },
+      { title: 'Model evaluation', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(7) },
+      { title: 'Cross-validation', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(5) },
+      { title: 'Deploy model to staging', priority: 'P2', status: 'In Progress' },
+      { title: 'A/B testing setup', priority: 'P2', status: 'Ready' },
+      { title: 'Model monitoring', priority: 'P2', status: 'Ready' },
       { title: 'Production deployment', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
+  // Add Data Pipeline work items
+  const dataPipelineObjective = aiMlRefinement.childObjectives.find(
+    (o) => o.title === 'Build Data Pipeline'
+  );
+  const dataPipelineSession = aiMlRefinement.childSessions.find(
+    (s) => s.objectiveId === dataPipelineObjective.id
+  );
+  const dataEngTeamsForAI = teams.filter((t) => t.parentId === departments.dataEngDept.id);
+  await createWorkItemsForSession({
+    session: dataPipelineSession,
+    leafTeam: dataEngTeamsForAI[0],
+    workItemsConfig: [
+      { title: 'Design pipeline architecture', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(20) },
+      { title: 'Setup Airflow DAGs', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(16) },
+      { title: 'Implement data ingestion', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(13) },
+      { title: 'Build feature store', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
+      { title: 'Add data validation', priority: 'P2', status: 'In Progress' },
+      { title: 'Setup monitoring', priority: 'P2', status: 'In Progress' },
+      { title: 'Implement retry logic', priority: 'P2', status: 'Ready' },
+      { title: 'Optimize pipeline performance', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -989,12 +1065,12 @@ async function createProjects(org, users) {
       {
         title: 'Deploy SIEM and Monitoring Tools',
         targetDate: daysFromNow(40),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
       {
         title: 'Define SOC Processes',
         targetDate: daysFromNow(60),
-        sessionStatus: 'not-started',
+        sessionStatus: 'in-progress',
       },
     ],
     users,
@@ -1009,14 +1085,32 @@ async function createProjects(org, users) {
     workItemsConfig: [
       { title: 'Evaluate SIEM solutions', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(12) },
       { title: 'Deploy Splunk', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(8) },
-      { title: 'Configure log aggregation', priority: 'P1', status: 'In Progress' },
-      { title: 'Setup alerting rules', priority: 'P1', status: 'In Progress' },
-      { title: 'Create dashboards', priority: 'P2', status: 'Ready' },
-      { title: 'Integrate with ticketing', priority: 'P2', status: 'Ready' },
-      { title: 'Define incident response playbooks', priority: 'P2', status: 'Ready' },
-      { title: 'Setup threat intelligence feeds', priority: 'P2', status: 'Backlog' },
-      { title: 'Compliance reporting', priority: 'P2', status: 'Backlog' },
+      { title: 'Configure log aggregation', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(6) },
+      { title: 'Setup alerting rules', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(4) },
+      { title: 'Create dashboards', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(3) },
+      { title: 'Integrate with ticketing', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(2) },
+      { title: 'Define incident response playbooks', priority: 'P2', status: 'In Progress' },
+      { title: 'Setup threat intelligence feeds', priority: 'P2', status: 'Ready' },
+      { title: 'Compliance reporting', priority: 'P2', status: 'Ready' },
       { title: 'Security metrics & KPIs', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
+  // Add SOC Processes work items
+  const socProcessesSession = socProject.refinementSessions[1];
+  await createWorkItemsForSession({
+    session: socProcessesSession,
+    leafTeam: secTeams[1],
+    workItemsConfig: [
+      { title: 'Document incident response procedures', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(5) },
+      { title: 'Create escalation matrix', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(3) },
+      { title: 'Define SLA requirements', priority: 'P1', status: 'In Progress' },
+      { title: 'Setup on-call rotation', priority: 'P2', status: 'In Progress' },
+      { title: 'Create runbooks', priority: 'P2', status: 'Ready' },
+      { title: 'Train SOC team', priority: 'P2', status: 'Ready' },
+      { title: 'Conduct tabletop exercises', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -1138,7 +1232,7 @@ async function createProjects(org, users) {
         title: 'Shopping Cart & Checkout',
         assignedUnits: [divisions.engDiv],
         targetDate: daysFromNow(40),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
       {
         title: 'Design E-Commerce UX',
@@ -1174,8 +1268,70 @@ async function createProjects(org, users) {
         title: 'Product Search & Filters',
         assignedUnits: [departments.frontendDept],
         targetDate: daysFromNow(20),
+        sessionStatus: 'completed',
+      },
+    ],
+    users,
+    org,
+  });
+
+  // Refine Shopping Cart objective
+  const shoppingCartObjective = ecomProject.objectives.find(o => o.title === 'Shopping Cart & Checkout');
+  const shoppingCartSession = ecomProject.refinementSessions.find(s => s.objectiveId === shoppingCartObjective.id);
+  const ecomBackendRefinement = await refineObjectiveIntoDeeperLevel({
+    parentSession: shoppingCartSession,
+    childUnits: [departments.backendDept, departments.frontendDept],
+    childObjectivesConfig: [
+      {
+        title: 'Cart Backend Services',
+        assignedUnits: [departments.backendDept],
+        targetDate: daysFromNow(25),
         sessionStatus: 'in-progress',
       },
+      {
+        title: 'Checkout UI',
+        assignedUnits: [departments.frontendDept],
+        targetDate: daysFromNow(30),
+        sessionStatus: 'in-progress',
+      },
+    ],
+    users,
+    org,
+  });
+
+  // Add Cart Backend work items
+  const cartBackendObjective = ecomBackendRefinement.childObjectives.find(o => o.title === 'Cart Backend Services');
+  const cartBackendSession = ecomBackendRefinement.childSessions.find(s => s.objectiveId === cartBackendObjective.id);
+  await createWorkItemsForSession({
+    session: cartBackendSession,
+    leafTeam: backendTeams[1],
+    workItemsConfig: [
+      { title: 'Design cart schema', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(18) },
+      { title: 'Implement cart CRUD', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(14) },
+      { title: 'Add cart persistence', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(11) },
+      { title: 'Implement inventory check', priority: 'P1', status: 'In Progress' },
+      { title: 'Add promo code logic', priority: 'P2', status: 'In Progress' },
+      { title: 'Cart abandonment tracking', priority: 'P2', status: 'Ready' },
+      { title: 'Saved carts feature', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
+  // Add Checkout UI work items
+  const checkoutUIObjective = ecomBackendRefinement.childObjectives.find(o => o.title === 'Checkout UI');
+  const checkoutUISession = ecomBackendRefinement.childSessions.find(s => s.objectiveId === checkoutUIObjective.id);
+  await createWorkItemsForSession({
+    session: checkoutUISession,
+    leafTeam: frontendTeams[0],
+    workItemsConfig: [
+      { title: 'Design checkout flow', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(16) },
+      { title: 'Build cart summary', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(13) },
+      { title: 'Implement address form', priority: 'P1', status: 'In Progress' },
+      { title: 'Add payment form', priority: 'P1', status: 'In Progress' },
+      { title: 'Order confirmation page', priority: 'P2', status: 'Ready' },
+      { title: 'Guest checkout', priority: 'P2', status: 'Ready' },
+      { title: 'Express checkout', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -1191,13 +1347,33 @@ async function createProjects(org, users) {
       { title: 'Design product schema', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(25) },
       { title: 'Implement CRUD endpoints', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(20) },
       { title: 'Add image upload', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
-      { title: 'Implement caching', priority: 'P1', status: 'In Progress' },
-      { title: 'Add inventory tracking', priority: 'P2', status: 'In Progress' },
-      { title: 'Product search indexing', priority: 'P2', status: 'Ready' },
-      { title: 'Category management', priority: 'P2', status: 'Ready' },
-      { title: 'Product variants support', priority: 'P2', status: 'Backlog' },
+      { title: 'Implement caching', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(12) },
+      { title: 'Add inventory tracking', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(10) },
+      { title: 'Product search indexing', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(8) },
+      { title: 'Category management', priority: 'P2', status: 'In Progress' },
+      { title: 'Product variants support', priority: 'P2', status: 'Ready' },
       { title: 'Bulk import/export', priority: 'P2', status: 'Backlog' },
       { title: 'Product reviews API', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
+  // Add work items for Product Search & Filters
+  const searchObjective = catalogRefinement.childObjectives.find(o => o.title === 'Product Search & Filters');
+  const searchSession = catalogRefinement.childSessions.find(s => s.objectiveId === searchObjective.id);
+  await createWorkItemsForSession({
+    session: searchSession,
+    leafTeam: frontendTeams[0],
+    workItemsConfig: [
+      { title: 'Design search UI', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
+      { title: 'Implement search bar', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(12) },
+      { title: 'Build filter components', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(9) },
+      { title: 'Add faceted search', priority: 'P2', status: 'In Progress' },
+      { title: 'Implement sorting options', priority: 'P2', status: 'In Progress' },
+      { title: 'Add search suggestions', priority: 'P2', status: 'Ready' },
+      { title: 'Pagination component', priority: 'P2', status: 'Ready' },
+      { title: 'Search analytics', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -1231,13 +1407,13 @@ async function createProjects(org, users) {
         title: 'Admin Dashboard UI',
         assignedUnits: [departments.frontendDept],
         targetDate: daysFromNow(30),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
       {
         title: 'Reporting & Analytics',
         assignedUnits: [departments.backendDept],
         targetDate: daysFromNow(40),
-        sessionStatus: 'not-started',
+        sessionStatus: 'in-progress',
       },
       {
         title: 'QA & Testing',
@@ -1259,12 +1435,32 @@ async function createProjects(org, users) {
     workItemsConfig: [
       { title: 'User CRUD endpoints', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(22) },
       { title: 'Role-based access control', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(18) },
-      { title: 'Audit logging', priority: 'P1', status: 'In Progress' },
-      { title: 'Password reset flow', priority: 'P2', status: 'In Progress' },
-      { title: 'User permissions management', priority: 'P2', status: 'Ready' },
+      { title: 'Audit logging', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
+      { title: 'Password reset flow', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(12) },
+      { title: 'User permissions management', priority: 'P2', status: 'In Progress' },
       { title: 'Session management', priority: 'P2', status: 'Ready' },
       { title: 'Two-factor authentication', priority: 'P2', status: 'Backlog' },
       { title: 'User activity tracking', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
+  // Add work items for Admin Dashboard UI
+  const dashboardUIObjective = adminProject.objectives.find(o => o.title === 'Admin Dashboard UI');
+  const dashboardUISession = adminProject.refinementSessions.find(s => s.objectiveId === dashboardUIObjective.id);
+  await createWorkItemsForSession({
+    session: dashboardUISession,
+    leafTeam: frontendTeams[0],
+    workItemsConfig: [
+      { title: 'Design dashboard layout', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(20) },
+      { title: 'Build navigation', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(17) },
+      { title: 'User list view', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(14) },
+      { title: 'User detail page', priority: 'P1', status: 'In Progress' },
+      { title: 'User edit form', priority: 'P2', status: 'In Progress' },
+      { title: 'Permissions management UI', priority: 'P2', status: 'Ready' },
+      { title: 'Activity log viewer', priority: 'P2', status: 'Ready' },
+      { title: 'Bulk operations', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -1292,7 +1488,7 @@ async function createProjects(org, users) {
         title: 'Migrate Historical Data',
         assignedUnits: [divisions.dataDiv],
         targetDate: daysFromNow(40),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
       {
         title: 'Build Data Pipeline',
@@ -1328,13 +1524,13 @@ async function createProjects(org, users) {
         title: 'Extract Legacy Data',
         assignedUnits: [departments.dataEngDept],
         targetDate: daysFromNow(25),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
       {
         title: 'Transform & Load to Snowflake',
         assignedUnits: [departments.dataEngDept],
         targetDate: daysFromNow(35),
-        sessionStatus: 'not-started',
+        sessionStatus: 'in-progress',
       },
     ],
     users,
@@ -1350,12 +1546,31 @@ async function createProjects(org, users) {
     workItemsConfig: [
       { title: 'Analyze legacy schema', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(14) },
       { title: 'Write extraction scripts', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
-      { title: 'Test data extraction', priority: 'P1', status: 'In Progress' },
-      { title: 'Handle data validation', priority: 'P2', status: 'In Progress' },
-      { title: 'Data quality checks', priority: 'P2', status: 'Ready' },
-      { title: 'Error handling & retry logic', priority: 'P2', status: 'Ready' },
-      { title: 'Performance optimization', priority: 'P2', status: 'Backlog' },
+      { title: 'Test data extraction', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(8) },
+      { title: 'Handle data validation', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(6) },
+      { title: 'Data quality checks', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(4) },
+      { title: 'Error handling & retry logic', priority: 'P2', status: 'In Progress' },
+      { title: 'Performance optimization', priority: 'P2', status: 'Ready' },
       { title: 'Incremental extraction', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
+  // Add Transform & Load work items
+  const transformLoadObjective = dataMigrationRefinement.childObjectives.find(o => o.title === 'Transform & Load to Snowflake');
+  const transformLoadSession = dataMigrationRefinement.childSessions.find(s => s.objectiveId === transformLoadObjective.id);
+  await createWorkItemsForSession({
+    session: transformLoadSession,
+    leafTeam: dataEngTeams[0],
+    workItemsConfig: [
+      { title: 'Design Snowflake schema', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(7) },
+      { title: 'Build transformation logic', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(5) },
+      { title: 'Implement data loading', priority: 'P1', status: 'In Progress' },
+      { title: 'Add data validation', priority: 'P1', status: 'In Progress' },
+      { title: 'Reconciliation checks', priority: 'P2', status: 'Ready' },
+      { title: 'Performance tuning', priority: 'P2', status: 'Ready' },
+      { title: 'Cutover planning', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -1424,19 +1639,19 @@ async function createProjects(org, users) {
         title: 'Database Query Optimization',
         assignedUnits: [backendTeams[0]],
         targetDate: daysFromNow(20),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
       {
         title: 'Implement Caching Strategy',
         assignedUnits: [backendTeams[1]],
         targetDate: daysFromNow(30),
-        sessionStatus: 'in-progress',
+        sessionStatus: 'completed',
       },
       {
         title: 'API Response Optimization',
         assignedUnits: [backendTeams[0]],
         targetDate: daysFromNow(40),
-        sessionStatus: 'not-started',
+        sessionStatus: 'in-progress',
       },
     ],
     users,
@@ -1452,12 +1667,31 @@ async function createProjects(org, users) {
     workItemsConfig: [
       { title: 'Identify slow queries', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
       { title: 'Add database indexes', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(7) },
-      { title: 'Optimize join queries', priority: 'P1', status: 'In Progress' },
-      { title: 'Implement query batching', priority: 'P2', status: 'In Progress' },
-      { title: 'Add connection pooling', priority: 'P2', status: 'Ready' },
+      { title: 'Optimize join queries', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(5) },
+      { title: 'Implement query batching', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(3) },
+      { title: 'Add connection pooling', priority: 'P2', status: 'In Progress' },
       { title: 'Query result caching', priority: 'P2', status: 'Ready' },
       { title: 'Database partitioning strategy', priority: 'P2', status: 'Backlog' },
       { title: 'Read replicas setup', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
+  // Add Caching Strategy work items
+  const cachingObjective = perfProject.objectives.find(o => o.title === 'Implement Caching Strategy');
+  const cachingSession = perfProject.refinementSessions.find(s => s.objectiveId === cachingObjective.id);
+  await createWorkItemsForSession({
+    session: cachingSession,
+    leafTeam: backendTeams[1],
+    workItemsConfig: [
+      { title: 'Design caching architecture', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(8) },
+      { title: 'Setup Redis cluster', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(6) },
+      { title: 'Implement cache layers', priority: 'P1', status: 'In Progress' },
+      { title: 'Add cache invalidation', priority: 'P1', status: 'In Progress' },
+      { title: 'Cache monitoring', priority: 'P2', status: 'Ready' },
+      { title: 'Cache warming strategies', priority: 'P2', status: 'Ready' },
+      { title: 'Cache hit rate optimization', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
