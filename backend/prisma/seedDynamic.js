@@ -12,6 +12,12 @@ function daysAgo(days) {
   return date.toISOString().split('T')[0]; // Return YYYY-MM-DD string
 }
 
+function daysAgoDateTime(days) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString(); // Return full ISO datetime string
+}
+
 function daysFromNow(days) {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -356,7 +362,7 @@ async function createProjectWithCascade({
         objectiveId: objective.id,
         status: objConfig.sessionStatus || 'not-started',
         createdBy: getUserByUnit(ownerUnit.id, users, org).id,
-        completedAt: objConfig.sessionStatus === 'completed' ? daysAgo(3) : null,
+        completedAt: objConfig.sessionStatus === 'completed' ? daysAgoDateTime(3) : null,
       },
     });
     refinementSessions.push(session);
@@ -423,7 +429,7 @@ async function refineObjectiveIntoDeeperLevel({
         objectiveId: childObjective.id,
         status: childConfig.sessionStatus || 'not-started',
         createdBy: getUserByUnit(assignedUnits[0].id, users, org).id,
-        completedAt: childConfig.sessionStatus === 'completed' ? daysAgo(2) : null,
+        completedAt: childConfig.sessionStatus === 'completed' ? daysAgoDateTime(2) : null,
       },
     });
     childSessions.push(session);
