@@ -34,23 +34,47 @@ export function ProjectDashboard() {
   // Update filtered data when store data changes
   useEffect(() => {
     if (objectives && projectId) {
-      setProjectObjectives(objectives.filter(obj => obj.projectId === projectId));
+      const filtered = objectives.filter(obj => obj.projectId === projectId);
+      console.log('Filtering objectives:', { 
+        totalObjectives: objectives.length, 
+        projectId, 
+        filtered: filtered.length,
+        sample: objectives[0]
+      });
+      setProjectObjectives(filtered);
     }
   }, [objectives, projectId]);
   
   useEffect(() => {
     if (workItems && projectId) {
-      setProjectWorkItems(workItems.filter(wi => wi.projectId === projectId));
+      const filtered = workItems.filter(wi => wi.projectId === projectId);
+      console.log('Filtering work items:', { 
+        totalWorkItems: workItems.length, 
+        projectId, 
+        filtered: filtered.length,
+        sample: workItems[0]
+      });
+      setProjectWorkItems(filtered);
     }
   }, [workItems, projectId]);
   
   async function loadProjectData() {
     setLoading(true);
     try {
+      console.log('Loading project data for:', projectId);
       // Load data sequentially to avoid race conditions
-      if (fetchProjects) await fetchProjects();
-      if (fetchObjectives) await fetchObjectives();
-      if (fetchWorkItems) await fetchWorkItems();
+      if (fetchProjects) {
+        await fetchProjects();
+        console.log('Projects loaded:', projects?.length);
+      }
+      if (fetchObjectives) {
+        await fetchObjectives();
+        console.log('Objectives loaded:', objectives?.length);
+      }
+      if (fetchWorkItems) {
+        await fetchWorkItems();
+        console.log('Work items loaded:', workItems?.length);
+      }
       // Wait a tick for state to update before loading dependencies
       await new Promise(resolve => setTimeout(resolve, 0));
       await loadDependencies();
