@@ -3,6 +3,37 @@ import prisma from '../lib/prisma.js';
 
 const router = express.Router();
 
+// GET all dependencies
+router.get('/', async (req, res) => {
+  try {
+    const dependencies = await prisma.objectiveDependency.findMany({
+      include: {
+        predecessor: {
+          select: {
+            id: true,
+            title: true,
+            projectId: true,
+            targetDate: true,
+          }
+        },
+        successor: {
+          select: {
+            id: true,
+            title: true,
+            projectId: true,
+            targetDate: true,
+          }
+        }
+      }
+    });
+
+    res.json(dependencies);
+  } catch (error) {
+    console.error('Error fetching all dependencies:', error);
+    res.status(500).json({ error: 'Failed to fetch dependencies' });
+  }
+});
+
 // GET all dependencies for an objective
 router.get('/objective/:objectiveId', async (req, res) => {
   try {
