@@ -41,9 +41,12 @@ export function ProjectDashboard() {
         filtered: filtered.length,
         sample: objectives[0]
       });
-      setProjectObjectives(filtered);
+      // Only update if the count changed (prevents infinite loop)
+      if (filtered.length !== projectObjectives.length) {
+        setProjectObjectives(filtered);
+      }
     }
-  }, [objectives, projectId]);
+  }, [objectives, projectId, projectObjectives.length]);
   
   useEffect(() => {
     if (workItems && projectId) {
@@ -54,9 +57,19 @@ export function ProjectDashboard() {
         filtered: filtered.length,
         sample: workItems[0]
       });
-      setProjectWorkItems(filtered);
+      // Only update if the count changed (prevents infinite loop)
+      if (filtered.length !== projectWorkItems.length) {
+        setProjectWorkItems(filtered);
+      }
     }
-  }, [workItems, projectId]);
+  }, [workItems, projectId, projectWorkItems.length]);
+  
+  // Load dependencies once objectives are filtered
+  useEffect(() => {
+    if (projectObjectives.length > 0 && !loading) {
+      loadDependencies();
+    }
+  }, [projectObjectives.length, loading]);
   
   async function loadProjectData() {
     setLoading(true);
@@ -75,9 +88,6 @@ export function ProjectDashboard() {
         await fetchWorkItems();
         console.log('Work items loaded:', workItems?.length);
       }
-      // Wait a tick for state to update before loading dependencies
-      await new Promise(resolve => setTimeout(resolve, 0));
-      await loadDependencies();
       await loadForecast();
     } catch (error) {
       console.error('Failed to load project data:', error);
