@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import BacklogPage from './pages/BacklogPage'
 import OrganizationBuilder from './pages/OrganizationBuilder'
 import ProjectInitiation from './pages/ProjectInitiation'
+import ProjectDashboard from './pages/ProjectDashboard'
 import RefinementPage from './pages/RefinementPage'
 import MyRefinements from './pages/MyRefinements'
 import RoadmapPage from './pages/RoadmapPage'
@@ -49,6 +50,7 @@ function App() {
                       <Route path="/organization" element={<ProtectedRoute><OrganizationBuilder /></ProtectedRoute>} />
                       <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
                       <Route path="/projects" element={<ProtectedRoute><ProjectInitiation /></ProtectedRoute>} />
+                      <Route path="/projects/:projectId/dashboard" element={<ProtectedRoute><ProjectDashboard /></ProtectedRoute>} />
                       <Route path="/refinement/:sessionId" element={<ProtectedRoute><RefinementPage /></ProtectedRoute>} />
                       <Route path="/my-refinements" element={<ProtectedRoute><MyRefinements /></ProtectedRoute>} />
                       <Route path="/roadmap" element={<ProtectedRoute><RoadmapPage /></ProtectedRoute>} />

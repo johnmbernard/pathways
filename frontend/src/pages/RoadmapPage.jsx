@@ -261,6 +261,7 @@ function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, t
 
 // Project Row Component
 function ProjectRow({ project, objectives, workItems, minDate, maxDate, timelineWidth, totalWeeks, weekWidth, forecast }) {
+  const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
   
   const rootObjectives = objectives.filter(obj => !obj.parentObjectiveId);
@@ -327,7 +328,11 @@ function ProjectRow({ project, objectives, workItems, minDate, maxDate, timeline
             <FolderOpen size={20} />
           </div>
           
-          <div className={styles.ganttItemTitle}>
+          <button
+            className={styles.projectTitleButton}
+            onClick={() => navigate(`/app/projects/${project.id}/dashboard`)}
+            title="Open project dashboard"
+          >
             <strong>{project.title}</strong>
             {status !== 'unknown' && (
               <div className={`${styles.statusDot} ${
@@ -336,7 +341,7 @@ function ProjectRow({ project, objectives, workItems, minDate, maxDate, timeline
                 styles.statusDotRed
               }`} />
             )}
-          </div>
+          </button>
           
           <div className={styles.ganttItemMeta}>
             {rootObjectives.length > 0 && (
