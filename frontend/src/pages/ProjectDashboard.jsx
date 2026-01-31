@@ -20,9 +20,9 @@ export function ProjectDashboard() {
   const [dependencies, setDependencies] = useState([]);
   const [forecast, setForecast] = useState(null);
   
-  const project = projects.find(p => p.id === projectId);
-  const projectObjectives = objectives.filter(obj => obj.projectId === projectId);
-  const projectWorkItems = workItems.filter(wi => wi.projectId === projectId);
+  const project = projects?.find(p => p.id === projectId);
+  const projectObjectives = objectives?.filter(obj => obj.projectId === projectId) || [];
+  const projectWorkItems = workItems?.filter(wi => wi.projectId === projectId) || [];
   
   useEffect(() => {
     loadProjectData();
@@ -51,14 +51,19 @@ export function ProjectDashboard() {
       if (!response.ok) throw new Error('Failed to fetch dependencies');
       const data = await response.json();
       
+      // Get current objectives for this project
+      const currentObjectives = await fetchObjectives();
+      const projectObjs = currentObjectives?.filter(obj => obj.projectId === projectId) || [];
+      const objectiveIds = projectObjs.map(obj => obj.id);
+      
       // Filter dependencies for this project's objectives
-      const objectiveIds = projectObjectives.map(obj => obj.id);
       const projectDeps = data.filter(dep => 
         objectiveIds.includes(dep.predecessorId) || objectiveIds.includes(dep.successorId)
       );
       setDependencies(projectDeps);
     } catch (error) {
       console.error('Failed to load dependencies:', error);
+      setDependencies([]);
     }
   }
   
@@ -70,6 +75,7 @@ export function ProjectDashboard() {
       setForecast(data);
     } catch (error) {
       console.error('Failed to load forecast:', error);
+      setForecast(null);
     }
   }
   
@@ -233,21 +239,21 @@ export function ProjectDashboard() {
 // ============================================
 function OverviewTab({ project, objectives, workItems, forecast }) {
   // Calculate completion stats
-  const completedObjectives = objectives.filter(obj => obj.status === 'Completed').length;
-  const completedWorkItems = workItems.filter(wi => wi.status === 'Done').length;
+  const completedObjectives = objectives?.filter(obj => obj.status === 'Completed').length || 0;
+  const completedWorkItems = workItems?.filter(wi => wi.status === 'Done').length || 0;
   
-  const objectiveCompletion = objectives.length > 0 
+  const objectiveCompletion = objectives?.length > 0 
     ? Math.round((completedObjectives / objectives.length) * 100) 
     : 0;
-  const workItemCompletion = workItems.length > 0
+  const workItemCompletion = workItems?.length > 0
     ? Math.round((completedWorkItems / workItems.length) * 100)
     : 0;
   
   // Group objectives by tier
-  const objectivesByTier = objectives.reduce((acc, obj) => {
+  const objectivesByTier = objectives?.reduce((acc, obj) => {
     acc[obj.fromTier] = (acc[obj.fromTier] || 0) + 1;
     return acc;
-  }, {});
+  }, {}) || {};
   
   return (
     <div className={styles.overviewTab}>
@@ -270,7 +276,7 @@ function OverviewTab({ project, objectives, workItems, forecast }) {
                 />
               </div>
               <div className={styles.progressStats}>
-                {completedObjectives} of {objectives.length} completed
+                {completedObjectives} of {objectives?.length || 0} completed
               </div>
             </div>
             
@@ -286,7 +292,7 @@ function OverviewTab({ project, objectives, workItems, forecast }) {
                 />
               </div>
               <div className={styles.progressStats}>
-                {completedWorkItems} of {workItems.length} done
+                {completedWorkItems} of {workItems?.length || 0} done
               </div>
             </div>
           </div>
@@ -366,7 +372,7 @@ function OverviewTab({ project, objectives, workItems, forecast }) {
           <div className={styles.cardBody}>
             <div className={styles.activityList}>
               {workItems
-                .filter(wi => wi.completedAt)
+                ?.filter(wi => wi.completedAt)
                 .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
                 .slice(0, 5)
                 .map(wi => (
@@ -381,7 +387,7 @@ function OverviewTab({ project, objectives, workItems, forecast }) {
                   </div>
                 ))}
               
-              {workItems.filter(wi => wi.completedAt).length === 0 && (
+              {(workItems?.filter(wi => wi.completedAt).length || 0) === 0 && (
                 <div className={styles.emptyState}>No completed work items yet</div>
               )}
             </div>
@@ -419,11 +425,11 @@ function DependenciesTab({ project, objectives, dependencies }) {
           <h3>Dependencies List ({dependencies.length})</h3>
         </div>
         <div className={styles.cardBody}>
-          {dependencies.length > 0 ? (
+          {dependencies?.length > 0 ? (
             <div className={styles.dependenciesList}>
               {dependencies.map(dep => {
-                const predecessor = objectives.find(obj => obj.id === dep.predecessorId);
-                const successor = objectives.find(obj => obj.id === dep.successorId);
+                const predecessor = objectives?.find(obj => obj.id === dep.predecessorId);
+                const successor = objectives?.find(obj => obj.id === dep.successorId);
                 
                 return (
                   <div key={dep.id} className={styles.dependencyItem}>
