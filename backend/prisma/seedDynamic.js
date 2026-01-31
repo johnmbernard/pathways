@@ -569,6 +569,9 @@ async function createProjects(org, users) {
       { title: 'Build user profile APIs', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(20) },
       { title: 'Add caching layer', priority: 'P2', status: 'In Progress' },
       { title: 'Optimize database queries', priority: 'P2', status: 'Ready' },
+      { title: 'Implement rate limiting', priority: 'P2', status: 'Ready' },
+      { title: 'Add API versioning', priority: 'P2', status: 'Backlog' },
+      { title: 'Write API documentation', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -590,7 +593,9 @@ async function createProjects(org, users) {
       { title: 'Write test plan', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
       { title: 'Create test cases', priority: 'P1', status: 'In Progress' },
       { title: 'Execute regression tests', priority: 'P2', status: 'Ready' },
-      { title: 'Performance testing', priority: 'P2', status: 'Backlog' },
+      { title: 'Performance testing', priority: 'P2', status: 'Ready' },
+      { title: 'Security testing', priority: 'P2', status: 'Backlog' },
+      { title: 'Load testing', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -666,8 +671,10 @@ async function createProjects(org, users) {
       { title: 'Provision VPC and subnets', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
       { title: 'Setup EKS cluster', priority: 'P1', status: 'In Progress' },
       { title: 'Configure RDS instances', priority: 'P1', status: 'Ready' },
-      { title: 'Setup CloudFront CDN', priority: 'P2', status: 'Backlog' },
+      { title: 'Setup CloudFront CDN', priority: 'P2', status: 'Ready' },
       { title: 'Implement monitoring', priority: 'P2', status: 'Backlog' },
+      { title: 'Configure auto-scaling', priority: 'P2', status: 'Backlog' },
+      { title: 'Setup backup strategy', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -730,6 +737,8 @@ async function createProjects(org, users) {
       { title: 'Implement sync endpoints', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
       { title: 'Add push notification service', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
       { title: 'Setup CDN for assets', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(5) },
+      { title: 'Implement offline support', priority: 'P2', status: 'In Progress' },
+      { title: 'Add image optimization', priority: 'P2', status: 'Ready' },
     ],
     users,
     org,
@@ -749,8 +758,10 @@ async function createProjects(org, users) {
       { title: 'Setup iOS project', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(18) },
       { title: 'Implement navigation', priority: 'P1', status: 'In Progress' },
       { title: 'Build auth screens', priority: 'P1', status: 'Ready' },
-      { title: 'Implement offline sync', priority: 'P1', status: 'Backlog' },
+      { title: 'Implement offline sync', priority: 'P1', status: 'Ready' },
       { title: 'Add push notifications', priority: 'P2', status: 'Backlog' },
+      { title: 'Build settings screen', priority: 'P2', status: 'Backlog' },
+      { title: 'Implement dark mode', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -827,7 +838,9 @@ async function createProjects(org, users) {
       { title: 'Feature engineering', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(18) },
       { title: 'Train baseline model', priority: 'P1', status: 'In Progress' },
       { title: 'Hyperparameter tuning', priority: 'P2', status: 'Ready' },
-      { title: 'Model evaluation', priority: 'P2', status: 'Backlog' },
+      { title: 'Model evaluation', priority: 'P2', status: 'Ready' },
+      { title: 'Cross-validation', priority: 'P2', status: 'Backlog' },
+      { title: 'Deploy model to staging', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -876,22 +889,23 @@ async function createProjects(org, users) {
       { title: 'Evaluate SIEM solutions', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(12) },
       { title: 'Deploy Splunk', priority: 'P1', status: 'In Progress' },
       { title: 'Configure log aggregation', priority: 'P1', status: 'Ready' },
-      { title: 'Setup alerting rules', priority: 'P2', status: 'Backlog' },
+      { title: 'Setup alerting rules', priority: 'P2', status: 'Ready' },
       { title: 'Create dashboards', priority: 'P2', status: 'Backlog' },
+      { title: 'Integrate with ticketing', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
   });
 
   // ============================================
-  // Add more projects in Planning status
+  // PROJECT 6: API Marketplace (Tier 1 → Planning, NOT YET RELEASED)
   // ============================================
-  console.log('  Creating planning-stage projects...');
+  console.log('  Creating API Marketplace (incomplete initiation)...');
 
   await createProjectWithCascade({
     ownerUnit: company,
     ownerTierNum: 1,
-    childUnits: [divisions.engDiv],
+    childUnits: [divisions.engDiv, divisions.productDiv],
     projectData: {
       title: 'API Marketplace',
       description: 'Centralized API management and monetization',
@@ -903,23 +917,42 @@ async function createProjects(org, users) {
     objectivesConfig: [
       {
         title: 'Design API Marketplace Architecture',
+        assignedUnits: [divisions.engDiv],
         targetDate: daysFromNow(45),
-        sessionStatus: 'not-started',
+        sessionStatus: 'not-started', // Not released yet
       },
       {
         title: 'Build API Catalog',
+        assignedUnits: [divisions.engDiv],
         targetDate: daysFromNow(90),
-        sessionStatus: 'not-started',
+        sessionStatus: 'not-started', // Not released yet
+      },
+      {
+        title: 'API Developer Portal',
+        assignedUnits: [divisions.productDiv],
+        targetDate: daysFromNow(75),
+        sessionStatus: 'not-started', // Not released yet
+      },
+      {
+        title: 'Monetization & Billing System',
+        assignedUnits: [divisions.productDiv],
+        targetDate: daysFromNow(100),
+        sessionStatus: 'not-started', // Not released yet
       },
     ],
     users,
     org,
   });
 
+  // ============================================
+  // PROJECT 7: Marketing Analytics (Tier 2 → Planning, NOT YET RELEASED)
+  // ============================================
+  console.log('  Creating Marketing Analytics Dashboard (incomplete initiation)...');
+
   await createProjectWithCascade({
     ownerUnit: divisions.productDiv,
     ownerTierNum: 2,
-    childUnits: [departments.productMktgDept],
+    childUnits: [departments.productMktgDept, departments.productMgmtDept],
     projectData: {
       title: 'Marketing Analytics Dashboard',
       description: 'Real-time marketing performance metrics',
@@ -931,7 +964,20 @@ async function createProjects(org, users) {
     objectivesConfig: [
       {
         title: 'Design Analytics Data Model',
+        assignedUnits: [departments.productMktgDept],
         targetDate: daysFromNow(50),
+        sessionStatus: 'not-started',
+      },
+      {
+        title: 'Build Dashboard UI',
+        assignedUnits: [departments.productMgmtDept],
+        targetDate: daysFromNow(70),
+        sessionStatus: 'not-started',
+      },
+      {
+        title: 'Integrate with Marketing Platforms',
+        assignedUnits: [departments.productMktgDept],
+        targetDate: daysFromNow(85),
         sessionStatus: 'not-started',
       },
     ],
@@ -940,7 +986,343 @@ async function createProjects(org, users) {
   });
 
   // ============================================
-  // Add completed projects
+  // PROJECT 8: E-Commerce Platform (Tier 1 → Full cascade, ACTIVE)
+  // ============================================
+  console.log('  Creating E-Commerce Platform...');
+
+  const ecomProject = await createProjectWithCascade({
+    ownerUnit: company,
+    ownerTierNum: 1,
+    childUnits: [divisions.engDiv, divisions.productDiv],
+    projectData: {
+      title: 'E-Commerce Platform v3',
+      description: 'Next-generation e-commerce with personalization',
+      status: 'Active',
+      startDate: daysAgo(50),
+      targetDate: daysFromNow(60),
+      budget: 600000,
+    },
+    objectivesConfig: [
+      {
+        title: 'Build Product Catalog Service',
+        assignedUnits: [divisions.engDiv],
+        targetDate: daysFromNow(25),
+        sessionStatus: 'completed',
+      },
+      {
+        title: 'Shopping Cart & Checkout',
+        assignedUnits: [divisions.engDiv],
+        targetDate: daysFromNow(40),
+        sessionStatus: 'in-progress',
+      },
+      {
+        title: 'Design E-Commerce UX',
+        assignedUnits: [divisions.productDiv],
+        targetDate: daysFromNow(30),
+        sessionStatus: 'completed',
+      },
+      {
+        title: 'Payment Integration',
+        assignedUnits: [divisions.engDiv],
+        targetDate: daysFromNow(35),
+        sessionStatus: 'not-started',
+      },
+    ],
+    users,
+    org,
+  });
+
+  // Refine Product Catalog (Engineering → Backend/Frontend)
+  const catalogObjective = ecomProject.objectives.find(o => o.title === 'Build Product Catalog Service');
+  const catalogSession = ecomProject.refinementSessions.find(s => s.objectiveId === catalogObjective.id);
+  const catalogRefinement = await refineObjectiveIntoDeeperLevel({
+    parentSession: catalogSession,
+    childUnits: [departments.backendDept, departments.frontendDept],
+    childObjectivesConfig: [
+      {
+        title: 'Product Catalog API',
+        assignedUnits: [departments.backendDept],
+        targetDate: daysFromNow(15),
+        sessionStatus: 'completed',
+      },
+      {
+        title: 'Product Search & Filters',
+        assignedUnits: [departments.frontendDept],
+        targetDate: daysFromNow(20),
+        sessionStatus: 'in-progress',
+      },
+    ],
+    users,
+    org,
+  });
+
+  // Create work items for catalog API
+  const catalogApiObjective = catalogRefinement.childObjectives.find(o => o.title === 'Product Catalog API');
+  const catalogApiSession = catalogRefinement.childSessions.find(s => s.objectiveId === catalogApiObjective.id);
+  await createWorkItemsForSession({
+    session: catalogApiSession,
+    leafTeam: backendTeams[0],
+    workItemsConfig: [
+      { title: 'Design product schema', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(25) },
+      { title: 'Implement CRUD endpoints', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(20) },
+      { title: 'Add image upload', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
+      { title: 'Implement caching', priority: 'P2', status: 'In Progress' },
+      { title: 'Add inventory tracking', priority: 'P2', status: 'Ready' },
+    ],
+    users,
+    org,
+  });
+
+  // ============================================
+  // PROJECT 9: Internal Admin Tools (Tier 2 → Departments, PARTIAL)
+  // ============================================
+  console.log('  Creating Internal Admin Tools...');
+
+  const adminProject = await createProjectWithCascade({
+    ownerUnit: divisions.engDiv,
+    ownerTierNum: 2,
+    childUnits: [departments.backendDept, departments.frontendDept, departments.qaDept],
+    projectData: {
+      title: 'Internal Admin Tools',
+      description: 'Admin dashboard for operations team',
+      status: 'Active',
+      startDate: daysAgo(35),
+      targetDate: daysFromNow(45),
+      budget: 180000,
+    },
+    objectivesConfig: [
+      {
+        title: 'User Management System',
+        assignedUnits: [departments.backendDept],
+        targetDate: daysFromNow(20),
+        sessionStatus: 'completed',
+      },
+      {
+        title: 'Admin Dashboard UI',
+        assignedUnits: [departments.frontendDept],
+        targetDate: daysFromNow(30),
+        sessionStatus: 'in-progress',
+      },
+      {
+        title: 'Reporting & Analytics',
+        assignedUnits: [departments.backendDept],
+        targetDate: daysFromNow(40),
+        sessionStatus: 'not-started',
+      },
+      {
+        title: 'QA & Testing',
+        assignedUnits: [departments.qaDept],
+        targetDate: daysFromNow(42),
+        sessionStatus: 'not-started',
+      },
+    ],
+    users,
+    org,
+  });
+
+  // Create work items for User Management
+  const userMgmtObjective = adminProject.objectives.find(o => o.title === 'User Management System');
+  const userMgmtSession = adminProject.refinementSessions.find(s => s.objectiveId === userMgmtObjective.id);
+  await createWorkItemsForSession({
+    session: userMgmtSession,
+    leafTeam: backendTeams[1],
+    workItemsConfig: [
+      { title: 'User CRUD endpoints', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(22) },
+      { title: 'Role-based access control', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(18) },
+      { title: 'Audit logging', priority: 'P2', status: 'In Progress' },
+      { title: 'Password reset flow', priority: 'P2', status: 'Ready' },
+    ],
+    users,
+    org,
+  });
+
+  // ============================================
+  // PROJECT 10: Data Warehouse Modernization (Tier 1 → Active with Planning objectives)
+  // ============================================
+  console.log('  Creating Data Warehouse Modernization...');
+
+  const dataWarehouseProject = await createProjectWithCascade({
+    ownerUnit: company,
+    ownerTierNum: 1,
+    childUnits: [divisions.dataDiv],
+    projectData: {
+      title: 'Data Warehouse Modernization',
+      description: 'Migrate to Snowflake and implement data lake',
+      status: 'Active',
+      startDate: daysAgo(25),
+      targetDate: daysFromNow(90),
+      budget: 520000,
+    },
+    objectivesConfig: [
+      {
+        title: 'Migrate Historical Data',
+        assignedUnits: [divisions.dataDiv],
+        targetDate: daysFromNow(40),
+        sessionStatus: 'in-progress',
+      },
+      {
+        title: 'Build Data Pipeline',
+        assignedUnits: [divisions.dataDiv],
+        targetDate: daysFromNow(55),
+        sessionStatus: 'not-started',
+      },
+      {
+        title: 'Data Governance Framework',
+        assignedUnits: [divisions.dataDiv],
+        targetDate: daysFromNow(70),
+        sessionStatus: 'not-started',
+      },
+      {
+        title: 'Analytics Layer',
+        assignedUnits: [divisions.dataDiv],
+        targetDate: daysFromNow(85),
+        sessionStatus: 'not-started',
+      },
+    ],
+    users,
+    org,
+  });
+
+  // Refine data migration
+  const dataMigrationObjective = dataWarehouseProject.objectives.find(o => o.title === 'Migrate Historical Data');
+  const dataMigrationSession = dataWarehouseProject.refinementSessions.find(s => s.objectiveId === dataMigrationObjective.id);
+  const dataMigrationRefinement = await refineObjectiveIntoDeeperLevel({
+    parentSession: dataMigrationSession,
+    childUnits: [departments.dataEngDept],
+    childObjectivesConfig: [
+      {
+        title: 'Extract Legacy Data',
+        assignedUnits: [departments.dataEngDept],
+        targetDate: daysFromNow(25),
+        sessionStatus: 'in-progress',
+      },
+      {
+        title: 'Transform & Load to Snowflake',
+        assignedUnits: [departments.dataEngDept],
+        targetDate: daysFromNow(35),
+        sessionStatus: 'not-started',
+      },
+    ],
+    users,
+    org,
+  });
+
+  const dataExtractObjective = dataMigrationRefinement.childObjectives.find(o => o.title === 'Extract Legacy Data');
+  const dataExtractSession = dataMigrationRefinement.childSessions.find(s => s.objectiveId === dataExtractObjective.id);
+  const dataEngTeams = teams.filter(t => t.parentId === departments.dataEngDept.id);
+  await createWorkItemsForSession({
+    session: dataExtractSession,
+    leafTeam: dataEngTeams[0],
+    workItemsConfig: [
+      { title: 'Analyze legacy schema', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(14) },
+      { title: 'Write extraction scripts', priority: 'P1', status: 'In Progress' },
+      { title: 'Test data extraction', priority: 'P1', status: 'Ready' },
+      { title: 'Handle data validation', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
+  // ============================================
+  // PROJECT 11: Customer Feedback System (Tier 2 → INCOMPLETE INITIATION)
+  // ============================================
+  console.log('  Creating Customer Feedback System (incomplete initiation)...');
+
+  await createProjectWithCascade({
+    ownerUnit: divisions.productDiv,
+    ownerTierNum: 2,
+    childUnits: [departments.productMgmtDept, departments.productMktgDept],
+    projectData: {
+      title: 'Customer Feedback System',
+      description: 'Collect and analyze customer feedback across touchpoints',
+      status: 'Planning',
+      startDate: daysFromNow(10),
+      targetDate: daysFromNow(70),
+      budget: 145000,
+    },
+    objectivesConfig: [
+      {
+        title: 'Design Feedback Collection Flow',
+        assignedUnits: [departments.productMgmtDept],
+        targetDate: daysFromNow(30),
+        sessionStatus: 'not-started',
+      },
+      {
+        title: 'Build Feedback API',
+        assignedUnits: [departments.productMgmtDept],
+        targetDate: daysFromNow(45),
+        sessionStatus: 'not-started',
+      },
+      {
+        title: 'Sentiment Analysis Integration',
+        assignedUnits: [departments.productMktgDept],
+        targetDate: daysFromNow(55),
+        sessionStatus: 'not-started',
+      },
+    ],
+    users,
+    org,
+  });
+
+  // ============================================
+  // PROJECT 12: Performance Optimization (Tier 3 → Teams, ACTIVE)
+  // ============================================
+  console.log('  Creating Performance Optimization...');
+
+  const perfProject = await createProjectWithCascade({
+    ownerUnit: departments.backendDept,
+    ownerTierNum: 3,
+    childUnits: backendTeams,
+    projectData: {
+      title: 'System Performance Optimization',
+      description: 'Improve application response times and throughput',
+      status: 'Active',
+      startDate: daysAgo(15),
+      targetDate: daysFromNow(50),
+      budget: 95000,
+    },
+    objectivesConfig: [
+      {
+        title: 'Database Query Optimization',
+        assignedUnits: [backendTeams[0]],
+        targetDate: daysFromNow(20),
+        sessionStatus: 'in-progress',
+      },
+      {
+        title: 'Implement Caching Strategy',
+        assignedUnits: [backendTeams[1]],
+        targetDate: daysFromNow(30),
+        sessionStatus: 'in-progress',
+      },
+      {
+        title: 'API Response Optimization',
+        assignedUnits: [backendTeams[0]],
+        targetDate: daysFromNow(40),
+        sessionStatus: 'not-started',
+      },
+    ],
+    users,
+    org,
+  });
+
+  // Create work items for DB optimization
+  const dbOptObjective = perfProject.objectives.find(o => o.title === 'Database Query Optimization');
+  const dbOptSession = perfProject.refinementSessions.find(s => s.objectiveId === dbOptObjective.id);
+  await createWorkItemsForSession({
+    session: dbOptSession,
+    leafTeam: backendTeams[0],
+    workItemsConfig: [
+      { title: 'Identify slow queries', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
+      { title: 'Add database indexes', priority: 'P1', status: 'In Progress' },
+      { title: 'Optimize join queries', priority: 'P1', status: 'Ready' },
+      { title: 'Implement query batching', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
+  // ============================================
+  // Add completed projects for historical context
   // ============================================
   console.log('  Creating completed projects...');
 
@@ -969,7 +1351,7 @@ async function createProjects(org, users) {
         createdBy: users[1].id,
       },
       {
-        title: 'Data Warehouse Migration',
+        title: 'Data Warehouse Migration Phase 1',
         description: 'Migrate from legacy to modern data warehouse',
         status: 'Completed',
         startDate: daysAgo(150),
@@ -979,10 +1361,32 @@ async function createProjects(org, users) {
         ownerTier: 1,
         createdBy: users[0].id,
       },
+      {
+        title: 'Mobile App v1.0',
+        description: 'Initial mobile app release',
+        status: 'Completed',
+        startDate: daysAgo(180),
+        targetDate: daysAgo(60),
+        budget: 250000,
+        ownerUnit: divisions.engDiv.id,
+        ownerTier: 2,
+        createdBy: users[2].id,
+      },
+      {
+        title: 'Security Audit 2025',
+        description: 'Annual security audit and remediation',
+        status: 'Completed',
+        startDate: daysAgo(90),
+        targetDate: daysAgo(15),
+        budget: 110000,
+        ownerUnit: departments.secEngDept.id,
+        ownerTier: 3,
+        createdBy: users[3].id,
+      },
     ],
   });
 
-  console.log('✅ Created 10 projects with cascading objectives and refinement sessions');
+  console.log('✅ Created 17 projects (12 with cascading objectives, 5 completed)');
 }
 
 async function createDependencies() {
