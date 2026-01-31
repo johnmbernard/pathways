@@ -105,8 +105,8 @@ export function ProjectDashboard() {
   return (
     <div className={styles.container}>
       <PageHeader
-        title={project.title}
-        description={project.description}
+        title={project?.title || 'Project Dashboard'}
+        description={project?.description || ''}
         actions={
           <Button
             variant="ghost"
@@ -127,7 +127,7 @@ export function ProjectDashboard() {
             <div>
               <div className={styles.statusLabel}>Target Date</div>
               <div className={styles.statusValue}>
-                {project.targetDate ? formatDate(project.targetDate, 'MMM dd, yyyy') : 'Not set'}
+                {project?.targetDate ? formatDate(project.targetDate, 'MMM dd, yyyy') : 'Not set'}
               </div>
             </div>
           </div>
@@ -136,7 +136,7 @@ export function ProjectDashboard() {
             <Target size={16} />
             <div>
               <div className={styles.statusLabel}>Objectives</div>
-              <div className={styles.statusValue}>{projectObjectives.length}</div>
+              <div className={styles.statusValue}>{projectObjectives?.length || 0}</div>
             </div>
           </div>
           
@@ -144,7 +144,7 @@ export function ProjectDashboard() {
             <BarChart3 size={16} />
             <div>
               <div className={styles.statusLabel}>Work Items</div>
-              <div className={styles.statusValue}>{projectWorkItems.length}</div>
+              <div className={styles.statusValue}>{projectWorkItems?.length || 0}</div>
             </div>
           </div>
           
@@ -155,18 +155,18 @@ export function ProjectDashboard() {
               <div className={styles.statusValue}>
                 <Badge 
                   variant={
-                    project.status === 'Completed' ? 'success' :
-                    project.status === 'Active' ? 'primary' :
-                    project.status === 'Planning' ? 'warning' : 'secondary'
+                    project?.status === 'Completed' ? 'success' :
+                    project?.status === 'Active' ? 'primary' :
+                    project?.status === 'Planning' ? 'warning' : 'secondary'
                   }
                 >
-                  {project.status}
+                  {project?.status || 'Unknown'}
                 </Badge>
               </div>
             </div>
           </div>
           
-          {project.budget && (
+          {project?.budget && (
             <div className={styles.statusItem}>
               <div className={styles.statusLabel}>Budget</div>
               <div className={styles.statusValue}>
