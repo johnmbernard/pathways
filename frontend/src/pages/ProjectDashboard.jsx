@@ -22,14 +22,27 @@ export function ProjectDashboard() {
   const [loading, setLoading] = useState(true);
   const [dependencies, setDependencies] = useState([]);
   const [forecast, setForecast] = useState(null);
+  const [projectObjectives, setProjectObjectives] = useState([]);
+  const [projectWorkItems, setProjectWorkItems] = useState([]);
   
   const project = projects?.find(p => p.id === projectId);
-  const projectObjectives = objectives?.filter(obj => obj.projectId === projectId) || [];
-  const projectWorkItems = workItems?.filter(wi => wi.projectId === projectId) || [];
   
   useEffect(() => {
     loadProjectData();
   }, [projectId]);
+  
+  // Update filtered data when store data changes
+  useEffect(() => {
+    if (objectives && projectId) {
+      setProjectObjectives(objectives.filter(obj => obj.projectId === projectId));
+    }
+  }, [objectives, projectId]);
+  
+  useEffect(() => {
+    if (workItems && projectId) {
+      setProjectWorkItems(workItems.filter(wi => wi.projectId === projectId));
+    }
+  }, [workItems, projectId]);
   
   async function loadProjectData() {
     setLoading(true);
@@ -38,6 +51,8 @@ export function ProjectDashboard() {
       if (fetchProjects) await fetchProjects();
       if (fetchObjectives) await fetchObjectives();
       if (fetchWorkItems) await fetchWorkItems();
+      // Wait a tick for state to update before loading dependencies
+      await new Promise(resolve => setTimeout(resolve, 0));
       await loadDependencies();
       await loadForecast();
     } catch (error) {
@@ -53,14 +68,14 @@ export function ProjectDashboard() {
       if (!response.ok) throw new Error('Failed to fetch dependencies');
       const data = await response.json();
       
-      // Use current state values
-      const objectiveIds = projectObjectives.map(obj => obj.id);
-      
-      // Filter dependencies for this project's objectives
-      const projectDeps = (data || []).filter(dep => 
-        objectiveIds.includes(dep.predecessorId) || objectiveIds.includes(dep.successorId)
-      );
-      setDependencies(projectDeps);
+      // Filter dependencies after objectives are loaded
+      if (projectObjectives.length > 0) {
+        const objectiveIds = projectObjectives.map(obj => obj.id);
+        const projectDeps = (data || []).filter(dep => 
+          objectiveIds.includes(dep.predecessorId) || objectiveIds.includes(dep.successorId)
+        );
+        setDependencies(projectDeps);
+      }
     } catch (error) {
       console.error('Failed to load dependencies:', error);
       setDependencies([]);
