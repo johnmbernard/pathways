@@ -98,7 +98,7 @@ function WorkItemRow({ workItem, minDate, maxDate, timelineWidth, totalWeeks, we
 
 // Objective Row Component
 function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, timelineWidth, totalWeeks, weekWidth, forecast, depth = 1 }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   const childObjectives = allObjectives.filter(obj => obj.parentObjectiveId === objective.id);
   const objectiveWorkItems = workItems.filter(wi => wi.objectiveId === objective.id);
@@ -261,7 +261,7 @@ function ObjectiveRow({ objective, allObjectives, workItems, minDate, maxDate, t
 
 // Project Row Component
 function ProjectRow({ project, objectives, workItems, minDate, maxDate, timelineWidth, totalWeeks, weekWidth, forecast }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   const rootObjectives = objectives.filter(obj => !obj.parentObjectiveId);
   const hasObjectives = rootObjectives.length > 0;
