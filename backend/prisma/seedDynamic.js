@@ -255,7 +255,22 @@ async function createUsers(org) {
     'Ahmed Khan',
   ];
 
-  for (const [idx, name] of names.entries()) {
+  // Create Sarah Chen as company owner (Tier 1) - first user
+  const sarahEmail = 'sarah.chen@synapse.io';
+  const sarah = await prisma.user.create({
+    data: {
+      name: 'Sarah Chen',
+      email: sarahEmail,
+      password: 'hashed_password_placeholder',
+      role: 'Member',
+      organizationalUnit: org.company.id, // Explicitly assign to company
+    },
+  });
+  users.push(sarah);
+
+  // Create remaining users distributed across all units
+  for (let idx = 1; idx < names.length; idx++) {
+    const name = names[idx];
     const unit = allUnits[idx % allUnits.length];
     const email = name.toLowerCase().replace(' ', '.') + '@synapse.io';
     const user = await prisma.user.create({
@@ -481,6 +496,80 @@ async function createWorkItemsForSession({
   return workItems;
 }
 
+async function createOandMWorkItems(teams, users, org) {
+  console.log('🔧 Creating O&M (Operations & Maintenance) work items...');
+
+  const omWorkItems = [];
+  const omTasks = [
+    'Update dependencies',
+    'Fix security vulnerabilities',
+    'Refactor legacy code',
+    'Update documentation',
+    'Database maintenance',
+    'Server patching',
+    'Monitor system health',
+    'Investigate production errors',
+    'Optimize slow queries',
+    'Clean up old data',
+    'Update SSL certificates',
+    'Review access permissions',
+    'Backup verification',
+    'Log rotation setup',
+    'Performance monitoring',
+    'Error tracking setup',
+    'Update CI/CD pipeline',
+    'Library version updates',
+    'Technical debt reduction',
+    'Code quality improvements',
+    'Test coverage improvements',
+    'Fix flaky tests',
+    'Update API documentation',
+    'Infrastructure cost optimization',
+    'Security audit tasks',
+  ];
+
+  // Distribute 100 O&M items across all teams
+  for (let i = 0; i < 100; i++) {
+    const team = teams[i % teams.length];
+    const task = omTasks[i % omTasks.length];
+    const user = getUserByUnit(team.id, users, org);
+    
+    // Mix of statuses weighted toward Done/In Progress
+    const statusRoll = Math.random();
+    let status, completedAt = null;
+    if (statusRoll < 0.4) {
+      status = 'Done';
+      completedAt = daysAgoDateTime(Math.floor(Math.random() * 30) + 1);
+    } else if (statusRoll < 0.6) {
+      status = 'In Progress';
+    } else if (statusRoll < 0.8) {
+      status = 'Ready';
+    } else {
+      status = 'Backlog';
+    }
+
+    const priority = Math.random() < 0.3 ? 'P1' : 'P2';
+
+    const workItem = await prisma.workItem.create({
+      data: {
+        title: `${task} #${i + 1}`,
+        description: `Operational maintenance task for ${team.name}`,
+        type: 'Task',
+        priority,
+        stackRank: i,
+        status,
+        assignedOrgUnit: team.id,
+        createdBy: user.id,
+        completedAt,
+      },
+    });
+    omWorkItems.push(workItem);
+  }
+
+  console.log(`✅ Created ${omWorkItems.length} O&M work items`);
+  return omWorkItems;
+}
+
 async function createProjects(org, users) {
   console.log('📋 Creating projects with cascading objectives...');
 
@@ -567,11 +656,18 @@ async function createProjects(org, users) {
       { title: 'Design API schema', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(30) },
       { title: 'Implement auth endpoints', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(25) },
       { title: 'Build user profile APIs', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(20) },
-      { title: 'Add caching layer', priority: 'P2', status: 'In Progress' },
-      { title: 'Optimize database queries', priority: 'P2', status: 'Ready' },
-      { title: 'Implement rate limiting', priority: 'P2', status: 'Ready' },
-      { title: 'Add API versioning', priority: 'P2', status: 'Backlog' },
-      { title: 'Write API documentation', priority: 'P2', status: 'Backlog' },
+      { title: 'Add caching layer', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(18) },
+      { title: 'Optimize database queries', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
+      { title: 'Implement rate limiting', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(12) },
+      { title: 'Add API versioning', priority: 'P2', status: 'In Progress' },
+      { title: 'Write API documentation', priority: 'P2', status: 'In Progress' },
+      { title: 'Add request validation', priority: 'P2', status: 'Ready' },
+      { title: 'Implement pagination', priority: 'P2', status: 'Ready' },
+      { title: 'Add filtering capabilities', priority: 'P2', status: 'Ready' },
+      { title: 'Error handling middleware', priority: 'P2', status: 'Backlog' },
+      { title: 'API metrics & monitoring', priority: 'P2', status: 'Backlog' },
+      { title: 'Request logging', priority: 'P2', status: 'Backlog' },
+      { title: 'API key management', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -591,11 +687,15 @@ async function createProjects(org, users) {
     leafTeam: qaTeams[0],
     workItemsConfig: [
       { title: 'Write test plan', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
-      { title: 'Create test cases', priority: 'P1', status: 'In Progress' },
-      { title: 'Execute regression tests', priority: 'P2', status: 'Ready' },
-      { title: 'Performance testing', priority: 'P2', status: 'Ready' },
-      { title: 'Security testing', priority: 'P2', status: 'Backlog' },
-      { title: 'Load testing', priority: 'P2', status: 'Backlog' },
+      { title: 'Create test cases', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(8) },
+      { title: 'Execute regression tests', priority: 'P1', status: 'In Progress' },
+      { title: 'Performance testing', priority: 'P2', status: 'In Progress' },
+      { title: 'Security testing', priority: 'P2', status: 'Ready' },
+      { title: 'Load testing', priority: 'P2', status: 'Ready' },
+      { title: 'API contract testing', priority: 'P2', status: 'Ready' },
+      { title: 'Cross-browser testing', priority: 'P2', status: 'Backlog' },
+      { title: 'Accessibility testing', priority: 'P2', status: 'Backlog' },
+      { title: 'Test automation', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -669,12 +769,16 @@ async function createProjects(org, users) {
     leafTeam: devopsTeams[0],
     workItemsConfig: [
       { title: 'Provision VPC and subnets', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
-      { title: 'Setup EKS cluster', priority: 'P1', status: 'In Progress' },
-      { title: 'Configure RDS instances', priority: 'P1', status: 'Ready' },
-      { title: 'Setup CloudFront CDN', priority: 'P2', status: 'Ready' },
-      { title: 'Implement monitoring', priority: 'P2', status: 'Backlog' },
-      { title: 'Configure auto-scaling', priority: 'P2', status: 'Backlog' },
-      { title: 'Setup backup strategy', priority: 'P2', status: 'Backlog' },
+      { title: 'Setup EKS cluster', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(12) },
+      { title: 'Configure RDS instances', priority: 'P1', status: 'In Progress' },
+      { title: 'Setup CloudFront CDN', priority: 'P1', status: 'In Progress' },
+      { title: 'Implement monitoring', priority: 'P2', status: 'Ready' },
+      { title: 'Configure auto-scaling', priority: 'P2', status: 'Ready' },
+      { title: 'Setup backup strategy', priority: 'P2', status: 'Ready' },
+      { title: 'Configure WAF', priority: 'P2', status: 'Backlog' },
+      { title: 'Setup disaster recovery', priority: 'P2', status: 'Backlog' },
+      { title: 'Implement blue-green deployment', priority: 'P2', status: 'Backlog' },
+      { title: 'Cost optimization review', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -736,9 +840,13 @@ async function createProjects(org, users) {
       { title: 'Design mobile API', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(20) },
       { title: 'Implement sync endpoints', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
       { title: 'Add push notification service', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
-      { title: 'Setup CDN for assets', priority: 'P2', status: 'Done', completedAt: daysAgoDateTime(5) },
-      { title: 'Implement offline support', priority: 'P2', status: 'In Progress' },
-      { title: 'Add image optimization', priority: 'P2', status: 'Ready' },
+      { title: 'Setup CDN for assets', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(5) },
+      { title: 'Implement offline support', priority: 'P1', status: 'In Progress' },
+      { title: 'Add image optimization', priority: 'P2', status: 'In Progress' },
+      { title: 'Background sync service', priority: 'P2', status: 'Ready' },
+      { title: 'Conflict resolution logic', priority: 'P2', status: 'Ready' },
+      { title: 'Data compression', priority: 'P2', status: 'Backlog' },
+      { title: 'Mobile analytics tracking', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -756,12 +864,16 @@ async function createProjects(org, users) {
     leafTeam: frontendTeams[1],
     workItemsConfig: [
       { title: 'Setup iOS project', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(18) },
-      { title: 'Implement navigation', priority: 'P1', status: 'In Progress' },
-      { title: 'Build auth screens', priority: 'P1', status: 'Ready' },
-      { title: 'Implement offline sync', priority: 'P1', status: 'Ready' },
-      { title: 'Add push notifications', priority: 'P2', status: 'Backlog' },
-      { title: 'Build settings screen', priority: 'P2', status: 'Backlog' },
-      { title: 'Implement dark mode', priority: 'P2', status: 'Backlog' },
+      { title: 'Implement navigation', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(14) },
+      { title: 'Build auth screens', priority: 'P1', status: 'In Progress' },
+      { title: 'Implement offline sync', priority: 'P1', status: 'In Progress' },
+      { title: 'Add push notifications', priority: 'P2', status: 'Ready' },
+      { title: 'Build settings screen', priority: 'P2', status: 'Ready' },
+      { title: 'Implement dark mode', priority: 'P2', status: 'Ready' },
+      { title: 'Add biometric auth', priority: 'P2', status: 'Backlog' },
+      { title: 'Localization support', priority: 'P2', status: 'Backlog' },
+      { title: 'App Store assets', priority: 'P2', status: 'Backlog' },
+      { title: 'Crash reporting setup', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -836,11 +948,15 @@ async function createProjects(org, users) {
     workItemsConfig: [
       { title: 'Collect training data', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(25) },
       { title: 'Feature engineering', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(18) },
+      { title: 'Data cleaning & preprocessing', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
       { title: 'Train baseline model', priority: 'P1', status: 'In Progress' },
-      { title: 'Hyperparameter tuning', priority: 'P2', status: 'Ready' },
+      { title: 'Hyperparameter tuning', priority: 'P2', status: 'In Progress' },
       { title: 'Model evaluation', priority: 'P2', status: 'Ready' },
-      { title: 'Cross-validation', priority: 'P2', status: 'Backlog' },
-      { title: 'Deploy model to staging', priority: 'P2', status: 'Backlog' },
+      { title: 'Cross-validation', priority: 'P2', status: 'Ready' },
+      { title: 'Deploy model to staging', priority: 'P2', status: 'Ready' },
+      { title: 'A/B testing setup', priority: 'P2', status: 'Backlog' },
+      { title: 'Model monitoring', priority: 'P2', status: 'Backlog' },
+      { title: 'Production deployment', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -887,11 +1003,15 @@ async function createProjects(org, users) {
     leafTeam: secTeams[0],
     workItemsConfig: [
       { title: 'Evaluate SIEM solutions', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(12) },
-      { title: 'Deploy Splunk', priority: 'P1', status: 'In Progress' },
-      { title: 'Configure log aggregation', priority: 'P1', status: 'Ready' },
-      { title: 'Setup alerting rules', priority: 'P2', status: 'Ready' },
-      { title: 'Create dashboards', priority: 'P2', status: 'Backlog' },
-      { title: 'Integrate with ticketing', priority: 'P2', status: 'Backlog' },
+      { title: 'Deploy Splunk', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(8) },
+      { title: 'Configure log aggregation', priority: 'P1', status: 'In Progress' },
+      { title: 'Setup alerting rules', priority: 'P1', status: 'In Progress' },
+      { title: 'Create dashboards', priority: 'P2', status: 'Ready' },
+      { title: 'Integrate with ticketing', priority: 'P2', status: 'Ready' },
+      { title: 'Define incident response playbooks', priority: 'P2', status: 'Ready' },
+      { title: 'Setup threat intelligence feeds', priority: 'P2', status: 'Backlog' },
+      { title: 'Compliance reporting', priority: 'P2', status: 'Backlog' },
+      { title: 'Security metrics & KPIs', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -1066,8 +1186,13 @@ async function createProjects(org, users) {
       { title: 'Design product schema', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(25) },
       { title: 'Implement CRUD endpoints', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(20) },
       { title: 'Add image upload', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
-      { title: 'Implement caching', priority: 'P2', status: 'In Progress' },
-      { title: 'Add inventory tracking', priority: 'P2', status: 'Ready' },
+      { title: 'Implement caching', priority: 'P1', status: 'In Progress' },
+      { title: 'Add inventory tracking', priority: 'P2', status: 'In Progress' },
+      { title: 'Product search indexing', priority: 'P2', status: 'Ready' },
+      { title: 'Category management', priority: 'P2', status: 'Ready' },
+      { title: 'Product variants support', priority: 'P2', status: 'Backlog' },
+      { title: 'Bulk import/export', priority: 'P2', status: 'Backlog' },
+      { title: 'Product reviews API', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -1129,8 +1254,12 @@ async function createProjects(org, users) {
     workItemsConfig: [
       { title: 'User CRUD endpoints', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(22) },
       { title: 'Role-based access control', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(18) },
-      { title: 'Audit logging', priority: 'P2', status: 'In Progress' },
-      { title: 'Password reset flow', priority: 'P2', status: 'Ready' },
+      { title: 'Audit logging', priority: 'P1', status: 'In Progress' },
+      { title: 'Password reset flow', priority: 'P2', status: 'In Progress' },
+      { title: 'User permissions management', priority: 'P2', status: 'Ready' },
+      { title: 'Session management', priority: 'P2', status: 'Ready' },
+      { title: 'Two-factor authentication', priority: 'P2', status: 'Backlog' },
+      { title: 'User activity tracking', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -1215,9 +1344,13 @@ async function createProjects(org, users) {
     leafTeam: dataEngTeams[0],
     workItemsConfig: [
       { title: 'Analyze legacy schema', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(14) },
-      { title: 'Write extraction scripts', priority: 'P1', status: 'In Progress' },
-      { title: 'Test data extraction', priority: 'P1', status: 'Ready' },
-      { title: 'Handle data validation', priority: 'P2', status: 'Backlog' },
+      { title: 'Write extraction scripts', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
+      { title: 'Test data extraction', priority: 'P1', status: 'In Progress' },
+      { title: 'Handle data validation', priority: 'P2', status: 'In Progress' },
+      { title: 'Data quality checks', priority: 'P2', status: 'Ready' },
+      { title: 'Error handling & retry logic', priority: 'P2', status: 'Ready' },
+      { title: 'Performance optimization', priority: 'P2', status: 'Backlog' },
+      { title: 'Incremental extraction', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -1313,9 +1446,13 @@ async function createProjects(org, users) {
     leafTeam: backendTeams[0],
     workItemsConfig: [
       { title: 'Identify slow queries', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
-      { title: 'Add database indexes', priority: 'P1', status: 'In Progress' },
-      { title: 'Optimize join queries', priority: 'P1', status: 'Ready' },
-      { title: 'Implement query batching', priority: 'P2', status: 'Backlog' },
+      { title: 'Add database indexes', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(7) },
+      { title: 'Optimize join queries', priority: 'P1', status: 'In Progress' },
+      { title: 'Implement query batching', priority: 'P2', status: 'In Progress' },
+      { title: 'Add connection pooling', priority: 'P2', status: 'Ready' },
+      { title: 'Query result caching', priority: 'P2', status: 'Ready' },
+      { title: 'Database partitioning strategy', priority: 'P2', status: 'Backlog' },
+      { title: 'Read replicas setup', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -1466,11 +1603,26 @@ async function main() {
   // Create throughput data
   await createThroughputData(org.teams, users, org);
 
-  // Create projects with cascading objectives
+  // Create projects with cascading objectives (creates ~200 project work items)
   await createProjects(org, users);
+
+  // Create O&M work items (100 operational work items)
+  await createOandMWorkItems(org.teams, users, org);
 
   // Create dependencies
   await createDependencies();
+
+  // Final summary
+  const projectCount = await prisma.project.count();
+  const objectiveCount = await prisma.objective.count();
+  const workItemCount = await prisma.workItem.count();
+  const sessionCount = await prisma.refinementSession.count();
+
+  console.log('\n📊 Seed Summary:');
+  console.log(`   Projects: ${projectCount}`);
+  console.log(`   Objectives: ${objectiveCount}`);
+  console.log(`   Work Items: ${workItemCount}`);
+  console.log(`   Refinement Sessions: ${sessionCount}`);
 
   console.log('\n🎉 Dynamic seed completed successfully!');
 }
