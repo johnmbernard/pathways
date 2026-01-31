@@ -12,8 +12,11 @@ import styles from './ProjectDashboard.module.css';
 export function ProjectDashboard() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { projects, objectives, fetchProjects, fetchObjectives } = useProjectsStore();
-  const { workItems, fetchWorkItems } = useWorkItemsStore();
+  const projectsStore = useProjectsStore();
+  const workItemsStore = useWorkItemsStore();
+  
+  const { projects = [], objectives = [], fetchProjects, fetchObjectives } = projectsStore;
+  const { workItems = [], fetchWorkItems } = workItemsStore;
   
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
@@ -31,13 +34,12 @@ export function ProjectDashboard() {
   async function loadProjectData() {
     setLoading(true);
     try {
-      await Promise.all([
-        fetchProjects(),
-        fetchObjectives(),
-        fetchWorkItems(),
-        loadDependencies(),
-        loadForecast()
-      ]);
+      // Load data sequentially to avoid race conditions
+      if (fetchProjects) await fetchProjects();
+      if (fetchObjectives) await fetchObjectives();
+      if (fetchWorkItems) await fetchWorkItems();
+      await loadDependencies();
+      await loadForecast();
     } catch (error) {
       console.error('Failed to load project data:', error);
     } finally {
@@ -51,13 +53,11 @@ export function ProjectDashboard() {
       if (!response.ok) throw new Error('Failed to fetch dependencies');
       const data = await response.json();
       
-      // Get current objectives for this project
-      const currentObjectives = await fetchObjectives();
-      const projectObjs = currentObjectives?.filter(obj => obj.projectId === projectId) || [];
-      const objectiveIds = projectObjs.map(obj => obj.id);
+      // Use current state values
+      const objectiveIds = projectObjectives.map(obj => obj.id);
       
       // Filter dependencies for this project's objectives
-      const projectDeps = data.filter(dep => 
+      const projectDeps = (data || []).filter(dep => 
         objectiveIds.includes(dep.predecessorId) || objectiveIds.includes(dep.successorId)
       );
       setDependencies(projectDeps);
