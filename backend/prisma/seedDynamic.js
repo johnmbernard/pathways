@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -255,13 +256,16 @@ async function createUsers(org) {
     'Ahmed Khan',
   ];
 
+  // Hash the default password once (password: "password")
+  const hashedPassword = await bcrypt.hash('password', 10);
+
   // Create Sarah Chen as company owner (Tier 1) - first user
   const sarahEmail = 'sarah.chen@synapse.io';
   const sarah = await prisma.user.create({
     data: {
       name: 'Sarah Chen',
       email: sarahEmail,
-      password: 'hashed_password_placeholder',
+      password: hashedPassword,
       role: 'Member',
       organizationalUnit: org.company.id, // Explicitly assign to company
     },
@@ -277,7 +281,7 @@ async function createUsers(org) {
       data: {
         name,
         email,
-        password: 'hashed_password_placeholder',
+        password: hashedPassword,
         role: 'Member',
         organizationalUnit: unit.id,
       },
@@ -286,6 +290,7 @@ async function createUsers(org) {
   }
 
   console.log(`✅ Created ${users.length} users`);
+  console.log(`📝 All users have password: "password"`);
   return users;
 }
 
