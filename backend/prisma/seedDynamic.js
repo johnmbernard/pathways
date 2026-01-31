@@ -349,19 +349,29 @@ async function createProjectWithCascade({
       })),
     });
 
-    // Create refinement sessions for each assigned unit
-    for (const unit of assignedUnits) {
-      const session = await prisma.refinementSession.create({
-        data: {
-          projectId: project.id,
-          objectiveId: objective.id,
-          assignedUnitId: unit.id,
-          status: objConfig.sessionStatus || 'not-started',
-          createdBy: getUserByUnit(unit.id, users, org).id,
-          completedAt: objConfig.sessionStatus === 'completed' ? daysAgo(3) : null,
-        },
-      });
-      refinementSessions.push(session);
+    // Create refinement session for the objective (one per objective)
+    const session = await prisma.refinementSession.create({
+      data: {
+        projectId: project.id,
+        objectiveId: objective.id,
+        status: objConfig.sessionStatus || 'not-started',
+        createdBy: getUserByUnit(ownerUnit.id, users, org).id,
+        completedAt: objConfig.sessionStatus === 'completed' ? daysAgo(3) : null,
+      },
+    });
+    refinementSessions.push(session);
+
+    // Create unit completion records for each assigned unit if session is completed
+    if (objConfig.sessionStatus === 'completed') {
+      for (const unit of assignedUnits) {
+        await prisma.refinementUnitCompletion.create({
+          data: {
+            refinementSessionId: session.id,
+            organizationalUnitId: unit.id,
+            completedBy: getUserByUnit(unit.id, users, org).id,
+          },
+        });
+      }
     }
   }
 
@@ -379,9 +389,9 @@ async function refineObjectiveIntoDeeperLevel({
   const childSessions = [];
 
   for (const childConfig of childObjectivesConfig) {
-    // Get the tier of the parent unit
-    const parentUnit = await prisma.organizationalUnit.findUnique({
-      where: { id: parentSession.assignedUnitId },
+    // Get the parent objective to determine the tier
+    const parentObjective = await prisma.objective.findUnique({
+      where: { id: parentSession.objectiveId },
     });
     
     const childObjective = await prisma.objective.create({
@@ -390,9 +400,9 @@ async function refineObjectiveIntoDeeperLevel({
         description: childConfig.description || null,
         projectId: parentSession.projectId,
         parentObjectiveId: parentSession.objectiveId,
-        fromTier: parentUnit.tier,
+        fromTier: parentObjective.fromTier,
         targetDate: childConfig.targetDate,
-        createdBy: getUserByUnit(parentSession.assignedUnitId, users, org).id,
+        createdBy: getUserByUnit(childUnits[0].id, users, org).id,
       },
     });
     childObjectives.push(childObjective);
@@ -406,19 +416,29 @@ async function refineObjectiveIntoDeeperLevel({
       })),
     });
 
-    // Create refinement sessions for each assigned child unit
-    for (const unit of assignedUnits) {
-      const session = await prisma.refinementSession.create({
-        data: {
-          projectId: parentSession.projectId,
-          objectiveId: childObjective.id,
-          assignedUnitId: unit.id,
-          status: childConfig.sessionStatus || 'not-started',
-          createdBy: getUserByUnit(unit.id, users, org).id,
-          completedAt: childConfig.sessionStatus === 'completed' ? daysAgo(2) : null,
-        },
-      });
-      childSessions.push(session);
+    // Create refinement session for the child objective
+    const session = await prisma.refinementSession.create({
+      data: {
+        projectId: parentSession.projectId,
+        objectiveId: childObjective.id,
+        status: childConfig.sessionStatus || 'not-started',
+        createdBy: getUserByUnit(assignedUnits[0].id, users, org).id,
+        completedAt: childConfig.sessionStatus === 'completed' ? daysAgo(2) : null,
+      },
+    });
+    childSessions.push(session);
+
+    // Create unit completion records for each assigned unit if session is completed
+    if (childConfig.sessionStatus === 'completed') {
+      for (const unit of assignedUnits) {
+        await prisma.refinementUnitCompletion.create({
+          data: {
+            refinementSessionId: session.id,
+            organizationalUnitId: unit.id,
+            completedBy: getUserByUnit(unit.id, users, org).id,
+          },
+        });
+      }
     }
   }
 
@@ -497,8 +517,11 @@ async function createProjects(org, users) {
   });
 
   // Refine Backend Services (Eng Division → Departments)
+  const backendObjective = portalProject.objectives.find(
+    (o) => o.title === 'Build Portal Backend Services'
+  );
   const backendSession = portalProject.refinementSessions.find(
-    (s) => s.assignedUnitId === divisions.engDiv.id
+    (s) => s.objectiveId === backendObjective.id
   );
 
   const portalBackendRefinement = await refineObjectiveIntoDeeperLevel({
@@ -523,8 +546,11 @@ async function createProjects(org, users) {
   });
 
   // Backend APIs (Backend Dept → Teams)
+  const backendApiObjective = portalBackendRefinement.childObjectives.find(
+    (o) => o.title === 'Develop Backend APIs'
+  );
   const backendApiSession = portalBackendRefinement.childSessions.find(
-    (s) => s.assignedUnitId === departments.backendDept.id
+    (s) => s.objectiveId === backendApiObjective.id
   );
 
   const backendTeams = teams.filter((t) => t.parentId === departments.backendDept.id);
@@ -543,8 +569,11 @@ async function createProjects(org, users) {
   });
 
   // QA Testing (QA Dept → Teams)
+  const qaObjective = portalBackendRefinement.childObjectives.find(
+    (o) => o.title === 'QA Testing for Backend'
+  );
   const qaSession = portalBackendRefinement.childSessions.find(
-    (s) => s.assignedUnitId === departments.qaDept.id
+    (s) => s.objectiveId === qaObjective.id
   );
 
   const qaTeams = teams.filter((t) => t.parentId === departments.qaDept.id);
@@ -617,8 +646,11 @@ async function createProjects(org, users) {
     org,
   });
 
+  const devopsObjective = cloudInfraRefinement.childObjectives.find(
+    (o) => o.title === 'Setup AWS Infrastructure'
+  );
   const devopsSession = cloudInfraRefinement.childSessions.find(
-    (s) => s.assignedUnitId === departments.devopsDept.id
+    (s) => s.objectiveId === devopsObjective.id
   );
   const devopsTeams = teams.filter((t) => t.parentId === departments.devopsDept.id);
   await createWorkItemsForSession({
@@ -677,8 +709,11 @@ async function createProjects(org, users) {
     org,
   });
 
+  const mobileBackendObjective = mobileProject.objectives.find(
+    (o) => o.title === 'Build Mobile Backend Services'
+  );
   const mobileBackendSession = mobileProject.refinementSessions.find(
-    (s) => s.assignedUnitId === departments.backendDept.id
+    (s) => s.objectiveId === mobileBackendObjective.id
   );
   const backendTeamsForMobile = teams.filter((t) => t.parentId === departments.backendDept.id);
   await createWorkItemsForSession({
@@ -694,10 +729,11 @@ async function createProjects(org, users) {
     org,
   });
 
+  const iosObjective = mobileProject.objectives.find(
+    (o) => o.title === 'Develop iOS App'
+  );
   const iosSession = mobileProject.refinementSessions.find(
-    (s) =>
-      s.assignedUnitId === departments.frontendDept.id &&
-      s.objectiveId === mobileProject.objectives.find((o) => o.title === 'Develop iOS App').id
+    (s) => s.objectiveId === iosObjective.id
   );
   const frontendTeams = teams.filter((t) => t.parentId === departments.frontendDept.id);
   await createWorkItemsForSession({
@@ -770,8 +806,11 @@ async function createProjects(org, users) {
     org,
   });
 
+  const mlDevObjective = aiMlRefinement.childObjectives.find(
+    (o) => o.title === 'Develop ML Models'
+  );
   const mlDevSession = aiMlRefinement.childSessions.find(
-    (s) => s.assignedUnitId === departments.dataSciDept.id
+    (s) => s.objectiveId === mlDevObjective.id
   );
   const dataSciTeams = teams.filter((t) => t.parentId === departments.dataSciDept.id);
   await createWorkItemsForSession({
