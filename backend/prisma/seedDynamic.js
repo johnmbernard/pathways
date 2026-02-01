@@ -1780,8 +1780,34 @@ async function createDependencies() {
   const mlModels = objectives.find((o) => o.title === 'Develop ML Models');
   const mlPipeline = objectives.find((o) => o.title === 'Build Data Pipeline');
 
+  // Mobile App objectives
+  const mobileBackend = objectives.find((o) => o.title === 'Build Mobile Backend Services');
+  const iosApp = objectives.find((o) => o.title === 'Develop iOS App');
+  const androidApp = objectives.find((o) => o.title === 'Develop Android App');
+
+  // E-Commerce objectives
+  const productCatalog = objectives.find((o) => o.title === 'Build Product Catalog');
+  const shoppingCart = objectives.find((o) => o.title === 'Implement Shopping Cart & Checkout');
+
+  // SOC objectives
+  const siem = objectives.find((o) => o.title === 'Deploy SIEM Solution');
+  const socProcesses = objectives.find((o) => o.title === 'Establish SOC Processes');
+
+  // Data Warehouse objectives
+  const dataExtraction = objectives.find((o) => o.title === 'Data Extraction Layer');
+  const dataTransform = objectives.find((o) => o.title === 'Transform & Load Pipeline');
+
+  // Performance objectives
+  const dbOptimization = objectives.find((o) => o.title === 'Database Optimization');
+  const apiOptimization = objectives.find((o) => o.title === 'API Performance Improvements');
+
   const dependencies = [];
 
+  // ============================================
+  // SIMPLE DEPENDENCIES (existing)
+  // ============================================
+  
+  // Portal: Backend APIs must complete before QA
   if (portalBackendApis && portalQa) {
     dependencies.push({
       predecessorId: portalBackendApis.id,
@@ -1790,6 +1816,7 @@ async function createDependencies() {
     });
   }
 
+  // Cloud: Infrastructure must be ready before migration
   if (cloudInfra && cloudMigrate) {
     dependencies.push({
       predecessorId: cloudInfra.id,
@@ -1798,6 +1825,7 @@ async function createDependencies() {
     });
   }
 
+  // AI: Data pipeline needed before ML models
   if (mlPipeline && mlModels) {
     dependencies.push({
       predecessorId: mlPipeline.id,
@@ -1806,11 +1834,94 @@ async function createDependencies() {
     });
   }
 
+  // ============================================
+  // COMPLEX DEPENDENCIES (will cause delays/alerts)
+  // ============================================
+
+  // Mobile App: Backend must be done before iOS and Android apps can complete
+  // This creates pressure since iOS/Android are in-progress but backend still has work
+  if (mobileBackend && iosApp) {
+    dependencies.push({
+      predecessorId: mobileBackend.id,
+      successorId: iosApp.id,
+      type: 'FS',
+    });
+  }
+
+  if (mobileBackend && androidApp) {
+    dependencies.push({
+      predecessorId: mobileBackend.id,
+      successorId: androidApp.id,
+      type: 'FS',
+    });
+  }
+
+  // E-Commerce: Product catalog must be ready before shopping cart
+  if (productCatalog && shoppingCart) {
+    dependencies.push({
+      predecessorId: productCatalog.id,
+      successorId: shoppingCart.id,
+      type: 'FS',
+    });
+  }
+
+  // SOC: SIEM must be deployed before processes can be fully established
+  if (siem && socProcesses) {
+    dependencies.push({
+      predecessorId: siem.id,
+      successorId: socProcesses.id,
+      type: 'FS',
+    });
+  }
+
+  // Data Warehouse: Extraction must complete before Transform
+  if (dataExtraction && dataTransform) {
+    dependencies.push({
+      predecessorId: dataExtraction.id,
+      successorId: dataTransform.id,
+      type: 'FS',
+    });
+  }
+
+  // ============================================
+  // CROSS-PROJECT DEPENDENCIES (create cascading delays)
+  // ============================================
+
+  // Performance improvements depend on cloud migration completing
+  // This creates a chain: Cloud Infra → Cloud Migrate → API Optimization
+  if (cloudMigrate && apiOptimization) {
+    dependencies.push({
+      predecessorId: cloudMigrate.id,
+      successorId: apiOptimization.id,
+      type: 'FS',
+    });
+  }
+
+  // Mobile apps depend on performance optimizations
+  // Chain: Cloud → Performance → Mobile
+  if (dbOptimization && mobileBackend) {
+    dependencies.push({
+      predecessorId: dbOptimization.id,
+      successorId: mobileBackend.id,
+      type: 'FS',
+    });
+  }
+
+  // E-commerce shopping cart depends on AI recommendations being ready
+  // This shows cross-functional dependency
+  if (mlModels && shoppingCart) {
+    dependencies.push({
+      predecessorId: mlModels.id,
+      successorId: shoppingCart.id,
+      type: 'FS',
+    });
+  }
+
   if (dependencies.length > 0) {
     await prisma.objectiveDependency.createMany({ data: dependencies });
   }
 
-  console.log(`✅ Created ${dependencies.length} objective dependencies`);
+  console.log(`✅ Created ${dependencies.length} objective dependencies (including complex chains that may cause delays)`);
 }
 
 // ============================================
