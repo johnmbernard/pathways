@@ -258,6 +258,21 @@ async function createUsers(org) {
 
   // Hash the default password once (password: "password")
   const hashedPassword = await bcrypt.hash('password', 10);
+  
+  // Hash demo password
+  const demoPassword = await bcrypt.hash('PathwaysDemo2026', 10);
+
+  // Create demo user for shared demo access
+  const demoUser = await prisma.user.create({
+    data: {
+      name: 'Demo User',
+      email: 'demo@pathways.app',
+      password: demoPassword,
+      role: 'Member',
+      organizationalUnit: org.company.id,
+    },
+  });
+  users.push(demoUser);
 
   // Create Sarah Chen as company owner (Tier 1) - first user
   const sarahEmail = 'sarah.chen@synapse.io';
