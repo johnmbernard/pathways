@@ -1815,8 +1815,8 @@ async function createDependencies() {
   const androidApp = objectives.find((o) => o.title === 'Develop Android App');
 
   // E-Commerce objectives
-  const productCatalog = objectives.find((o) => o.title === 'Build Product Catalog');
-  const shoppingCart = objectives.find((o) => o.title === 'Implement Shopping Cart & Checkout');
+  const productCatalog = objectives.find((o) => o.title === 'Build Product Catalog Service');
+  const shoppingCart = objectives.find((o) => o.title === 'Shopping Cart & Checkout');
 
   // SOC objectives
   const siem = objectives.find((o) => o.title === 'Deploy SIEM Solution');
@@ -1827,8 +1827,8 @@ async function createDependencies() {
   const dataTransform = objectives.find((o) => o.title === 'Transform & Load Pipeline');
 
   // Performance objectives
-  const dbOptimization = objectives.find((o) => o.title === 'Database Optimization');
-  const apiOptimization = objectives.find((o) => o.title === 'API Performance Improvements');
+  const dbOptimization = objectives.find((o) => o.title === 'Database Query Optimization');
+  const apiOptimization = objectives.find((o) => o.title === 'API Response Optimization');
 
   const dependencies = [];
 
