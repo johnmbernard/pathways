@@ -802,13 +802,17 @@ async function createProjects(org, users) {
     leafTeam: backendTeamsForCloud[2],
     workItemsConfig: [
       { title: 'Audit current services', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(8) },
-      { title: 'Containerize applications', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(6) },
+      { title: 'Containerize applications', priority: 'P1', status: 'In Progress' }, // Changed from Done
       { title: 'Create Kubernetes manifests', priority: 'P1', status: 'In Progress' },
-      { title: 'Migrate authentication service', priority: 'P1', status: 'In Progress' },
-      { title: 'Migrate API gateway', priority: 'P2', status: 'Ready' },
-      { title: 'Update service discovery', priority: 'P2', status: 'Ready' },
-      { title: 'Configure health checks', priority: 'P2', status: 'Backlog' },
-      { title: 'Load testing', priority: 'P2', status: 'Backlog' },
+      { title: 'Migrate authentication service', priority: 'P1', status: 'Ready' }, // Changed from In Progress
+      { title: 'Migrate API gateway', priority: 'P1', status: 'Ready' }, // Changed to P1
+      { title: 'Update service discovery', priority: 'P1', status: 'Ready' }, // Changed to P1
+      { title: 'Configure health checks', priority: 'P1', status: 'Backlog' }, // Changed to P1
+      { title: 'Load testing', priority: 'P1', status: 'Backlog' }, // Changed to P1
+      { title: 'Database migration', priority: 'P2', status: 'Backlog' },
+      { title: 'Configure monitoring', priority: 'P2', status: 'Backlog' },
+      { title: 'Setup alerting', priority: 'P2', status: 'Backlog' },
+      { title: 'Update documentation', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -836,13 +840,13 @@ async function createProjects(org, users) {
       {
         title: 'Build Mobile Backend Services',
         assignedUnits: [departments.backendDept],
-        targetDate: daysFromNow(45),
-        sessionStatus: 'completed',
+        targetDate: daysFromNow(30), // Aggressive target - won't make it
+        sessionStatus: 'in-progress', // Still has work remaining
       },
       {
         title: 'Develop iOS App',
         assignedUnits: [departments.frontendDept],
-        targetDate: daysFromNow(75),
+        targetDate: daysFromNow(60), // Depends on backend finishing first
         sessionStatus: 'in-progress',
       },
       {
@@ -869,14 +873,18 @@ async function createProjects(org, users) {
     workItemsConfig: [
       { title: 'Design mobile API', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(20) },
       { title: 'Implement sync endpoints', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(15) },
-      { title: 'Add push notification service', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(10) },
-      { title: 'Setup CDN for assets', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(5) },
-      { title: 'Implement offline support', priority: 'P1', status: 'In Progress' },
-      { title: 'Add image optimization', priority: 'P2', status: 'In Progress' },
-      { title: 'Background sync service', priority: 'P2', status: 'Ready' },
-      { title: 'Conflict resolution logic', priority: 'P2', status: 'Ready' },
-      { title: 'Data compression', priority: 'P2', status: 'Backlog' },
+      { title: 'Add push notification service', priority: 'P1', status: 'In Progress' }, // Changed from Done
+      { title: 'Setup CDN for assets', priority: 'P1', status: 'In Progress' }, // Changed from Done
+      { title: 'Implement offline support', priority: 'P1', status: 'Ready' }, // Changed from In Progress
+      { title: 'Add image optimization', priority: 'P1', status: 'Ready' }, // Changed to P1
+      { title: 'Background sync service', priority: 'P1', status: 'Ready' }, // Changed to P1
+      { title: 'Conflict resolution logic', priority: 'P1', status: 'Backlog' }, // Changed from Ready
+      { title: 'Data compression', priority: 'P1', status: 'Backlog' }, // Changed to P1
       { title: 'Mobile analytics tracking', priority: 'P2', status: 'Backlog' },
+      { title: 'Rate limiting', priority: 'P2', status: 'Backlog' },
+      { title: 'API versioning', priority: 'P2', status: 'Backlog' },
+      { title: 'Monitoring endpoints', priority: 'P2', status: 'Backlog' },
+      { title: 'Health check system', priority: 'P2', status: 'Backlog' },
     ],
     users,
     org,
@@ -1697,6 +1705,27 @@ async function createProjects(org, users) {
     org,
   });
 
+  // Add API Response Optimization work items (will be blocked by Cloud Migration)
+  const apiOptObjective = perfProject.objectives.find(o => o.title === 'API Response Optimization');
+  const apiOptSession = perfProject.refinementSessions.find(s => s.objectiveId === apiOptObjective.id);
+  await createWorkItemsForSession({
+    session: apiOptSession,
+    leafTeam: backendTeams[0],
+    workItemsConfig: [
+      { title: 'Profile API endpoints', priority: 'P1', status: 'Done', completedAt: daysAgoDateTime(5) },
+      { title: 'Optimize serialization', priority: 'P1', status: 'In Progress' },
+      { title: 'Reduce payload sizes', priority: 'P1', status: 'In Progress' },
+      { title: 'Implement response compression', priority: 'P1', status: 'Ready' },
+      { title: 'Add request batching', priority: 'P1', status: 'Ready' },
+      { title: 'Optimize database queries', priority: 'P1', status: 'Backlog' },
+      { title: 'Add API throttling', priority: 'P2', status: 'Backlog' },
+      { title: 'Response time monitoring', priority: 'P2', status: 'Backlog' },
+      { title: 'Load testing', priority: 'P2', status: 'Backlog' },
+    ],
+    users,
+    org,
+  });
+
   // ============================================
   // Add completed projects for historical context
   // ============================================
@@ -1887,7 +1916,7 @@ async function createDependencies() {
   // CROSS-PROJECT DEPENDENCIES (create cascading delays)
   // ============================================
 
-  // Performance improvements depend on cloud migration completing
+  // Cloud migration services must complete before performance API optimization can start
   // This creates a chain: Cloud Infra → Cloud Migrate → API Optimization
   if (cloudMigrate && apiOptimization) {
     dependencies.push({
@@ -1897,11 +1926,11 @@ async function createDependencies() {
     });
   }
 
-  // Mobile apps depend on performance optimizations
-  // Chain: Cloud → Performance → Mobile
-  if (dbOptimization && mobileBackend) {
+  // API optimization must complete before mobile backend can finish
+  // Chain: Cloud Migrate → API Optimization → Mobile Backend
+  if (apiOptimization && mobileBackend) {
     dependencies.push({
-      predecessorId: dbOptimization.id,
+      predecessorId: apiOptimization.id,
       successorId: mobileBackend.id,
       type: 'FS',
     });
