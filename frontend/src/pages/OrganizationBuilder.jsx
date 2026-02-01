@@ -227,12 +227,6 @@ export default function OrganizationBuilder() {
             )}
           </div>
         </div>
-
-        <div className={styles.infoBox}>
-          <h4 className={styles.infoTitle}>
-            💡 How to use
-          </h4>
-        </div>
       </div>
     </div>
   );
